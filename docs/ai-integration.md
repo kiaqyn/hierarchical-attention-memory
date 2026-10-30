@@ -6,7 +6,21 @@ HFA 2.2 提供一个可运行的本地 MCP 接口。它让支持 MCP 的 AI 软�
 
 ## 安装与启动
 
-基本 CLI 需要 Python 3.10+；可选 MCP 接口需要 Python 3.11+。在项目根目录运行：
+基本 CLI 与生命周期钩子需要 Python 3.10+（仅用标准库，内置 `sqlite3` FTS5）；可选 MCP 接口需要 Python 3.11+。
+
+### 方式 A：`pip install -e .` 或 `uvx` 零配置启动
+
+```powershell
+python -m pip install -e ".[all]"
+hfa init ./my_memory
+hfa status ./my_memory --json
+hfa-mcp --memory-dir ./my_memory --print-config
+hfa-hook --print-hooks --memory-dir ./my_memory
+```
+
+若使用 `uvx`，可直接运行 `uvx --from "git+https://github.com/kiaqyn/hierarchical-attention-memory[mcp]" hfa-mcp`（省略 `--memory-dir` 时默认使用 `HFA_MEMORY_DIR` 或当前工作区 `./memory`，目录为空时自动初始化模板）。
+
+### 方式 B：使用项目虚拟环境直接运行脚本
 
 ```powershell
 python -m venv .venv
@@ -17,7 +31,7 @@ python -m venv .venv
 python -B scripts/hfa_hook.py --print-hooks --memory-dir ./my_memory
 ```
 
-倒数第二条命令输出包含绝对路径的 `mcpServers` JSON；最后一条命令输出包含绝对路径的 `hooks.json` 配置（用于支持 `PreInvocation` 生命周期钩子的宿主，在模型调用前自动执行零依赖检索，未命中输出 `{}`，命中时通过单轮 `ephemeralMessage` 注入片段）。把其中的服务启动项或钩子配置放进所用软件的配置；不同软件可能使用不同外层配置格式。本项目不会覆盖应用现有配置。已有记忆目录不重复初始化，升级时先运行 `reindex`，再检查 `status`。
+倒数第二条命令输出包含绝对路径的 `mcpServers` JSON；最后一条命令输出包含绝对路径的 `hooks.json` 配置（同时注册 `PreInvocation` 自动按需检索，以及 `PostInvocation` / `Stop` 回合结束自动提炼结论、过滤闲聊、脱敏凭据并按 `request_id` 幂等落盘 L1 `chunk_XXXX.json`）。把其中的服务启动项或钩子配置放进所用软件的配置；不同软件可能使用不同外层配置格式。本项目不会覆盖应用现有配置。已有记忆目录不重复初始化，升级时先运行 `reindex`，再检查 `status`。
 
 应用实际执行的命令相当于：
 

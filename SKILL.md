@@ -12,7 +12,7 @@ version: 2.2.0
 
 - `directory.md` 是 L0：节点、路径、状态、关键词与唯一 `ACTIVE` 主线。
 - `chunks/*.json` 是 L1 真源。文件 ID 全局唯一；纪元内的 Topic 编号不能单独用作身份。
-- `index/*.json` 与 `history/epoch_*/summaries.md` 都是派生物。摘要与 L1 冲突时以 L1 为准，运行重建，不直接修改摘要作为修复。
+- `index/fts.sqlite`（内置 `sqlite3` FTS5 索引）、`index/*.json` 与 `history/epoch_*/summaries.md` 都是派生物。摘要与 L1 冲突时以 L1 为准，运行重建，不直接修改摘要作为修复。
 - 记忆内容发生冲突时核对来源与当前用户意图；不得仅因一句临时表达就自动覆盖长期偏好。
 
 ## 初始化与健康检查
@@ -22,13 +22,17 @@ python scripts/hfa_manager.py init ./memory
 python scripts/hfa_manager.py status ./memory --json
 ```
 
-已有目录不要重置。`init --force` 只填补缺失模板，保留现有文件。
+若已通过 `pip install -e .` 安装，可直接使用 `hfa`、`hfa-hook`、`hfa-mcp` 命令，且省略目录参数时默认定位环境变量 `HFA_MEMORY_DIR` 或当前工作区 `./memory`。已有目录不要重置；`init --force` 只填补缺失模板，保留现有文件。
 
 状态检查发现缺失文件、孤儿 L1、过期索引、派生视图不一致或预算超限时，先修复并重建，再继续召回。
 
-## 工具接入与生命周期钩子
+## 工具接入与全生命周期钩子
 
-若宿主已配置本项目 `PreInvocation` 钩子（`hooks.json` / `scripts/hfa_hook.py`），每轮用户输入会在模型运行前自动触发检索：未命中输出 `{}`（0 Token），命中则通过单轮 `ephemeralMessage` 注入相关片段与 `deferred` 提示。若宿主已配置本项目 MCP，优先调用 `recall_memory`、`remember_decision`、`memory_health`；未配置则按下述 CLI 执行。配置与宿主调用约定见 `docs/ai-integration.md`。工具可用并不保证模型会自动调用，每次依赖旧决定的工作要主动查询。
+若宿主已配置本项目生命周期钩子（`hooks.json` / `scripts/hfa_hook.py`）：
+- `PreInvocation`：每轮用户输入在模型运行前自动触发检索，未命中输出 `{}`（0 Token），命中则通过单轮 `ephemeralMessage` 注入相关片段与 `deferred` 提示。
+- `PostInvocation` / `Stop`：回合结束时若提供结构化 `decision`、```` ```hfa-memory ```` 代码块或含明确结论/修复方案/文件路径的回复，自动过滤闲聊并脱敏凭据后，按 `request_id` 幂等落盘为 `chunks/chunk_XXXX.json`。
+
+若宿主已配置本项目 MCP，优先调用 `recall_memory`、`remember_decision`、`memory_health`；未配置则按下述 CLI 执行。配置与宿主调用约定见 `docs/ai-integration.md`。工具可用并不保证模型会自动调用，每次依赖旧决定的工作要主动查询。
 
 ## 主线专注锁与命中词
 

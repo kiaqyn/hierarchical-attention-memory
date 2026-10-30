@@ -169,6 +169,15 @@ class MemoryQualityTests(HfaTests):
         for technical in ("如何取消自动执行的定时任务？", "把数据库回复超时改成30秒"):
             self.assertFalse(self.route(technical)["profile_drift"], technical)
 
+    def test_fts5_hybrid_retrieval_and_expanded_paraphrase_aliases(self):
+        self.add("报表导出", "乱码, CSV, export-case", "中文乱码已通过 UTF-8 修复，CSV 导出必须指定编码。")
+        self.add("发行失败", "回滚, undo-case", "出现故障就回滚，恢复上一版本。")
+        self.assertEqual(self.route("输出文件全是看不懂的符号")["selected"][0]["id"], "chunk_0002")
+        self.assertEqual(self.route("撤回这次更新恢复到昨天那版")["selected"][0]["id"], "chunk_0003")
+        with patch.object(hfa, "_fts_search", return_value=(None, None)):
+            self.assertEqual(self.route("输出文件全是看不懂的符号")["selected"][0]["id"], "chunk_0002")
+            self.assertEqual(self.route("撤回这次更新恢复到昨天那版")["selected"][0]["id"], "chunk_0003")
+
 
 def load_tests(loader, tests, pattern):
     return unittest.TestSuite(MemoryQualityTests(name) for name in MemoryQualityTests.__dict__ if name.startswith("test_"))

@@ -1,18 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""HFA 2.2 PreInvocation lifecycle hook adapter (stdlib-only, fail-open).
+"""HFA 2.2 lifecycle hook adapter: PreInvocation recall + PostInvocation/Stop auto-persist.
 
-Reads hook payload JSON from stdin, resolves a bound memory directory, runs
-`hfa_manager.py recall`, and emits an `ephemeralMessage` injection step only
-when relevant memory or deferred/drift signals exist. Unmatched turns emit `{}`
-(zero tokens injected). Any missing directory, invalid payload, or unhealthy
-memory store fails open with exit code 0 so the host conversation never stalls.
+- PreInvocation (`--phase pre` or auto-detected user prompt):
+  Reads `lastUserInput`, runs `hfa_manager.py recall`, and emits an `ephemeralMessage`
+  injection step only when relevant memory or deferred/drift signals exist. Unmatched
+  turns emit `{}` (zero tokens injected).
+- PostInvocation / Stop (`--phase post` / `--phase stop` or auto-detected turn end):
+  Reads structured conclusion payloads or assistant response text, filters out casual
+  chat noise and redacts secrets, distills `title`, `hit_words` (file paths, technical
+  identifiers, CJK terms), and `conclusion`, and idempotently persists a structured
+  L1 `chunk_XXXX.json` via `hfa_manager.py add-topic --request-id ... --json`.
+- Fail-open: Any missing directory, invalid payload, or subprocess timeout exits 0.
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -27,26 +34,101 @@ UNHEALTHY_WARNING = (
     "run `status --json` / `reindex` before relying on past decisions."
 )
 
+_SECRET_PATTERNS = re.compile(
+    r"sk-[A-Za-z0-9_-]{20,}"
+    r"|gh[pousr]_[A-Za-z0-9]{20,}"
+    r"|AKIA[0-9A-Z]{16}"
+    r"|-----BEGIN [A-Z ]*PRIVATE KEY-----"
+    r"|(?i:api[_-]?key|password|passwd|secret|access[_-]?token)\s*[:=]\s*['\"]?[A-Za-z0-9_\-./+=]{8,}"
+)
+_FILE_PATH_RE = re.compile(
+    r"(?<![A-Za-z0-9_])(?:[A-Za-z0-9_.-]+[/\\])*[A-Za-z0-9_.-]+\."
+    r"(?:py|js|ts|tsx|jsx|go|rs|java|c|cpp|h|json|yaml|yml|toml|md|sh|ps1|sql|html|css)(?![A-Za-z0-9_.-])"
+)
+_CONCLUSION_MARKER_RE = re.compile(
+    r"(?:核心结论|结论|修复方案|解决方式|根因|决定|变更说明|验证结果|已修复|已解决|已验证|采用|统一使用|总结)[:：]"
+    r"|(?<![尚未没不])(?:已修复|已解决|已验证|修复了|解决了|改为使用|切换为)"
+    r"|(?<![A-Za-z0-9_])(?:Conclusion|Decision|Root\s+cause|Fixed|Resolved|Verified|Summary|Solution|Implemented)[:：]"
+    r"|(?<![A-Za-z0-9_])(?:Changed\s+to|Switched\s+to|Resolved\s+by|Fixed\s+by)(?![A-Za-z0-9_])",
+    re.I,
+)
+_ACTION_OUTCOME_RE = re.compile(
+    r"(?<![尚未没不])(?:已(?:修复|解决|新增|更新|改为|使用|启用|配置|实现|迁移|升级|回滚|锁定)"
+    r"|(?:修复|解决|新增|更新|配置|实现|迁移|升级|回滚|锁定)了|改为|切换为|统一使用)"
+    r"|(?<![A-Za-z0-9_])(?:fixed|resolved|updated|added|configured|enabled|switched|implemented|migrated|rolled\s+back)(?![A-Za-z0-9_])",
+    re.I,
+)
+_NON_CONCLUSION_LINE_RE = re.compile(
+    r"[?？]\s*$"
+    r"|(?:请问|如何|怎么|为什么|是否|能否|尚未|还未|还没有|未能|无法|正在(?:查看|排查|检查|分析))"
+    r"|(?<![A-Za-z0-9_])(?:how\s+to|what\s+is|is\s+the|have\s+you|not\s+(?:yet\s+)?(?:fixed|resolved|implemented|verified|updated))(?![A-Za-z0-9_])",
+    re.I,
+)
+_ASCII_TOKEN_RE = re.compile(r"(?<![A-Za-z0-9_.-])[A-Za-z][A-Za-z0-9_.-]{0,31}[A-Za-z0-9](?![A-Za-z0-9_.-])")
+_STOP_WORDS = {
+    "the", "a", "an", "to", "of", "is", "are", "in", "on", "for", "with", "how", "what",
+    "was", "were", "please", "find", "recall", "previous", "this", "that", "it", "and",
+    "or", "my", "we", "do", "not", "should", "about", "from", "by", "at", "as", "if",
+    "then", "than", "so", "only", "also", "just", "very", "here", "there", "use", "uses",
+    "used", "using", "get", "set", "run", "fix", "make", "new", "old", "see", "check",
+    "show", "tell", "want", "need", "can", "will", "file", "code", "true", "false", "none",
+}
+_KNOWN_CJK_TERMS = (
+    "乱码", "编码修复", "部署", "上线", "备份", "数据库", "并发", "文件锁", "超时",
+    "回滚", "幂等", "缓存", "事务", "索引", "主线", "分支", "墓碑", "配置", "鉴权",
+)
+
 
 def _emit(payload: dict) -> int:
     print(json.dumps(payload, ensure_ascii=False))
     return 0
 
 
-def _resolve_memory_dir(explicit: Path | None, payload: dict) -> Path | None:
-    candidates: list[Path] = []
+def _default_memory_dir(explicit: Path | None = None) -> Path:
     if explicit is not None:
-        candidates.append(explicit)
+        return Path(explicit)
     env_dir = os.environ.get("HFA_MEMORY_DIR", "").strip()
     if env_dir:
-        candidates.append(Path(env_dir))
+        return Path(env_dir)
+    cwd = Path.cwd().resolve()
+    for rel in ("memory", ".agents/memory", ".hfa/memory"):
+        cand = cwd / rel
+        if (cand / "directory.md").is_file():
+            return cand
+    return cwd / "memory"
+
+
+def _resolve_memory_dir(explicit: Path | None, payload: dict, allow_auto_init: bool = False) -> Path | None:
+    candidates: list[Path] = []
+    auto_init_targets: list[Path] = []
+    if explicit is not None:
+        candidates.append(explicit)
+        auto_init_targets.append(explicit)
+    env_dir = os.environ.get("HFA_MEMORY_DIR", "").strip()
+    if env_dir:
+        env_path = Path(env_dir)
+        candidates.append(env_path)
+        auto_init_targets.append(env_path)
     workspaces = payload.get("workspacePaths")
-    if isinstance(workspaces, list):
-        for ws in workspaces:
-            if isinstance(ws, str) and ws.strip():
-                base = Path(ws.strip())
-                candidates.append(base / "memory")
-                candidates.append(base / ".agents" / "memory")
+    has_ws_key = "workspacePaths" in payload or "workspacePath" in payload or "cwd" in payload
+    if not isinstance(workspaces, list):
+        single_ws = payload.get("workspacePath") or payload.get("cwd")
+        workspaces = [single_ws] if isinstance(single_ws, str) and single_ws.strip() else []
+    for ws in workspaces:
+        if isinstance(ws, str) and ws.strip():
+            base = Path(ws.strip())
+            candidates.append(base / "memory")
+            candidates.append(base / ".agents" / "memory")
+            candidates.append(base / ".hfa" / "memory")
+            try:
+                if base.resolve().is_dir():
+                    auto_init_targets.append(base.resolve() / "memory")
+            except OSError:
+                pass
+    if not candidates and not has_ws_key:
+        cwd = Path.cwd().resolve()
+        for rel in ("memory", ".agents/memory", ".hfa/memory"):
+            candidates.append(cwd / rel)
     for candidate in candidates:
         try:
             resolved = candidate.resolve()
@@ -54,7 +136,280 @@ def _resolve_memory_dir(explicit: Path | None, payload: dict) -> Path | None:
                 return resolved
         except OSError:
             continue
+    if allow_auto_init and auto_init_targets:
+        target = auto_init_targets[0]
+        try:
+            resolved = target.resolve()
+            if not resolved.exists() or (resolved.is_dir() and not any(resolved.iterdir())):
+                proc = subprocess.run(
+                    [sys.executable, "-B", str(CLI), "init", str(resolved), "--force"],
+                    capture_output=True,
+                    encoding="utf-8",
+                    timeout=10,
+                )
+                if proc.returncode == 0 and (resolved / "directory.md").is_file():
+                    return resolved
+        except Exception:
+            return None
     return None
+
+
+def _detect_phase(explicit_phase: str, payload: dict) -> str:
+    norm = (explicit_phase or "auto").strip().lower()
+    if norm in ("pre", "preinvocation", "before"):
+        return "pre"
+    if norm in ("post", "postinvocation", "after"):
+        return "post"
+    if norm in ("stop", "session_end", "turn_end"):
+        return "stop"
+    event = str(
+        payload.get("hook_event_name")
+        or payload.get("hookEventName")
+        or payload.get("event")
+        or payload.get("phase")
+        or ""
+    ).strip().lower()
+    if event.startswith("post") or event in ("after_invocation", "turn_end", "posttooluse"):
+        return "post"
+    if event.startswith("stop") or event == "session_end":
+        return "stop"
+    if event.startswith("pre") or event in ("before_invocation", "user_prompt_submit", "userpromptsubmit"):
+        return "pre"
+    turn_end_keys = (
+        "decision", "hfaRemember", "memoryDecision", "remember",
+        "lastAssistantResponse", "lastModelOutput", "assistantResponse",
+        "modelOutput", "response", "output", "stopResponse", "assistantMessage",
+    )
+    if any(payload.get(k) for k in turn_end_keys):
+        return "post"
+    return "pre"
+
+
+def _sanitize_hitword(word: str) -> str:
+    cleaned = re.sub(r"[,，、/\r\n`*_#\[\]()\"']+", " ", str(word)).strip()
+    cleaned = " ".join(cleaned.split())
+    return cleaned[:64]
+
+
+def _extract_hitwords_from_text(text: str, title: str) -> list[str]:
+    found: list[str] = []
+
+    def _add(candidate: str) -> None:
+        w = _sanitize_hitword(candidate)
+        if not w or len(w) < 2 or w.lower() in _STOP_WORDS or w.isdigit():
+            return
+        if w.lower() not in {x.lower() for x in found} and len(found) < 8:
+            found.append(w)
+
+    for m in _FILE_PATH_RE.finditer(text):
+        raw_path = m.group(0).replace("\\", "/")
+        basename = raw_path.rsplit("/", 1)[-1]
+        _add(basename)
+    for m in re.finditer(r"`([^`\r\n]{2,48})`", text):
+        token = m.group(1).strip()
+        if "/" in token or "\\" in token:
+            token = token.replace("\\", "/").rsplit("/", 1)[-1]
+        if re.fullmatch(r"[A-Za-z0-9_.:-]+|[\u4e00-\u9fffA-Za-z0-9_.-]{2,24}", token):
+            _add(token)
+    for m in _ASCII_TOKEN_RE.finditer(title + " " + text):
+        tok = m.group(0).strip(".-_")
+        if len(tok) >= 2 and tok.lower() not in _STOP_WORDS and (
+            any(c.isupper() or c.isdigit() or c in "-_." for c in tok) or len(tok) >= 4
+        ):
+            _add(tok)
+    combined = title + " " + text
+    for cjk_term in _KNOWN_CJK_TERMS:
+        if cjk_term in combined:
+            _add(cjk_term)
+    if not found:
+        for run in re.findall(r"[\u4e00-\u9fff]{2,8}", title + " " + text):
+            _add(run[:8])
+            if len(found) >= 3:
+                break
+    if not found:
+        _add(title[:24] or "project-decision")
+    return found[:8]
+
+
+def _clean_line(line: str) -> str:
+    line = _SECRET_PATTERNS.sub("[REDACTED]", line)
+    line = re.sub(r"^\s*(?:#+|\*+|-+|\d+\.)\s*", "", line)
+    line = re.sub(r"\*\*([^*]+)\*\*", r"\1", line)
+    line = " ".join(line.split()).strip()
+    return line
+
+
+def _is_conclusion_candidate(line: str) -> bool:
+    if _NON_CONCLUSION_LINE_RE.search(line):
+        return False
+    return bool(
+        _CONCLUSION_MARKER_RE.search(line)
+        or (_FILE_PATH_RE.search(line) and _ACTION_OUTCOME_RE.search(line))
+    )
+
+
+def _extract_turn_decision(payload: dict, phase: str) -> dict | None:
+    conv_id = str(payload.get("conversationId") or payload.get("sessionId") or "local").strip()[:48]
+    turn_id = str(payload.get("turnId") or payload.get("requestId") or payload.get("messageId") or "").strip()[:48]
+    user_input = str(payload.get("lastUserInput") or payload.get("userInput") or payload.get("prompt") or "").strip()
+
+    # 1. Explicit structured decision object in payload
+    structured = (
+        payload.get("decision")
+        or payload.get("hfaRemember")
+        or payload.get("memoryDecision")
+        or payload.get("remember")
+    )
+    response_text = ""
+    for key in (
+        "lastAssistantResponse", "lastModelOutput", "assistantResponse",
+        "modelOutput", "response", "output", "stopResponse", "assistantMessage",
+    ):
+        val = payload.get(key)
+        if isinstance(val, str) and val.strip():
+            response_text = val.strip()
+            break
+
+    # 2. Check for fenced ```hfa-memory JSON block inside response_text
+    if not isinstance(structured, dict) and response_text:
+        fenced = re.search(
+            r"```(?:hfa-memory|hfa)\s*\r?\n\s*(\{.*?\})\s*\r?\n\s*```",
+            response_text,
+            re.S,
+        )
+        if fenced:
+            try:
+                parsed = json.loads(fenced.group(1))
+                if isinstance(parsed, dict):
+                    structured = parsed
+            except Exception:
+                pass
+
+    if isinstance(structured, dict):
+        raw_title = _clean_line(str(structured.get("title") or ""))[:120]
+        raw_conclusion = structured.get("conclusion") or structured.get("summary") or ""
+        if isinstance(raw_conclusion, list):
+            c_lines = [_clean_line(str(x))[:150] for x in raw_conclusion if _clean_line(str(x))]
+        else:
+            c_lines = [_clean_line(ln)[:150] for ln in str(raw_conclusion).splitlines() if _clean_line(ln)]
+        conclusion = "\n".join(c_lines[:3])[:300].strip()
+        if not conclusion:
+            return None
+        if not raw_title:
+            raw_title = conclusion.splitlines()[0][:80]
+        raw_words = structured.get("hit_words") or structured.get("hitwords") or []
+        if isinstance(raw_words, str):
+            raw_words = [w.strip() for w in re.split(r"[,，、/]+", raw_words) if w.strip()]
+        hit_words = [_sanitize_hitword(w) for w in raw_words if _sanitize_hitword(w)][:8]
+        if not hit_words:
+            hit_words = _extract_hitwords_from_text(conclusion, raw_title)
+        project = str(structured.get("project") or "").strip() or None
+        supersedes = [str(x).strip() for x in (structured.get("supersedes") or []) if str(x).strip()]
+        source = _clean_line(str(structured.get("source") or f"hook:turn:{conv_id}"))[:240]
+        explicit_req_id = str(structured.get("request_id") or structured.get("requestId") or "").strip()
+    else:
+        if not response_text or len(response_text) < 12:
+            return None
+        # Strip outer 4+ backtick fences before 3-backtick fences and any unclosed trailing fence
+        prose = re.sub(r"`{4,}.*?`{4,}", "\n", response_text, flags=re.S)
+        prose = re.sub(r"`{3}.*?`{3}", "\n", prose, flags=re.S)
+        prose = re.sub(r"`{3,}.*$", "\n", prose, flags=re.S).strip()
+        if not prose:
+            return None
+
+        lines = [ln.strip() for ln in prose.splitlines() if ln.strip()]
+        raw_title = ""
+        for ln in lines[:4]:
+            heading_match = re.match(r"^#+\s+(.+)$", ln)
+            if heading_match:
+                raw_title = _clean_line(heading_match.group(1))[:80]
+                break
+            title_label = re.match(r"^(?:标题|主题|Title|Topic)[:：]\s*(.+)$", ln, re.I)
+            if title_label:
+                raw_title = _clean_line(title_label.group(1))[:80]
+                break
+
+        picked: list[str] = []
+        for ln in lines:
+            if re.match(r"^#+\s+", ln):
+                continue
+            if _is_conclusion_candidate(ln):
+                cleaned = _clean_line(ln)
+                if len(cleaned) >= 6 and cleaned not in picked:
+                    picked.append(cleaned)
+            if len(picked) >= 3:
+                break
+        if not picked:
+            sentences = [
+                s.strip()
+                for s in re.split(r"(?<=[。！？!?])\s*|\n+", prose)
+                if len(_clean_line(s)) >= 8
+            ]
+            for s in sentences:
+                if _is_conclusion_candidate(s):
+                    cleaned = _clean_line(s)
+                    if cleaned not in picked:
+                        picked.append(cleaned)
+                if len(picked) >= 2:
+                    break
+        if not picked:
+            return None
+
+        conclusion_lines: list[str] = []
+        total_chars = 0
+        for p in picked[:3]:
+            trimmed = p[:150]
+            if total_chars + len(trimmed) > 300:
+                rem = 300 - total_chars
+                if rem >= 16:
+                    conclusion_lines.append(trimmed[:rem])
+                break
+            conclusion_lines.append(trimmed)
+            total_chars += len(trimmed) + 1
+        conclusion = "\n".join(conclusion_lines).strip()
+        if not conclusion:
+            return None
+
+        if not raw_title:
+            if user_input:
+                first_clause = re.split(r"[，。；;,\n!?！？]", user_input)[0]
+                first_clause = re.sub(r"^(?:请问|帮我|请|麻烦|please\s+)", "", first_clause, flags=re.I).strip()
+                raw_title = _clean_line(first_clause)[:80]
+            if not raw_title:
+                raw_title = re.split(r"[，。；;：:\n]", conclusion_lines[0])[0][:80].strip()
+        raw_title = (raw_title or "回合结论")[:120]
+        hit_words = _extract_hitwords_from_text(user_input + "\n" + prose, raw_title)
+        project = None
+        supersedes = []
+        path_match = _FILE_PATH_RE.search(prose)
+        path_suffix = f":{path_match.group(0)}" if path_match else ""
+        source = f"hook:turn:{conv_id}{path_suffix}"[:240]
+        explicit_req_id = ""
+
+    fingerprint = hashlib.sha256(
+        json.dumps(
+            {
+                "title": raw_title,
+                "hit_words": hit_words,
+                "conclusion": conclusion,
+                "project": project,
+                "supersedes": supersedes,
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+        ).encode("utf-8")
+    ).hexdigest()[:16]
+    turn_part = f"-{turn_id}" if turn_id else ""
+    request_id = (explicit_req_id or f"hook-{conv_id}{turn_part}-{fingerprint}")[:120]
+    return {
+        "title": raw_title,
+        "hit_words": hit_words,
+        "conclusion": conclusion,
+        "source": source,
+        "request_id": request_id,
+        "project": project,
+        "supersedes": supersedes,
+    }
 
 
 def _format_ephemeral_message(result: dict) -> str | None:
@@ -88,15 +443,68 @@ def _format_ephemeral_message(result: dict) -> str | None:
     return "\n".join(lines)
 
 
+def _handle_post_or_stop(root: Path, decision: dict) -> int:
+    cmd = [
+        sys.executable, "-B", str(CLI), "add-topic", str(root),
+        f"--title={decision['title']}",
+        f"--hit-words={','.join(decision['hit_words'])}",
+        f"--conclusion={decision['conclusion']}",
+        f"--source={decision['source']}",
+        f"--request-id={decision['request_id']}",
+        "--json",
+    ]
+    if decision.get("project"):
+        cmd.append(f"--project={decision['project']}")
+    for old_id in decision.get("supersedes") or []:
+        cmd.append(f"--supersedes={old_id}")
+    try:
+        proc = subprocess.run(cmd, capture_output=True, encoding="utf-8", timeout=10)
+    except Exception:
+        return _emit({})
+    if proc.returncode != 0:
+        return _emit({})
+    try:
+        result = json.loads(proc.stdout)
+        if not isinstance(result, dict) or "id" not in result:
+            return _emit({})
+    except Exception:
+        return _emit({})
+    return _emit({
+        "saved": {
+            "id": result["id"],
+            "path": result.get("path", f"chunks/{result['id']}.json"),
+            "duplicate": bool(result.get("duplicate", False)),
+            "title": decision["title"],
+            "hit_words": decision["hit_words"],
+            "request_id": decision["request_id"],
+        }
+    })
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="HFA 2.2 PreInvocation lifecycle hook (stdlib-only, fail-open)"
+        description="HFA 2.2 lifecycle hook: PreInvocation recall + PostInvocation/Stop auto-persist"
     )
     parser.add_argument(
         "--memory-dir",
         type=Path,
         default=None,
         help="Optional explicit memory directory (overrides HFA_MEMORY_DIR and workspace discovery)",
+    )
+    parser.add_argument(
+        "--phase",
+        default="auto",
+        help="Lifecycle hook phase: auto, pre (PreInvocation), post (PostInvocation), or stop (Stop)",
+    )
+    parser.add_argument(
+        "--auto-init",
+        action="store_true",
+        help="Automatically initialize workspace memory directory if not yet initialized",
+    )
+    parser.add_argument(
+        "--no-auto-init",
+        action="store_true",
+        help="Disable automatic initialization on PostInvocation/Stop",
     )
     parser.add_argument(
         "--print-hooks",
@@ -106,26 +514,37 @@ def main() -> int:
     args, _ = parser.parse_known_args()
 
     if args.print_hooks:
-        if args.memory_dir is None:
-            print("--print-hooks requires --memory-dir", file=sys.stderr)
-            return 1
         try:
-            resolved_dir = args.memory_dir.resolve()
+            resolved_dir = _default_memory_dir(args.memory_dir).resolve()
             py_exe = str(Path(sys.executable).resolve())
             hook_script = str(Path(__file__).resolve())
         except OSError as exc:
             print(str(exc), file=sys.stderr)
             return 1
-        cmd = f'"{py_exe}" -B "{hook_script}" --memory-dir "{resolved_dir}"'
+        base_cmd = f'"{py_exe}" -B "{hook_script}" --memory-dir "{resolved_dir}"'
         config = {
             "hfa-auto-recall": {
                 "PreInvocation": [
                     {
                         "type": "command",
-                        "command": cmd,
+                        "command": f"{base_cmd} --phase pre",
                         "timeout": 10,
                     }
-                ]
+                ],
+                "PostInvocation": [
+                    {
+                        "type": "command",
+                        "command": f"{base_cmd} --phase post",
+                        "timeout": 10,
+                    }
+                ],
+                "Stop": [
+                    {
+                        "type": "command",
+                        "command": f"{base_cmd} --phase stop",
+                        "timeout": 10,
+                    }
+                ],
             }
         }
         print(json.dumps(config, ensure_ascii=False, indent=2))
@@ -141,12 +560,28 @@ def main() -> int:
     except Exception:
         return _emit({})
 
-    query = payload.get("lastUserInput")
+    phase = _detect_phase(args.phase, payload)
+    env_auto_init = os.environ.get("HFA_AUTO_INIT", "").strip().lower() in ("1", "true", "yes")
+
+    if phase in ("post", "stop"):
+        decision = _extract_turn_decision(payload, phase)
+        if decision is None:
+            return _emit({})
+        root = _resolve_memory_dir(
+            args.memory_dir,
+            payload,
+            allow_auto_init=not args.no_auto_init,
+        )
+        if root is None:
+            return _emit({})
+        return _handle_post_or_stop(root, decision)
+
+    query = payload.get("lastUserInput") or payload.get("userInput") or payload.get("prompt")
     if not isinstance(query, str) or not query.strip():
         return _emit({})
     query = query.strip()[:8000]
 
-    root = _resolve_memory_dir(args.memory_dir, payload)
+    root = _resolve_memory_dir(args.memory_dir, payload, allow_auto_init=args.auto_init or env_auto_init)
     if root is None:
         return _emit({})
 

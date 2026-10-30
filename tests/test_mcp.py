@@ -10,10 +10,20 @@ from pathlib import Path
 
 try:
     from mcp import Client, StdioServerParameters
+    try:
+        from mcp.client.stdio import stdio_client
+    except ImportError:
+        stdio_client = None
 except ImportError:
-    Client = StdioServerParameters = None
+    Client = StdioServerParameters = stdio_client = None
 
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def _open_client(params):
+    if hasattr(params, "__aenter__") or stdio_client is None:
+        return Client(params)
+    return Client(stdio_client(params))
 
 
 class MCPIntegrationTests(unittest.IsolatedAsyncioTestCase):
@@ -30,17 +40,29 @@ class MCPIntegrationTests(unittest.IsolatedAsyncioTestCase):
             entry = payload["mcpServers"]["hfa-project-memory"]
             self.assertEqual(entry["args"][-1], str(uninitialized.resolve()))
 
+            # Zero-config invocation without --memory-dir resolves HFA_MEMORY_DIR or ./memory
+            env = os.environ.copy()
+            env["HFA_MEMORY_DIR"] = str(uninitialized)
+            proc_zero = subprocess.run(
+                [sys.executable, "-B", str(ROOT / "scripts/hfa_mcp.py"), "--print-config"],
+                capture_output=True, encoding="utf-8", env=env, timeout=30,
+            )
+            self.assertEqual(proc_zero.returncode, 0, proc_zero.stderr)
+            payload_zero = json.loads(proc_zero.stdout)
+            self.assertEqual(
+                payload_zero["mcpServers"]["hfa-project-memory"]["args"][-1],
+                str(uninitialized.resolve()),
+            )
+
     @unittest.skipIf(Client is None, "optional mcp SDK not installed")
     async def test_real_client_write_recall_retry_update_restart_and_error(self):
         with tempfile.TemporaryDirectory(prefix="hfa-mcp-") as temp:
+            # Start without pre-running `init` and without `--memory-dir` to exercise zero-config auto-init
             memory = Path(temp) / "memory"
-            created = subprocess.run([sys.executable, "-B", str(ROOT / "scripts/hfa_manager.py"), "init", str(memory)],
-                                     capture_output=True, encoding="utf-8", timeout=30)
-            self.assertEqual(created.returncode, 0, created.stderr)
             params = StdioServerParameters(command=sys.executable,
-                args=["-B", str(ROOT / "scripts/hfa_mcp.py"), "--memory-dir", str(memory)],
-                env={"PYTHONUTF8": "1", "PYTHONDONTWRITEBYTECODE": "1"})
-            async with Client(params) as client:
+                args=["-B", str(ROOT / "scripts/hfa_mcp.py")],
+                env={"PYTHONUTF8": "1", "PYTHONDONTWRITEBYTECODE": "1", "HFA_MEMORY_DIR": str(memory)})
+            async with _open_client(params) as client:
                 listed = await client.list_tools()
                 self.assertEqual({t.name for t in listed.tools}, {"remember_decision", "recall_memory", "memory_health"})
                 health = await client.call_tool("memory_health", {})
@@ -72,7 +94,10 @@ class MCPIntegrationTests(unittest.IsolatedAsyncioTestCase):
                 self.assertFalse(strange.is_error)
                 unknown = await client.call_tool("recall_memory", {"query": "今晚吃什么"})
                 self.assertEqual(unknown.structured_content["memory_text"], "")
-            async with Client(params) as restarted:
+            explicit_params = StdioServerParameters(command=sys.executable,
+                args=["-B", str(ROOT / "scripts/hfa_mcp.py"), "--memory-dir", str(memory)],
+                env={"PYTHONUTF8": "1", "PYTHONDONTWRITEBYTECODE": "1"})
+            async with _open_client(explicit_params) as restarted:
                 result = await restarted.call_tool("recall_memory", {"query": "garbled text"})
                 self.assertEqual([m["id"] for m in result.structured_content["matches"]], [new_id])
                 self.assertIn("UTF-8-SIG", result.structured_content["memory_text"])

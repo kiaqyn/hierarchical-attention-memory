@@ -1,0 +1,56 @@
+[build-system]
+requires = []
+build-backend = "scripts._build_backend"
+backend-path = ["."]
+
+[project]
+name = "hierarchical-attention-memory"
+version = "2.2.0"
+description = "Local transactional file memory for AI coding agents: L0 mainline focus lock, L1 JSON source of truth, SQLite FTS5 hybrid search, lifecycle hooks, and stdio MCP server."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "HFA Contributors"},
+]
+keywords = [
+    "ai-memory",
+    "agent-memory",
+    "mcp",
+    "claude-code",
+    "sqlite-fts5",
+    "hierarchical-attention",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = []
+
+[project.optional-dependencies]
+mcp = [
+    "mcp==2.3.0; python_version >= '3.11'",
+]
+tokenizer = [
+    "tiktoken==0.14.0",
+]
+all = [
+    "mcp==2.3.0; python_version >= '3.11'",
+    "tiktoken==0.14.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/kiaqyn/hierarchical-attention-memory"
+Repository = "https://github.com/kiaqyn/hierarchical-attention-memory"
+
+[project.scripts]
+hfa = "scripts.hfa_manager:main"
+hfa-mcp = "scripts.hfa_mcp:main"
+hfa-hook = "scripts.hfa_hook:main"

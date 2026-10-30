@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -12,11 +13,32 @@ from typing import Any
 CLI = Path(__file__).with_name("hfa_manager.py")
 
 
-def create_server(memory_dir: Path):
+def _default_memory_dir(explicit: Path | None = None) -> Path:
+    if explicit is not None:
+        return Path(explicit)
+    env_dir = os.environ.get("HFA_MEMORY_DIR", "").strip()
+    if env_dir:
+        return Path(env_dir)
+    cwd = Path.cwd().resolve()
+    for rel in ("memory", ".agents/memory", ".hfa/memory"):
+        candidate = cwd / rel
+        if (candidate / "directory.md").is_file():
+            return candidate
+    return cwd / "memory"
+
+
+def create_server(memory_dir: Path | None = None, auto_init: bool = True):
     from mcp.server import MCPServer
     from mcp.server.mcpserver.exceptions import ToolError
 
-    root = memory_dir.resolve(strict=True)
+    target = _default_memory_dir(memory_dir)
+    if auto_init and not (target / "directory.md").is_file():
+        if not target.exists() or (target.is_dir() and not any(target.iterdir())):
+            subprocess.run(
+                [sys.executable, "-B", str(CLI), "init", str(target), "--force"],
+                capture_output=True, encoding="utf-8", timeout=30, check=True,
+            )
+    root = target.resolve(strict=True)
     if not (root / "directory.md").is_file():
         raise ValueError("Initialize a dedicated memory directory with the CLI first")
     server = MCPServer(
@@ -111,14 +133,16 @@ def create_server(memory_dir: Path):
 
 def main():
     parser = argparse.ArgumentParser(description="HFA stdio MCP server (Python 3.11+; optional SDK)")
-    parser.add_argument("--memory-dir", required=True, type=Path,
-                        help="Existing project memory. Tools cannot change this root.")
+    parser.add_argument("--memory-dir", required=False, default=None, type=Path,
+                        help="Project memory directory (defaults to HFA_MEMORY_DIR or ./memory; auto-initializes if empty).")
+    parser.add_argument("--no-auto-init", action="store_true",
+                        help="Disable automatic initialization when memory_dir does not exist yet")
     parser.add_argument("--print-config", action="store_true",
                         help="Print a launch entry with verified absolute paths, then exit")
     args = parser.parse_args()
     if args.print_config:
         try:
-            resolved_dir = args.memory_dir.resolve()
+            resolved_dir = _default_memory_dir(args.memory_dir).resolve()
         except OSError as exc:
             print(str(exc), file=sys.stderr)
             return 1
@@ -129,11 +153,11 @@ def main():
         }}}, ensure_ascii=False, indent=2))
         return 0
     try:
-        server = create_server(args.memory_dir)
+        server = create_server(args.memory_dir, auto_init=not args.no_auto_init)
     except ImportError:
         print("Install requirements-mcp.txt in your project virtual environment first.", file=sys.stderr)
         return 1
-    except (ValueError, OSError) as exc:
+    except (ValueError, OSError, subprocess.CalledProcessError) as exc:
         print(str(exc), file=sys.stderr)
         return 1
     server.run(transport="stdio")

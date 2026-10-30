@@ -7,3 +7,6 @@ venv/
 .hfa-transaction.json
 .hfa.lock
 access.jsonl
+build/
+dist/
+*.egg-info/

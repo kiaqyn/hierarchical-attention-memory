@@ -14,6 +14,7 @@ import math
 import unicodedata
 import os
 import re
+import sqlite3
 import sys
 import tempfile
 import threading
@@ -25,7 +26,11 @@ for _stream in (sys.stdout, sys.stderr):
         _stream.reconfigure(encoding="utf-8", errors="replace")
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
-TEMPLATE_MEMORY_DIR = ROOT_DIR / "templates/memory"
+TEMPLATE_MEMORY_DIR = (
+    ROOT_DIR / "templates/memory"
+    if (ROOT_DIR / "templates/memory").is_dir()
+    else Path(__file__).resolve().parent / "templates/memory"
+)
 # One re-entrant thread lock per memory root: different memory directories in the
 # same process never serialize each other; the file lock handles other processes.
 _ROOT_LOCKS: dict[str, threading.RLock] = {}
@@ -33,6 +38,21 @@ _ROOT_LOCKS_GUARD = threading.Lock()
 JOURNAL = ".hfa-transaction.json"
 DEFAULT_CONFIG = {"version": "2.2", "active_mainline": "M1", "router_token_budget": 600,
                   "recall_token_budget": 600, "max_topics_per_epoch": 50, "max_recall_topics": 2}
+
+
+def resolve_default_memory_dir(explicit: Path | None = None, cwd: Path | None = None) -> Path:
+    """Resolve an explicit memory path, HFA_MEMORY_DIR, or workspace default ./memory."""
+    if explicit is not None:
+        return Path(explicit)
+    env_dir = os.environ.get("HFA_MEMORY_DIR", "").strip()
+    if env_dir:
+        return Path(env_dir)
+    base = (cwd or Path.cwd()).resolve()
+    for rel in ("memory", ".agents/memory", ".hfa/memory"):
+        candidate = base / rel
+        if (candidate / "directory.md").is_file():
+            return candidate
+    return base / "memory"
 
 class MemoryError(ValueError):
     """Invalid input, inconsistent state, or failed recovery."""
@@ -150,6 +170,21 @@ def _root_lock(root):
     with _ROOT_LOCKS_GUARD:
         return _ROOT_LOCKS.setdefault(key, threading.RLock())
 
+def _to_bytes(content: str | bytes) -> bytes:
+    return content if isinstance(content, bytes) else content.encode("utf-8")
+
+def _file_matches(path: Path, expected: str | bytes) -> bool:
+    if not path.is_file():
+        return False
+    if isinstance(expected, bytes):
+        actual = path.read_bytes()
+        if actual == expected:
+            return True
+        if len(expected) >= 100 and len(actual) == len(expected) and expected.startswith(b"SQLite format 3\x00"):
+            return actual[:92] == expected[:92] and actual[100:] == expected[100:]
+        return False
+    return _read_utf8(path) == expected
+
 def _commit(root, updates):
     """Must hold _hfa_lock. CLI readers see committed or recovered state.
 
@@ -162,7 +197,7 @@ def _commit(root, updates):
         if target.exists() and not target.is_file():
             raise MemoryError(f"Write target is not a file: {relative}")
         old = target.read_bytes() if target.exists() else None
-        if old == content.encode("utf-8"):
+        if old == _to_bytes(content):
             continue
         entries.append({"path": relative, "before": base64.b64encode(old).decode("ascii") if old is not None else None})
     if not entries:
@@ -172,7 +207,7 @@ def _commit(root, updates):
     _atomic_write(journal, _json(state).encode("utf-8"))
     try:
         for entry in entries:
-            _atomic_write(_safe_path(root, entry["path"]), updates[entry["path"]].encode("utf-8"))
+            _atomic_write(_safe_path(root, entry["path"]), _to_bytes(updates[entry["path"]]))
         state["state"] = "committed"
         _atomic_write(journal, _json(state).encode("utf-8"))
     except BaseException:
@@ -197,6 +232,7 @@ _CJK_RANGES = ("\u2e80-\u2fff\u3000-\u303f\u3040-\u30ff\u3100-\u31ff\u3400-\u4db
                "\uac00-\ud7af\uf900-\ufaff\ufe30-\ufe4f\uff00-\uffef")
 _HEURISTIC_PIECES = re.compile(rf"[A-Za-z]+|[0-9]+|[{_CJK_RANGES}]|[ \t]+|[\r\n]+|.", re.S)
 
+@functools.lru_cache(maxsize=4096)
 def _heuristic_tokens(text):
     """Conservative o200k-style estimate used only when tiktoken is unavailable.
 
@@ -282,11 +318,11 @@ def _positive_query(query):
 
 # Small, auditable vocabulary; this is lexical expansion, not an embedding model.
 DEFAULT_ALIASES = [
-    ["乱码", "中文变问号", "文字变成问号", "mojibake", "garbled text"],
+    ["乱码", "中文变问号", "文字变成问号", "看不懂的符号", "mojibake", "garbled text"],
     ["部署", "上线", "deployment", "deploy"],
     ["备份", "backup"], ["并发", "同时写入", "concurrency"],
     ["超时", "等太久", "timeout", "timed out"],
-    ["回滚", "撤销更改", "rollback"],
+    ["回滚", "撤销更改", "撤回", "rollback"],
 ]
 STOP_TERMS = set("the a an to of is are in on for with how what was were please find recall previous this that it and or my we do not should about 的是 之前 怎么 如何 这个 那个 我们 记得 请问 一下 什么 现在 继续 方案 问题 处理 需要 已经 可以 当时 后来 是否 结果".split())
 # Common English words: indexed and matchable, but never sufficient evidence alone.
@@ -315,7 +351,130 @@ def _search_terms(text, config):
     custom = tuple(tuple(g) for g in config.get("retrieval_aliases", []))
     return set(_search_terms_cached(text, custom))
 
-def _rank_content(query, documents, config):
+@functools.lru_cache(maxsize=1)
+def _fts5_supported() -> bool:
+    try:
+        conn = sqlite3.connect(":memory:")
+        try:
+            conn.execute("CREATE VIRTUAL TABLE _t USING fts5(x)")
+        finally:
+            conn.close()
+        return True
+    except Exception:
+        return False
+
+@functools.lru_cache(maxsize=16)
+def _build_fts_cached(digest: str, docs_json: str) -> bytes:
+    documents = json.loads(docs_json)
+    df_counts: dict[str, int] = {}
+    for doc in documents.values():
+        for term in set(doc["terms"]):
+            df_counts[term] = df_counts.get(term, 0) + 1
+
+    def _populate(conn: sqlite3.Connection) -> None:
+        conn.execute("PRAGMA page_size = 4096")
+        conn.execute("PRAGMA journal_mode = OFF")
+        conn.execute("PRAGMA synchronous = OFF")
+        conn.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT)")
+        conn.execute("INSERT INTO meta VALUES ('version', '1'), ('source_digest', ?)", (digest,))
+        conn.execute("CREATE TABLE term_df (term TEXT PRIMARY KEY, df INTEGER)")
+        for term in sorted(df_counts):
+            conn.execute("INSERT INTO term_df VALUES (?, ?)", (term, df_counts[term]))
+        if _fts5_supported():
+            conn.execute(
+                "CREATE VIRTUAL TABLE chunks_fts USING fts5("
+                "chunk_id UNINDEXED, heading, body, "
+                "tokenize=\"unicode61 tokenchars ':_.-'\")"
+            )
+            for chunk_id in sorted(documents):
+                doc = documents[chunk_id]
+                conn.execute(
+                    "INSERT INTO chunks_fts VALUES (?, ?, ?)",
+                    (chunk_id, " ".join(doc["heading"]), " ".join(doc["terms"])),
+                )
+        conn.commit()
+
+    conn = sqlite3.connect(":memory:")
+    try:
+        _populate(conn)
+        if hasattr(conn, "serialize"):
+            return conn.serialize()
+    finally:
+        conn.close()
+    with tempfile.NamedTemporaryFile(prefix=".hfa-fts-", delete=False) as tmp:
+        tmp_path = Path(tmp.name)
+    try:
+        fconn = sqlite3.connect(str(tmp_path))
+        try:
+            _populate(fconn)
+        finally:
+            fconn.close()
+        return tmp_path.read_bytes()
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+_FTS_THREAD_LOCAL = threading.local()
+
+def _fts_search(terms: set[str], fts_bytes: bytes | None) -> tuple[dict[str, float] | None, dict[str, int] | None]:
+    if not fts_bytes or not terms or not _fts5_supported():
+        return None, None
+    tmp_path: Path | None = None
+    temp_conn: sqlite3.Connection | None = None
+    try:
+        cache = getattr(_FTS_THREAD_LOCAL, "conn_cache", None)
+        if cache is None or cache[0] != fts_bytes:
+            if cache is not None:
+                try:
+                    cache[1].close()
+                except Exception:
+                    pass
+            conn = sqlite3.connect(":memory:")
+            if hasattr(conn, "deserialize"):
+                conn.deserialize(fts_bytes)
+                _FTS_THREAD_LOCAL.conn_cache = (fts_bytes, conn)
+            else:
+                conn.close()
+                with tempfile.NamedTemporaryFile(prefix=".hfa-fts-q-", delete=False) as tmp:
+                    tmp.write(fts_bytes)
+                    tmp_path = Path(tmp.name)
+                temp_conn = sqlite3.connect(str(tmp_path))
+                conn = temp_conn
+        else:
+            conn = cache[1]
+        term_list = sorted(terms)
+        placeholders = ",".join("?" for _ in term_list)
+        df_rows = conn.execute(
+            f"SELECT term, df FROM term_df WHERE term IN ({placeholders})",
+            term_list,
+        ).fetchall()
+        df_map = {t: 0 for t in terms}
+        present_terms: list[str] = []
+        for term, df in df_rows:
+            df_int = int(df)
+            df_map[str(term)] = df_int
+            if df_int > 0:
+                present_terms.append(str(term))
+        if not present_terms:
+            return {}, df_map
+        match_expr = " OR ".join('"' + t.replace('"', '""') + '"' for t in present_terms)
+        rows = conn.execute(
+            "SELECT chunk_id, -bm25(chunks_fts, 0.0, 3.0, 1.0) "
+            "FROM chunks_fts WHERE chunks_fts MATCH ?",
+            (match_expr,),
+        ).fetchall()
+        return {str(cid): float(bm25_val) for cid, bm25_val in rows}, df_map
+    except Exception:
+        return None, None
+    finally:
+        if temp_conn is not None:
+            try:
+                temp_conn.close()
+            except Exception:
+                pass
+        if tmp_path is not None:
+            tmp_path.unlink(missing_ok=True)
+
+def _rank_content(query, documents, config, fts_bytes=None):
     # Filler words may still match documents, but never count as evidence on their own,
     # never dilute coverage and never count as "unexplained" query concepts.
     terms = {t for t in _search_terms(query, config) if t not in GENERIC_TERMS}
@@ -327,11 +486,17 @@ def _rank_content(query, documents, config):
         words = _search_terms(" ".join(group), {"retrieval_aliases": []})
         alias_terms.setdefault("alias:" + _normalize_for_match(group[0]), set()).update(
             t for t in words if not t.startswith("alias:"))
-    frequency = {t: sum(t in d["terms"] for d in documents.values()) for t in terms}
+    fts_candidates, fts_df = _fts_search(terms, fts_bytes)
+    if fts_df is not None:
+        frequency = fts_df
+        candidate_items = [(cid, documents[cid]) for cid in fts_candidates if cid in documents]
+    else:
+        frequency = {t: sum(t in d["terms"] for d in documents.values()) for t in terms}
+        candidate_items = list(documents.items())
     weights = {t: 1 + math.log((len(documents) + 1) / (frequency[t] + 1)) for t in terms}
     total = sum(weights.values())
     ranked = []
-    for chunk_id, doc in documents.items():
+    for chunk_id, doc in candidate_items:
         shared = terms.intersection(doc["terms"])
         if not shared:
             continue
@@ -557,10 +722,18 @@ def _summary_updates(root, chunks, epoch):
             result[f"history/legacy-backups/epoch_{epoch:02d}-{digest}.md"] = old
     return result
 
+_DERIVED_CACHE: dict[tuple[str, str], dict[str, str | bytes]] = {}
+
 def _derived(root, state, chunks, overrides=None):
     if overrides and "directory.md" in overrides:
         state = parse_directory_nodes(root / "directory.md", overrides["directory.md"])
-    digest, entries, projects = _digest(root, overrides), {}, {}
+    digest = _digest(root, overrides)
+    config = _config(root)
+    cache_key = (digest, _json(config))
+    cached = _DERIVED_CACHE.get(cache_key)
+    if cached is not None:
+        return cached.copy()
+    entries, projects = {}, {}
     for tier, group in state["nodes"].items():
         for node in group:
             projects[node["id"]] = {"tier": tier, "path": node["path"], "status": node["status"]}
@@ -569,13 +742,17 @@ def _derived(root, state, chunks, overrides=None):
     for chunk in chunks:
         for word in chunk["hitwords"]:
             entries.setdefault(_normalize_for_match(word), []).append({"kind": "chunk", "id": chunk["id"]})
-    config = _config(root)
     documents = {c["id"]: {"heading": sorted(_search_terms(c["title"] + " " + " ".join(c["hitwords"]), config)),
                             "terms": sorted(_search_terms(c["title"] + " " + " ".join(c["hitwords"] + c["summary"]), config))}
                  for c in chunks}
-    return {"index/search.json": _json({"version": 1, "source_digest": digest, "documents": documents}),
-            "index/hitwords.json": _json({"version": 1, "source_digest": digest, "entries": entries}),
-            "index/projects.json": _json({"version": 1, "source_digest": digest, "entries": projects})}
+    result = {"index/search.json": _json({"version": 1, "source_digest": digest, "documents": documents}),
+              "index/hitwords.json": _json({"version": 1, "source_digest": digest, "entries": entries}),
+              "index/projects.json": _json({"version": 1, "source_digest": digest, "entries": projects}),
+              "index/fts.sqlite": _build_fts_cached(digest, _json(documents))}
+    if len(_DERIVED_CACHE) >= 32:
+        _DERIVED_CACHE.clear()
+    _DERIVED_CACHE[cache_key] = result
+    return result.copy()
 
 def _chunk_text(chunk):
     return (f"[{chunk['id']} | {chunk['topic_id']} | epoch_{chunk['epoch']:02d} | {chunk['project']}] "
@@ -613,20 +790,22 @@ def _framework_update(root, epoch, status):
         text = text.rstrip("\n") + f"\n\nStatus: {status}\n"
     return {relative: text}
 
-def cmd_init(target_dir, force=False):
-    target_dir = target_dir.resolve()
+def cmd_init(target_dir, force=False, quiet=False):
+    target_dir = resolve_default_memory_dir(target_dir).resolve()
     if target_dir.exists() and not target_dir.is_dir():
         raise MemoryError("Initialization target must be a directory")
     if target_dir.exists() and any(target_dir.iterdir()) and not force:
         raise MemoryError("Target not empty; --force only fills missing files")
     target_dir.mkdir(parents=True, exist_ok=True)
     with _hfa_lock(target_dir):
-        updates = {p.relative_to(TEMPLATE_MEMORY_DIR).as_posix(): _read_utf8(p)
-                   for p in TEMPLATE_MEMORY_DIR.rglob("*") if p.is_file()
+        updates = {p.relative_to(TEMPLATE_MEMORY_DIR).as_posix(): p.read_bytes()
+                   for p in TEMPLATE_MEMORY_DIR.rglob("*")
+                   if p.is_file() and not p.name.startswith(".hfa") and "__pycache__" not in p.parts
                    and not (target_dir / p.relative_to(TEMPLATE_MEMORY_DIR)).exists()}
         _commit(target_dir, updates)
-    cmd_reindex(target_dir)
-    print(f"[OK] Initialized memory at {target_dir}")
+    cmd_reindex(target_dir, quiet=quiet)
+    if not quiet:
+        print(f"[OK] Initialized memory at {target_dir}")
     return 0
 
 def cmd_status(root, as_json=False):
@@ -637,7 +816,7 @@ def cmd_status(root, as_json=False):
         state["topic_count"] = sum(c["epoch"] == epoch for c in chunks)
         state["total_topics"] = len(chunks)
         expected = _derived(root, state, chunks)
-        state["stale_indexes"] = [p for p, content in expected.items() if not (root / p).is_file() or _read_utf8(root / p) != content]
+        state["stale_indexes"] = [p for p, content in expected.items() if not _file_matches(root / p, content)]
         state["stale_summaries"] = [f"history/epoch_{e:02d}/summaries.md" for e in sorted({c["epoch"] for c in chunks})
                                     if not (root / f"history/epoch_{e:02d}/summaries.md").is_file()
                                     or _read_utf8(root / f"history/epoch_{e:02d}/summaries.md") != _render_summaries(chunks, e)]
@@ -659,7 +838,7 @@ def cmd_status(root, as_json=False):
             print(f"[ERROR] {problem}")
     return 1 if problems else 0
 
-def cmd_reindex(root, verify=False):
+def cmd_reindex(root, verify=False, quiet=False):
     with _hfa_lock(root):
         state = parse_directory_nodes(root / "directory.md")
         chunks = _chunks(root, state)
@@ -667,12 +846,13 @@ def cmd_reindex(root, verify=False):
         updates.update(_derived(root, state, chunks, updates))
         for epoch in sorted({c["epoch"] for c in chunks}):
             updates.update(_summary_updates(root, chunks, epoch))
-        differences = [p for p, content in updates.items() if not (root / p).is_file() or _read_utf8(root / p) != content]
+        differences = [p for p, content in updates.items() if not _file_matches(root / p, content)]
         if verify:
             print(_json({"consistent": not differences, "differences": differences}), end="")
             return 1 if differences else 0
         _commit(root, updates)
-    print("[OK] Rebuilt indexes and Markdown views from L0/L1")
+    if not quiet:
+        print("[OK] Rebuilt indexes and Markdown views from L0/L1")
     return 0
 
 def cmd_add_topic(root, title, hit_words, conclusion, milestone_log=None, project=None,
@@ -820,7 +1000,7 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid"):
         chunks = _chunks(root, state)
         expected = _derived(root, state, chunks)
         for relative, content in expected.items():
-            if not (root / relative).is_file() or _read_utf8(root / relative) != content:
+            if not _file_matches(root / relative, content):
                 raise MemoryError(f"Stale index: {relative}; run reindex")
         index = json.loads(_read_utf8(root / "index/hitwords.json"))["entries"]
         positive, refs, matched = _positive_query(query), [], []
@@ -835,7 +1015,8 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid"):
                     kw_terms.setdefault(key, set()).add(word)
         if mode == "hybrid":
             documents = json.loads(_read_utf8(root / "index/search.json"))["documents"]
-            for chunk_id, score, terms in _rank_content(positive, documents, config):
+            fts_bytes = expected.get("index/fts.sqlite")
+            for chunk_id, score, terms in _rank_content(positive, documents, config, fts_bytes=fts_bytes):
                 key = ("chunk", chunk_id)
                 scores[key] = scores.get(key, 0) + score
                 content_terms[key] = set(terms)
@@ -913,17 +1094,26 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid"):
     print(_json(result), end="")
     return 0
 
+def _ensure_memory_dir(explicit: Path | None, auto_init: bool = False) -> Path:
+    target = resolve_default_memory_dir(explicit)
+    should_init = auto_init or os.environ.get("HFA_AUTO_INIT", "").strip().lower() in ("1", "true", "yes")
+    if should_init and not (target / "directory.md").is_file():
+        if not target.exists() or (target.is_dir() and not any(target.iterdir())):
+            cmd_init(target, force=True, quiet=True)
+    return target
+
 def main():
     parser = argparse.ArgumentParser(description="HFA local file-memory manager (2.2)")
     subs = parser.add_subparsers(dest="command", required=True)
     init = subs.add_parser("init", help="Initialize; --force preserves existing files and fills gaps")
-    init.add_argument("memory_dir", type=Path)
+    init.add_argument("memory_dir", nargs="?", type=Path, default=None, help="Target memory directory (defaults to HFA_MEMORY_DIR or ./memory)")
     init.add_argument("--force", action="store_true")
     status = subs.add_parser("status", help="Audit L0, L1, views and full-text token budget")
-    status.add_argument("memory_dir", type=Path)
+    status.add_argument("memory_dir", nargs="?", type=Path, default=None, help="Target memory directory (defaults to HFA_MEMORY_DIR or ./memory)")
     status.add_argument("--json", action="store_true")
+    status.add_argument("--auto-init", action="store_true", help="Initialize memory directory if not yet initialized")
     topic = subs.add_parser("add-topic", help="Transactionally store L1 and rebuild views")
-    topic.add_argument("memory_dir", type=Path)
+    topic.add_argument("memory_dir", nargs="?", type=Path, default=None, help="Target memory directory (defaults to HFA_MEMORY_DIR or ./memory)")
     for arg in ("title", "hit-words", "conclusion"):
         topic.add_argument("--" + arg, required=True)
     topic.add_argument("--milestone")
@@ -932,36 +1122,39 @@ def main():
     topic.add_argument("--supersedes", action="append", default=[], help="Explicit old chunk ID; repeatable")
     topic.add_argument("--request-id", help="Stable event ID for retry-safe writes")
     topic.add_argument("--json", action="store_true")
+    topic.add_argument("--auto-init", action="store_true", help="Initialize memory directory if not yet initialized")
     tomb = subs.add_parser("tombstone", help="Logically archive a branch with an audit event")
-    tomb.add_argument("memory_dir", type=Path)
+    tomb.add_argument("memory_dir", nargs="?", type=Path, default=None, help="Target memory directory (defaults to HFA_MEMORY_DIR or ./memory)")
     tomb.add_argument("--id", required=True)
     tomb.add_argument("--hit-words")
     tomb.add_argument("--reason")
     for name in ("route", "recall"):
         route = subs.add_parser(name, help="Return bounded L1 snippets; side branches need --unlock")
-        route.add_argument("memory_dir", type=Path)
+        route.add_argument("memory_dir", nargs="?", type=Path, default=None, help="Target memory directory (defaults to HFA_MEMORY_DIR or ./memory)")
         route.add_argument("--query", required=True)
         route.add_argument("--mainline")
         route.add_argument("--mode", choices=("hybrid", "keyword"), default="hybrid")
         route.add_argument("--unlock", help="Explicit reason for reading non-mainline or tombstoned memory")
+        route.add_argument("--auto-init", action="store_true", help="Initialize memory directory if not yet initialized")
     for name in ("reindex", "summarize"):
         rebuild = subs.add_parser(name, help="Rebuild indexes and Markdown views from L0/L1")
-        rebuild.add_argument("memory_dir", type=Path)
+        rebuild.add_argument("memory_dir", nargs="?", type=Path, default=None, help="Target memory directory (defaults to HFA_MEMORY_DIR or ./memory)")
         rebuild.add_argument("--verify", "--check", dest="verify", action="store_true")
     args = parser.parse_args()
     try:
         if args.command == "init":
-            return cmd_init(args.memory_dir, args.force)
+            return cmd_init(resolve_default_memory_dir(args.memory_dir), args.force)
+        target_dir = _ensure_memory_dir(args.memory_dir, getattr(args, "auto_init", False))
         if args.command == "status":
-            return cmd_status(args.memory_dir, args.json)
+            return cmd_status(target_dir, args.json)
         if args.command == "add-topic":
-            return cmd_add_topic(args.memory_dir, args.title, args.hit_words, args.conclusion, args.milestone, args.project,
+            return cmd_add_topic(target_dir, args.title, args.hit_words, args.conclusion, args.milestone, args.project,
                                  args.source, args.supersedes, args.request_id, args.json)
         if args.command == "tombstone":
-            return cmd_tombstone(args.memory_dir, args.id, args.hit_words, args.reason)
+            return cmd_tombstone(target_dir, args.id, args.hit_words, args.reason)
         if args.command in ("route", "recall"):
-            return cmd_route(args.memory_dir, args.query, args.mainline, args.unlock, args.mode)
-        return cmd_reindex(args.memory_dir, args.verify)
+            return cmd_route(target_dir, args.query, args.mainline, args.unlock, args.mode)
+        return cmd_reindex(target_dir, args.verify)
     except (MemoryError, OSError, ValueError, KeyError) as exc:
         print(_json({"error": str(exc), "command": args.command}), end="")
         return 1

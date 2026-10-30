@@ -442,5 +442,78 @@ hfa.cmd_add_topic(Path(sys.argv[2]),"Committed","committed-key","fact")
         self.assertGreaterEqual(unlocked["selected"][0]["score"], 100)
         self.assertIn("match", unlocked["selected"][0])
 
+    def test_sqlite_fts5_index_created_verified_and_rebuilt(self):
+        import sqlite3
+        self.add("SQLite FTS5 检索层", "fts5-engine", "使用内置 sqlite3 FTS5 加速混合检索与候选过滤。")
+        fts_path = self.mem / "index/fts.sqlite"
+        self.assertTrue(fts_path.is_file())
+        conn = sqlite3.connect(str(fts_path))
+        try:
+            digest = dict(conn.execute("SELECT key, value FROM meta").fetchall())["source_digest"]
+            self.assertEqual(digest, hfa._digest(self.mem))
+            if hfa._fts5_supported():
+                rows = conn.execute("SELECT chunk_id FROM chunks_fts WHERE chunks_fts MATCH ?", ('"fts5-engine"',)).fetchall()
+                self.assertEqual(rows, [("chunk_0002",)])
+        finally:
+            conn.close()
+        saved_bytes = fts_path.read_bytes()
+        # Different SQLite C library minor versions at header offset 96..100 must not trigger false staleness
+        diff_ver = bytearray(saved_bytes)
+        diff_ver[96:100] = b"\x00\x2e\x76\xab"
+        fts_path.write_bytes(bytes(diff_ver))
+        self.assertEqual(invoke(hfa.cmd_status, self.mem, True)[0], 0)
+        # Actual corruption or page tampering must be rejected and rebuilt
+        fts_path.write_bytes(b"corrupted-sqlite")
+        self.assertEqual(invoke(hfa.cmd_status, self.mem, True)[0], 1)
+        with self.assertRaises(hfa.MemoryError):
+            self.route("fts5-engine")
+        invoke(hfa.cmd_reindex, self.mem)
+        self.assertEqual(fts_path.read_bytes(), saved_bytes)
+        self.assertEqual(invoke(hfa.cmd_reindex, self.mem, True)[0], 0)
+
+    def test_zero_config_default_memory_dir_and_auto_init(self):
+        auto_dir = self.path / "auto_memory"
+        env = {"HFA_MEMORY_DIR": str(auto_dir)}
+        # 1. --auto-init on status --json initializes and returns pure JSON
+        proc = self.cli("status", "--json", "--auto-init", env=env)
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        state = json.loads(proc.stdout)
+        self.assertEqual(state["problems"], [])
+        self.assertTrue((auto_dir / "directory.md").is_file())
+        # 2. add-topic and recall without explicit memory_dir argument
+        added = self.cli("add-topic", "--title", "零配置写入", "--hit-words", "zero-cfg-key",
+                         "--conclusion", "省略 memory_dir 时默认解析 HFA_MEMORY_DIR 或 ./memory。", "--json", env=env)
+        self.assertEqual(added.returncode, 0, added.stdout + added.stderr)
+        self.assertEqual(json.loads(added.stdout)["id"], "chunk_0002")
+        recalled = self.cli("recall", "--query", "zero-cfg-key", env=env)
+        self.assertEqual(recalled.returncode, 0, recalled.stdout + recalled.stderr)
+        self.assertIn("零配置写入", json.loads(recalled.stdout)["recall_text"])
+
+    def test_pep517_stdlib_build_backend_wheel_and_editable(self):
+        import tarfile
+        import zipfile
+        backend_spec = importlib.util.spec_from_file_location("build_backend", ROOT / "scripts/_build_backend.py")
+        backend = importlib.util.module_from_spec(backend_spec)
+        backend_spec.loader.exec_module(backend)
+        wheel_dir = self.path / "dist"
+        whl_name = backend.build_wheel(wheel_dir)
+        edt_name = backend.build_editable(wheel_dir)
+        sdist_name = backend.build_sdist(wheel_dir)
+        with zipfile.ZipFile(wheel_dir / whl_name) as zf:
+            names = set(zf.namelist())
+            self.assertIn("scripts/hfa_manager.py", names)
+            self.assertIn("scripts/templates/memory/directory.md", names)
+            self.assertIn("scripts/templates/memory/index/fts.sqlite", names)
+            ep = zf.read("hierarchical_attention_memory-2.2.0.dist-info/entry_points.txt").decode("utf-8")
+            self.assertIn("hfa = scripts.hfa_manager:main", ep)
+            self.assertIn("hfa-mcp = scripts.hfa_mcp:main", ep)
+            self.assertIn("hfa-hook = scripts.hfa_hook:main", ep)
+        with zipfile.ZipFile(wheel_dir / edt_name) as zf:
+            self.assertIn("hierarchical_attention_memory.pth", set(zf.namelist()))
+        with tarfile.open(wheel_dir / sdist_name, "r:gz") as tf:
+            sdist_names = set(tf.getnames())
+            self.assertIn("hierarchical_attention_memory-2.2.0/PKG-INFO", sdist_names)
+            self.assertIn("hierarchical_attention_memory-2.2.0/pyproject.toml", sdist_names)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

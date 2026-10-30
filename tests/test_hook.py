@@ -52,6 +52,8 @@ class HookIntegrationTests(unittest.TestCase):
         self.assertEqual(plugin["name"], "hierarchical-attention-memory")
         hooks = json.loads((ROOT / "hooks.json").read_text(encoding="utf-8"))
         self.assertIn("PreInvocation", hooks["hfa-auto-recall"])
+        self.assertIn("PostInvocation", hooks["hfa-auto-recall"])
+        self.assertIn("Stop", hooks["hfa-auto-recall"])
 
         uncreated = self.workspace / "future_memory"
         proc = subprocess.run(
@@ -62,8 +64,9 @@ class HookIntegrationTests(unittest.TestCase):
         )
         self.assertEqual(proc.returncode, 0, proc.stderr)
         printed = json.loads(proc.stdout)
-        cmd = printed["hfa-auto-recall"]["PreInvocation"][0]["command"]
-        self.assertIn(str(uncreated.resolve()), cmd)
+        for event_name in ("PreInvocation", "PostInvocation", "Stop"):
+            cmd = printed["hfa-auto-recall"][event_name][0]["command"]
+            self.assertIn(str(uncreated.resolve()), cmd)
 
     def test_unmatched_query_emits_empty_json_with_zero_tokens(self):
         payload = json.dumps({
@@ -114,6 +117,92 @@ class HookIntegrationTests(unittest.TestCase):
         msg = out["injectSteps"][0]["ephemeralMessage"]
         self.assertIn("S1", msg)
         self.assertIn("--unlock", msg)
+
+    def test_post_invocation_and_stop_auto_extract_idempotently_and_filter_noise(self):
+        # 1. Casual chat, questions mentioning files/keywords, unresolved status, and nested code fences are ignored
+        for noise_response in (
+            "今天晚饭建议吃西红柿鸡蛋面，既简单又营养。",
+            "请告诉我 main.py 是如何使用的？",
+            "Is the bug fixed yet?",
+            "尚未修复 main.py 的问题，还在排查中。",
+            "````markdown\n```python\n# 结论：已在 app.py 中修复\n```\n````\n今天天气不错。",
+        ):
+            casual = json.dumps({
+                "conversationId": "conv-post-noise",
+                "workspacePaths": [str(self.workspace)],
+                "lastUserInput": "随便聊聊",
+                "lastAssistantResponse": noise_response,
+            })
+            proc_casual = self.run_hook(casual, extra_args=["--phase", "post"])
+            self.assertEqual(proc_casual.returncode, 0, proc_casual.stderr)
+            self.assertEqual(json.loads(proc_casual.stdout), {}, noise_response)
+        self.assertFalse((self.mem / "chunks/chunk_0002.json").exists())
+
+        # 2. Technical conclusion response with CJK-adjacent file path and identifiers auto-distills and persists L1 chunk
+        turn_end = json.dumps({
+            "conversationId": "conv-post-2",
+            "turnId": "turn-01",
+            "workspacePaths": [str(self.workspace)],
+            "lastUserInput": "帮我排查 CSV 导出乱码问题",
+            "lastAssistantResponse": (
+                "### CSV 导出编码修复\n"
+                "结论：已在scripts/exporter.py中将导出编码改为UTF-8-SIG，修复了GBK乱码问题。\n"
+                "验证结果：包含 API key sk-1234567890abcdefghijklmnop 的测试日志已脱敏并通过。"
+            ),
+        })
+        proc_post = self.run_hook(turn_end, extra_args=["--phase", "post"])
+        self.assertEqual(proc_post.returncode, 0, proc_post.stderr)
+        saved = json.loads(proc_post.stdout)["saved"]
+        self.assertEqual(saved["id"], "chunk_0002")
+        self.assertFalse(saved["duplicate"])
+        self.assertIn("exporter.py", saved["hit_words"])
+        self.assertIn("UTF-8-SIG", saved["hit_words"])
+        self.assertIn("GBK", saved["hit_words"])
+        chunk_data = json.loads((self.mem / "chunks/chunk_0002.json").read_text(encoding="utf-8"))
+        self.assertTrue(chunk_data["source"].endswith(":scripts/exporter.py"), chunk_data["source"])
+        self.assertIn("UTF-8-SIG", "\n".join(chunk_data["summary"]))
+        self.assertNotIn("sk-1234567890abcdefghijklmnop", "\n".join(chunk_data["summary"]))
+        self.assertIn("[REDACTED]", "\n".join(chunk_data["summary"]))
+
+        # 3. Stop hook firing on the same turn is 100% idempotent (duplicate: True)
+        proc_stop = self.run_hook(turn_end, extra_args=["--phase", "stop"])
+        self.assertEqual(proc_stop.returncode, 0, proc_stop.stderr)
+        saved_again = json.loads(proc_stop.stdout)["saved"]
+        self.assertEqual(saved_again["id"], "chunk_0002")
+        self.assertTrue(saved_again["duplicate"])
+        self.assertFalse((self.mem / "chunks/chunk_0003.json").exists())
+
+        # 4. Subsequent PreInvocation recalls the newly persisted decision
+        recall_payload = json.dumps({
+            "conversationId": "conv-post-3",
+            "workspacePaths": [str(self.workspace)],
+            "lastUserInput": "exporter.py 的乱码怎么解决的",
+        })
+        proc_recall = self.run_hook(recall_payload, extra_args=["--phase", "pre"])
+        self.assertEqual(proc_recall.returncode, 0, proc_recall.stderr)
+        self.assertIn("UTF-8-SIG", json.loads(proc_recall.stdout)["injectSteps"][0]["ephemeralMessage"])
+
+        # 5. Structured decision payload or indented ```hfa-memory block on fresh uninitialized workspace auto-initializes memory/
+        fresh_ws = self.workspace / "fresh_project"
+        fresh_ws.mkdir()
+        structured_payload = json.dumps({
+            "conversationId": "conv-fresh",
+            "workspacePaths": [str(fresh_ws)],
+            "lastAssistantResponse": (
+                "已完成配置：\n"
+                "  ```hfa-memory\n"
+                "  {\n"
+                '    "title": "数据库连接池上限",\n'
+                '    "hit_words": ["PostgreSQL", "pool-limit"],\n'
+                '    "conclusion": "连接池最大连接数锁定为 20，避免连接耗尽。"\n'
+                "  }\n"
+                "  ```\n"
+            ),
+        })
+        proc_fresh = self.run_hook(structured_payload)
+        self.assertEqual(proc_fresh.returncode, 0, proc_fresh.stderr)
+        self.assertEqual(json.loads(proc_fresh.stdout)["saved"]["id"], "chunk_0002")
+        self.assertTrue((fresh_ws / "memory" / "chunks" / "chunk_0002.json").is_file())
 
     def test_dash_prefixed_query_and_fail_open_on_missing_or_corrupt_inputs(self):
         # 1. Query starting with '-' is treated as data, never a CLI flag

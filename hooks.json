@@ -3,7 +3,21 @@
     "PreInvocation": [
       {
         "type": "command",
-        "command": "python -B ./scripts/hfa_hook.py",
+        "command": "python -B ./scripts/hfa_hook.py --phase pre",
+        "timeout": 10
+      }
+    ],
+    "PostInvocation": [
+      {
+        "type": "command",
+        "command": "python -B ./scripts/hfa_hook.py --phase post",
+        "timeout": 10
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "python -B ./scripts/hfa_hook.py --phase stop",
         "timeout": 10
       }
     ]
