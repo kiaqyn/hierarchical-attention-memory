@@ -1,0 +1,84 @@
+{
+  "entries": {
+    "hfa初始化": [
+      {
+        "id": "chunk_0001",
+        "kind": "chunk"
+      }
+    ],
+    "ide": [
+      {
+        "id": "S1",
+        "kind": "node"
+      }
+    ],
+    "mcp": [
+      {
+        "id": "S1",
+        "kind": "node"
+      }
+    ],
+    "mvp": [
+      {
+        "id": "M1",
+        "kind": "node"
+      }
+    ],
+    "主线专注锁": [
+      {
+        "id": "chunk_0001",
+        "kind": "chunk"
+      }
+    ],
+    "作息": [
+      {
+        "id": "State",
+        "kind": "node"
+      }
+    ],
+    "初始配置": [
+      {
+        "id": "S0",
+        "kind": "node"
+      }
+    ],
+    "大白话": [
+      {
+        "id": "Traits",
+        "kind": "node"
+      }
+    ],
+    "核心": [
+      {
+        "id": "M1",
+        "kind": "node"
+      }
+    ],
+    "状态": [
+      {
+        "id": "State",
+        "kind": "node"
+      }
+    ],
+    "环境": [
+      {
+        "id": "S1",
+        "kind": "node"
+      }
+    ],
+    "目录拓扑": [
+      {
+        "id": "chunk_0001",
+        "kind": "chunk"
+      }
+    ],
+    "自主执行": [
+      {
+        "id": "Traits",
+        "kind": "node"
+      }
+    ]
+  },
+  "source_digest": "b6bc8782bdac8720cb19deb368749101993fdbf2b1acdc55e14ac7590e6cd273",
+  "version": 1
+}

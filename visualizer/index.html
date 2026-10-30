@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HFA v2.2 交互式架构沙盘</title>
+<!--
+  HFA v2.2 Architecture Sandbox
+  - L0 热目录 directory.md（常驻上下文，绑定唯一 ACTIVE 主线）
+  - L1 结构化真源 chunks/*.json（按需受限加载，跨纪元永久保留）
+  - I1 派生索引 index/hitwords.json & search.json（仅 CLI 侧使用，不进入 LLM 上下文）
+  - L3 墓碑审计 tombstones.jsonl（支线逻辑归档，只追加）
+  仪表盘中的 R / C 数值均由本页实际组装的文本现场计算，没有任何写死的“节省 xx%”。
+  Token 计数为启发式估算：CJK 字符按 1T，其余按约 4 字符 = 1T。
+-->
+<style>
+  :root{
+    --bg:#0f1220;--panel:#171b2e;--line:#2a3050;--fg:#e6e8f2;--dim:#8a90ad;
+    --l0:#4fc3f7;--l1:#81c784;--i1:#ffb74d;--l3:#b39ddb;--llm:#f06292;--cli:#4dd0e1;
+    --ok:#66bb6a;--warn:#ffa726;--bad:#ef5350;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+  header{padding:12px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  header h1{font-size:18px;margin:0}
+  header .sub{color:var(--dim);font-size:12px}
+  .wrap{display:grid;grid-template-columns:1fr 380px;gap:12px;padding:12px}
+  @media(max-width:1100px){.wrap{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;min-width:0}
+  .wrap>div{min-width:0}
+  canvas{width:100%;height:460px;display:block;background:#0b0e1a;border-radius:6px}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  button{background:#232a48;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:8px 12px;cursor:pointer;font-size:13px;max-width:100%;overflow-wrap:anywhere}
+  button:hover{border-color:var(--l0)}
+  button.active{background:#2f3a68;border-color:var(--l0)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  h2{font-size:14px;margin:0 0 8px;color:var(--dim);font-weight:600;letter-spacing:.5px}
+  .gauge{margin-bottom:14px}
+  .gauge .row{display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px}
+  .bar{position:relative;height:16px;background:#0b0e1a;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+  .bar .fill{height:100%;width:0;transition:width .4s,background .4s}
+  .bar .limit{position:absolute;top:0;bottom:0;width:2px;background:#fff8}
+  .meta{font-size:11px;color:var(--dim)}
+  pre{margin:0;background:#0b0e1a;border:1px solid var(--line);border-radius:6px;padding:8px;font-size:12px;max-height:220px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+  #log{max-height:260px}
+  .tag{display:inline-block;padding:0 6px;border-radius:3px;font-size:11px;margin-right:4px}
+  .t-ok{background:#1f3d24;color:var(--ok)}.t-warn{background:#3d321f;color:var(--warn)}.t-bad{background:#3d1f1f;color:var(--bad)}
+  .files{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+  @media(max-width:800px){.files{grid-template-columns:1fr}}
+  .files h3{margin:0 0 4px;font-size:12px}
+  .lock{font-weight:600}
+  input[type=text]{background:#0b0e1a;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:100%;min-width:0;font-size:13px}
+  label{font-size:12px;color:var(--dim)}
+</style>
+</head>
+<body>
+<header>
+  <h1>HFA v2.2 · 分层文件架构沙盘</h1>
+  <span class="sub">本地规则演示 · 数据只存在本页内存，不连接 Python CLI 或模型服务</span>
+  <span class="sub" id="epochLabel">纪元 Epoch: 1</span>
+  <span class="sub lock" id="lockLabel">专注锁: MAX</span>
+</header>
+
+<div class="wrap">
+  <div>
+    <div class="panel">
+      <canvas id="cv" width="1200" height="460"></canvas>
+      <div class="btns">
+        <button id="b1">① 主线专注锁 (MAX)</button>
+        <button id="b2">② 附 --unlock 侧向召回支线</button>
+        <button id="b3">③ 索引受限召回 (recall)</button>
+        <button id="b4">④ 主题上限驱动纪元 Rollover</button>
+        <button id="bReset">重置</button>
+      </div>
+      <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><label for="query">召回查询词 (--query)</label><input type="text" id="query" value="IDE 迁移"></div>
+        <div><label for="unlockReason">侧向解锁原因 (--unlock，仅读取非主线/墓碑时使用)</label><input type="text" id="unlockReason" value="复核早期 IDE 迁移决策"></div>
+      </div>
+    </div>
+    <div class="files">
+      <div class="panel"><h3 style="color:var(--l0)">L0 · directory.md</h3><pre id="fDir"></pre></div>
+      <div class="panel"><h3 style="color:var(--i1)">I1 · index/hitwords.json <span class="meta">(CLI 专用，不进上下文)</span></h3><pre id="fIdx"></pre></div>
+      <div class="panel"><h3 style="color:var(--l1)">L1 · chunks/*.json</h3><pre id="fChunks"></pre></div>
+      <div class="panel"><h3 style="color:var(--l3)">L3 · tombstones.jsonl</h3><pre id="fTomb"></pre></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="panel">
+      <h2>实时测量仪表盘</h2>
+      <div class="gauge">
+        <div class="row"><span>R · 路由目录全文</span><span id="rVal">0 T / 600 T</span></div>
+        <div class="bar"><div class="fill" id="rFill"></div><div class="limit" style="left:80%"></div></div>
+        <div class="meta">R = 本页生成的 directory.md 全文估算值，上限 600T</div>
+      </div>
+      <div class="gauge">
+        <div class="row"><span>C · 本次召回载荷</span><span id="cVal">0 T / 600 T</span></div>
+        <div class="bar"><div class="fill" id="cFill"></div><div class="limit" style="left:80%"></div></div>
+        <div class="meta">C = 最近一次选中片段的全文估算值，最多 2 条，上限 600T</div>
+      </div>
+      <div class="gauge">
+        <div class="row"><span>纪元预算水位</span><span id="wVal">0%</span></div>
+        <div class="bar"><div class="fill" id="wFill"></div><div class="limit" style="left:85%"></div></div>
+        <div class="meta">累计消耗 / 纪元预算；≥85% 触发 Rollover</div>
+      </div>
+      <div class="gauge">
+        <div class="row"><span>参照：若全量加载 L1</span><span id="fullVal">0 T</span></div>
+        <div class="meta">仅作对照的实测值，比例由当前数据现场计算：<span id="ratio">—</span></div>
+      </div>
+      <div class="meta">Token 计数为启发式估算（CJK=1T，其它≈4 字符/T），非模型分词器结果。</div>
+    </div>
+    <div class="panel" style="margin-top:12px">
+      <h2>事件日志</h2>
+      <pre id="log"></pre>
+    </div>
+    <div class="panel" style="margin-top:12px">
+      <h2>最近一次召回载荷 recall_text（本地）</h2>
+      <pre id="payload">(空)</pre>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+// ---------- 常量 ----------
+const R_LIMIT = 600, C_LIMIT = 600, EPOCH_BUDGET = 3000, ROLLOVER_AT = 0.85;
+
+// ---------- Token 估算（启发式，真实计算） ----------
+function estTokens(str){
+  if(!str) return 0;
+  let cjk = 0, other = 0;
+  for(const ch of str){
+    const c = ch.codePointAt(0);
+    if((c>=0x4E00&&c<=0x9FFF)||(c>=0x3400&&c<=0x4DBF)||(c>=0x3000&&c<=0x303F)||(c>=0xFF00&&c<=0xFFEF)) cjk++;
+    else other++;
+  }
+  return cjk + Math.ceil(other/4);
+}
+
+// ---------- 初始数据 ----------
+const SEED_CHUNKS = [
+  {id:"chunk_0001",title:"模型接入层",text:"系统通过 provider->IDE 适配器把模型 provider 暴露给编辑器扩展。provider 列表在 config/providers.yaml 维护。"},
+  {id:"chunk_0002",title:"迁移决策",text:"讨论后决定：暂不迁移到 IDE 插件形态，继续以 CLI 为主线交付。迁移评估推迟到 Q3。"},
+  {id:"chunk_0003",title:"CLI 主线",text:"CLI recall/route 核验 L0/L1 指纹后按相关性与预算返回受限 L1 片段 (recall_text)，不直接读取全量文件。"},
+  {id:"chunk_0004",title:"索引规范",text:"hitwords.json 与 search.json 只被 CLI 读取，用于把查询映射到 chunk_XXXX，不进入模型上下文。"},
+  {id:"chunk_0005",title:"墓碑策略",text:"tombstone 命令将已完成支线标为 TOMBSTONED 并追加审计记录至 tombstones.jsonl；纪元切换保留全部 L1 原文。"},
+  {id:"chunk_0006",title:"预算约束",text:"路由目录 R 与召回载荷 C 的默认预算各为 600T；本页为启发式估算，CLI 会标注精确计量或保守估算。"},
+  {id:"chunk_0007",title:"IDE 原型",text:"曾做过一个 IDE 原型，但没有合并进主干，相关支线 S1 已归档冻结。"},
+  {id:"chunk_0008",title:"访问审计",text:"每次 CLI recall 动作以追加方式写入 history/access.jsonl，记录选中项与 --unlock 用途。"}
+];
+
+let state;
+function resetState(){
+  state = {
+    epoch:1,
+    lock:true,
+    mainline:"主线 [M1]：交付 HFA 2.2 事务型文件记忆与受限召回管线",
+    chunks: JSON.parse(JSON.stringify(SEED_CHUNKS)).map(c=>({...c,epoch:1,project:['chunk_0001','chunk_0002','chunk_0007'].includes(c.id)?'S1':'M1'})),
+    archive:[], nextId:8,
+    tombstones:[],
+    spent:0,
+    deferred:[],
+    lastC:0
+  };
+  rebuildIndex();
+}
+
+// ---------- I1 倒排索引（词边界分词） ----------
+function tokenizeTerms(text){
+  const out = new Set();
+  // 英文/标识符：按词边界切分，"provider->IDE" 切成 provider 与 IDE 两个独立词，
+  // 而 "provider" 内部的 "ide" 不会被当作 IDE
+  (text.match(/[A-Za-z][A-Za-z0-9_]*/g)||[]).forEach(w=>out.add(w.toLowerCase()));
+  // 中文：二元组
+  const cjk = text.match(/[\u4e00-\u9fff]+/g)||[];
+  cjk.forEach(seg=>{ for(let i=0;i<seg.length-1;i++) out.add(seg.slice(i,i+2)); if(seg.length===1) out.add(seg); });
+  return [...out];
+}
+function rebuildIndex(){
+  const idx = {};
+  for(const c of state.chunks){
+    for(const t of tokenizeTerms(c.title+" "+c.text)){
+      (idx[t] ||= []).push(c.id);
+    }
+  }
+  state.index = idx;
+}
+
+// ---------- 渲染 directory.md ----------
+function directoryMd(){
+  let s = `# directory.md (epoch ${state.epoch})\n`;
+  s += `> ${state.mainline}${state.lock?" [LOCK:MAX]":""}\n\n`;
+  for(const c of state.chunks) s += `- ${c.id} ${c.title}\n`;
+  if(state.tombstones.length) s += `\n墓碑: ${state.tombstones.length} 条 → tombstones.jsonl\n`;
+  if(state.deferred.length) s += `\n延后队列: ${state.deferred.length} 项\n`;
+  return s;
+}
+function measureR(){ return estTokens(directoryMd()); }
+function fullL1Tokens(){ return state.chunks.reduce((a,c)=>a+estTokens(JSON.stringify(c)),0); }
+
+// ---------- UI 工具 ----------
+const $ = id => document.getElementById(id);
+function log(msg, cls){
+  const t = new Date().toLocaleTimeString();
+  const tag = cls?`<span class="tag t-${cls}">${cls.toUpperCase()}</span>`:"";
+  $('log').innerHTML = `[${t}] ${tag}${escapeHtml(msg)}\n` + $('log').innerHTML;
+}
+function escapeHtml(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function setGauge(fill,val,limit,label,text){
+  const pct = Math.min(val/limit,1.25);
+  $(fill).style.width = Math.min(pct*80,100)+"%"; // limit 线位于 80%
+  $(fill).style.background = val>limit?'var(--bad)':val>limit*0.8?'var(--warn)':'var(--ok)';
+  $(label).textContent = text;
+}
+function refresh(){
+  const R = measureR();
+  setGauge('rFill',R,R_LIMIT,'rVal',`${R} T / ${R_LIMIT} T`);
+  setGauge('cFill',state.lastC,C_LIMIT,'cVal',`${state.lastC} T / ${C_LIMIT} T`);
+  const w = state.spent/EPOCH_BUDGET;
+  $('wFill').style.width = Math.min(w,1)*100+"%";
+  $('wFill').style.background = w>=ROLLOVER_AT?'var(--bad)':w>=0.6?'var(--warn)':'var(--ok)';
+  $('wVal').textContent = `${(w*100).toFixed(1)}% (${state.spent}/${EPOCH_BUDGET} T)`;
+  const full = fullL1Tokens();
+  $('fullVal').textContent = `${full} T`;
+  $('ratio').textContent = state.lastC ? `本次 C / 全量 L1 = ${state.lastC}/${full} = ${(state.lastC/full*100).toFixed(1)}%` : '尚无检索';
+  $('fDir').textContent = directoryMd();
+  const idxView = Object.fromEntries(Object.entries(state.index).filter(([k])=>/^[A-Za-z]/.test(k)||k.length===2).slice(0,40));
+  $('fIdx').textContent = JSON.stringify(idxView,null,1).slice(0,2000) + `\n… 共 ${Object.keys(state.index).length} 个词条`;
+  $('fChunks').textContent = state.chunks.map(c=>`chunks/${c.id}.json ${JSON.stringify({id:c.id,epoch:c.epoch,title:c.title})}`).join("\n") + `\n历史原子记忆仍保留：${state.archive.length} 条`;
+  $('fTomb').textContent = state.tombstones.map(t=>JSON.stringify(t)).join("\n") || "(空)";
+  $('epochLabel').textContent = `纪元 Epoch: ${state.epoch}`;
+  $('lockLabel').textContent = `专注锁: ${state.lock?'MAX':'OFF'}`;
+  $('b1').classList.toggle('active',state.lock);
+}
+function spend(n){ state.spent += n; }
+
+// ---------- Canvas 场景 ----------
+const cv = $('cv'), ctx = cv.getContext('2d');
+const nodes = {
+  LLM:{x:600,y:60,w:200,h:56,color:'#f06292',label:'LLM 裁决者',sub:'只见 L0 + 注入载荷'},
+  L0:{x:600,y:180,w:220,h:56,color:'#4fc3f7',label:'L0 directory.md',sub:'常驻热目录'},
+  CLI:{x:250,y:180,w:180,h:56,color:'#4dd0e1',label:'CLI 引擎',sub:'路由 / 召回 / 归档'},
+  I1:{x:250,y:340,w:220,h:56,color:'#ffb74d',label:'I1 hitwords.json',sub:'不进上下文'},
+  L1:{x:600,y:340,w:220,h:56,color:'#81c784',label:'L1 chunks/*.json',sub:'结构化真源'},
+  L3:{x:950,y:340,w:220,h:56,color:'#b39ddb',label:'L3 tombstones.jsonl',sub:'墓碑 · 只追加'},
+  Q:{x:950,y:180,w:180,h:56,color:'#90a4ae',label:'延后队列',sub:'专注锁拦截的支线'}
+};
+const edges = [['CLI','I1'],['CLI','L1'],['CLI','LLM'],['L0','LLM'],['L1','L3'],['CLI','L3'],['L0','L1'],['LLM','Q']];
+let particles = [], highlights = {}, banner = "", bannerColor = "#fff";
+
+function emit(from,to,color,label,delay=0){
+  setTimeout(()=>particles.push({from,to,t:0,color,label}),delay);
+}
+function flash(node,ms=900){ highlights[node]=performance.now()+ms; }
+function setBanner(t,c="#fff"){ banner=t; bannerColor=c; }
+
+function roundRect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+
+function draw(){
+  const rect=cv.getBoundingClientRect(),w=rect.width,h=rect.height,dpr=window.devicePixelRatio||1;
+  cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);
+  const compact=w<600;
+  const layout=compact?{L0:[.5,55],CLI:[.25,160],LLM:[.75,160],I1:[.25,270],L1:[.75,270],L3:[.25,380],Q:[.75,380]}:
+    {L0:[.5,75],CLI:[.2,180],LLM:[.8,75],I1:[.2,335],L1:[.5,335],L3:[.8,335],Q:[.8,180]};
+  const labels={L0:['L0 目录','路由常驻'],CLI:['CLI 引擎','本地规则演示'],LLM:['裁决输入','供模型或人工复核'],I1:['I1 索引','不进入上下文'],L1:['L1 原子记忆','全局唯一编号'],L3:['L3 墓碑','历史可追溯'],Q:['延后队列','专注锁拦截']};
+  for(const [key,pos] of Object.entries(layout)){nodes[key].x=w*pos[0];nodes[key].y=pos[1];}
+  ctx.clearRect(0,0,w,h);ctx.strokeStyle='#2a3050';ctx.lineWidth=1;
+  for(const [a,b] of edges){ctx.beginPath();ctx.moveTo(nodes[a].x,nodes[a].y);ctx.lineTo(nodes[b].x,nodes[b].y);ctx.stroke();}
+  const bw=compact?Math.min(132,w*.42):Math.min(165,w*.25);
+  for(const [key,n] of Object.entries(nodes)){
+    ctx.fillStyle=highlights[key]?'#263457':'#171b2e';ctx.strokeStyle=n.color;
+    roundRect(n.x-bw/2,n.y-27,bw,54,6);ctx.fill();ctx.stroke();
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#e6e9f5';ctx.font='600 12px sans-serif';ctx.fillText(labels[key][0],n.x,n.y-7);
+    ctx.fillStyle='#a6afc9';ctx.font='11px sans-serif';ctx.fillText(labels[key][1],n.x,n.y+13);
+  }
+}
+
+function retrieve(unlockReason=null){
+  const terms=tokenizeTerms($('query').value),ids=new Set();
+  for(const term of terms)for(const id of state.index[term]||[])ids.add(id);
+  const selected=[];state.deferred=[];let payload='';
+  const unlocked=Boolean(unlockReason&&unlockReason.trim());
+  for(const c of state.chunks.filter(c=>ids.has(c.id))){
+    if(state.lock&&c.project!=='M1'&&!unlocked){state.deferred.push(c.id);continue;}
+    const snippet=`[${c.id} | epoch_${String(c.epoch).padStart(2,'0')} | ${c.project}] ${c.title}\n${c.text}`;
+    const next=payload+(payload?'\n\n':'')+snippet;
+    if(selected.length>=2||estTokens(next)>C_LIMIT){state.deferred.push(c.id);continue;}
+    selected.push(c);payload=next;
+  }
+  state.lastC=estTokens(payload);spend(state.lastC);$('payload').textContent=payload||'(无可注入片段)';
+  highlights={CLI:true,I1:true,L1:true,LLM:true,Q:state.deferred.length>0};refresh();draw();
+  log(`recall 命中 ${ids.size} 条，选中 ${selected.length} 条，延后 ${state.deferred.length} 条；C=${state.lastC}T（估算）`,'ok');
+  return selected;
+}
+
+function unlockRetrieve(){
+  const reason=($('unlockReason').value||'').trim();
+  if(!reason){
+    log('侧向召回需要非空 --unlock 用途说明；非主线记录保持在 deferred 队列。','warn');
+    return retrieve(null);
+  }
+  const selected=retrieve(reason);
+  const result={
+    active_mainline_lock:'M1',
+    unlock_reason:reason,
+    routed_files:selected.map(c=>`chunks/${c.id}.json`),
+    selected:selected.map(c=>({id:c.id,project:c.project,epoch:c.epoch,title:c.title})),
+    deferred:state.deferred.map(id=>({id,reason:'recall budget or item limit'}))
+  };
+  log(`已附 --unlock="${reason}" 侧向召回 ${selected.length} 条片段并写入审计日志。`,'warn');
+  return result;
+}
+
+function rolloverStep(){
+  const cost=fullL1Tokens();spend(cost);
+  log(`演示纪元容量推进：累计 ${cost}T 估算水位 ${(state.spent/EPOCH_BUDGET*100).toFixed(1)}%`,'warn');
+  if(state.spent/EPOCH_BUDGET>=ROLLOVER_AT){
+    const old=state.epoch;
+    state.archive.push(...state.chunks.map(c=>({...c})));
+    state.tombstones.push({id:'S1',path:'branches/S1_toolchain.md',epoch:old,reason:'branch-archived-on-rollover'});
+    state.epoch++;state.spent=0;state.lastC=0;state.deferred=[];
+    const id='chunk_'+String(++state.nextId).padStart(4,'0');
+    state.chunks=[{id,epoch:state.epoch,project:'M1',title:'新纪元主线',text:`继续 CLI 主线；旧纪元 ${old} 的 L1 原子记忆完整保留在 chunks/ 中。`}];
+    rebuildIndex();$('payload').textContent='(新纪元，等待召回)';
+    log(`纪元 ${old} 已封存 (SEALED)；新纪元 ${state.epoch} 使用全局递增编号 ${id}，历史 L1 未覆盖。`,'ok');
+  }
+  highlights={L0:true,L1:true,L3:true};refresh();draw();
+}
+
+function boot(){
+  resetState();refresh();draw();log('本地沙盘已就绪。Token 为启发式估算，页面不修改磁盘记忆。','ok');
+  $('b1').addEventListener('click',()=>{state.lock=!state.lock;state.deferred=[];highlights={L0:true,Q:true};refresh();draw();log(state.lock?'专注锁已启用：支线需 --unlock 才可召回':'专注锁已关闭：允许直接演示支线召回','ok');});
+  $('b2').addEventListener('click',unlockRetrieve);$('b3').addEventListener('click',()=>retrieve(null));$('b4').addEventListener('click',rolloverStep);
+  $('bReset').addEventListener('click',()=>{resetState();highlights={};$('log').textContent='';$('payload').textContent='(空)';refresh();draw();log('本页演示数据已重置。','ok');});
+  $('query').addEventListener('keydown',event=>{if(event.key==='Enter')retrieve();});
+  window.addEventListener('resize',draw);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+})();
+</script>
+</body>
+</html>

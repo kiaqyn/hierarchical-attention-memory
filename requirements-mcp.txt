@@ -1,0 +1,2 @@
+# Optional local AI-tool interface; Python 3.11+. No provider keys required.
+mcp==2.3.0

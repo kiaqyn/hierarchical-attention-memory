@@ -1,0 +1,31 @@
+{
+  "entries": {
+    "M1": {
+      "path": "main/M1_core_project.md",
+      "status": "ACTIVE",
+      "tier": "MAX"
+    },
+    "S0": {
+      "path": "branches/S0_archived_setup.md",
+      "status": "TOMBSTONED",
+      "tier": "TOMBSTONED"
+    },
+    "S1": {
+      "path": "branches/S1_toolchain.md",
+      "status": "MEDIUM",
+      "tier": "MEDIUM"
+    },
+    "State": {
+      "path": "profile/state.md",
+      "status": "STABLE",
+      "tier": "HIGH"
+    },
+    "Traits": {
+      "path": "profile/traits.md",
+      "status": "STABLE",
+      "tier": "HIGH"
+    }
+  },
+  "source_digest": "b6bc8782bdac8720cb19deb368749101993fdbf2b1acdc55e14ac7590e6cd273",
+  "version": 1
+}

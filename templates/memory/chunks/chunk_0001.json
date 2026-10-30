@@ -1,0 +1,11 @@
+{
+  "id": "chunk_0001",
+  "topic_id": "Topic#01",
+  "number": 1,
+  "epoch": 1,
+  "project": "M1",
+  "title": "HFA 分层文件记忆初始化",
+  "summary": ["以 L1 JSON 为真源，派生索引与摘要；按完整文本预算召回少量片段。"],
+  "hitwords": ["HFA初始化", "目录拓扑", "主线专注锁"],
+  "status": "ACTIVE"
+}

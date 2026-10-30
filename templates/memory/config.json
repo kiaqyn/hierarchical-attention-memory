@@ -1,0 +1,8 @@
+{
+  "active_mainline": "M1",
+  "max_recall_topics": 2,
+  "max_topics_per_epoch": 50,
+  "recall_token_budget": 600,
+  "router_token_budget": 600,
+  "version": "2.2"
+}

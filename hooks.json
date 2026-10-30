@@ -1,0 +1,11 @@
+{
+  "hfa-auto-recall": {
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "python -B ./scripts/hfa_hook.py",
+        "timeout": 10
+      }
+    ]
+  }
+}

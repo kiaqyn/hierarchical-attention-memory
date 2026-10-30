@@ -1,0 +1,2 @@
+# Optional exact full-text token accounting; basic CLI uses Python's standard library.
+tiktoken==0.14.0

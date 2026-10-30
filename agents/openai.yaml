@@ -1,0 +1,4 @@
+interface:
+  display_name: "Hierarchical Attention Memory"
+  short_description: "可恢复文件记忆、主线约束与限额片段召回 (HFA 2.2)"
+  default_prompt: "使用 $hierarchical-attention-memory 初始化、路由或同步当前项目的分层文件夹注意力记忆中枢。"
