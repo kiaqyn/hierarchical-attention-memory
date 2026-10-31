@@ -228,47 +228,11 @@ def _encoder():
     except Exception:
         return None
 
-_CJK_RANGES = ("\u2e80-\u2fff\u3000-\u303f\u3040-\u30ff\u3100-\u31ff\u3400-\u4dbf\u4e00-\u9fff"
-               "\uac00-\ud7af\uf900-\ufaff\ufe30-\ufe4f\uff00-\uffef")
-_HEURISTIC_PIECES = re.compile(rf"[A-Za-z]+|[0-9]+|[{_CJK_RANGES}]|[ \t]+|[\r\n]+|.", re.S)
-
-@functools.lru_cache(maxsize=4096)
-def _heuristic_tokens(text):
-    """Conservative o200k-style estimate used only when tiktoken is unavailable.
-
-    Calibrated to over-count typical Markdown/CJK/English text (tests compare it with
-    o200k_base): letters ceil(n/4), digits ceil(n/3) (o200k splits 1-3 digit groups),
-    one per CJK character or ASCII symbol, one per newline run or multi-space run,
-    and UTF-8 bytes for any other character (a strict byte-level BPE bound).
-    """
-    count = 0
-    pieces = _HEURISTIC_PIECES.findall(text)
-    for index, piece in enumerate(pieces):
-        first = piece[0]
-        if first.isascii():
-            if first.isalpha():
-                count += -(-len(piece) // 4)
-            elif first.isdigit():
-                count += -(-len(piece) // 3)
-            elif first in " \t":
-                following = pieces[index + 1][0] if index + 1 < len(pieces) else ""
-                # A single space usually merges into a following word or symbol,
-                # but not into digits, CJK or other multi-byte characters.
-                merges = len(piece) == 1 and following.isascii() and not following.isdigit() and following not in "\r\n"
-                count += 0 if merges else 1
-            else:
-                count += 1
-        elif re.match(rf"[{_CJK_RANGES}]", first):
-            count += 1
-        else:
-            count += len(first.encode("utf-8"))
-    return count
-
 def measure_tokens(text):
     encoder = _encoder()
     if encoder is not None:
         return {"count": len(encoder.encode(text, disallowed_special=())), "method": "o200k_base", "exact": True}
-    return {"count": _heuristic_tokens(text), "method": "heuristic_estimate", "exact": False}
+    return {"count": len(text.encode("utf-8")), "method": "utf8_bytes_upper_bound", "exact": False}
 
 def estimate_routing_tokens(text):
     return measure_tokens(text)["count"]
@@ -415,32 +379,72 @@ def _build_fts_cached(digest: str, docs_json: str) -> bytes:
 
 _FTS_THREAD_LOCAL = threading.local()
 
-def _fts_search(terms: set[str], fts_bytes: bytes | None) -> tuple[dict[str, float] | None, dict[str, int] | None]:
+def _open_readonly_sqlite(path: Path) -> sqlite3.Connection:
+    try:
+        return sqlite3.connect(f"file:{path.resolve().as_posix()}?mode=ro", uri=True)
+    except Exception:
+        return sqlite3.connect(str(path))
+
+def _verify_fts_file(fts_path: Path, expected_digest: str, expected_doc_count: int) -> bool:
+    try:
+        if not fts_path.is_file() or fts_path.stat().st_size < 100:
+            return False
+        with fts_path.open("rb") as fh:
+            if fh.read(16) != b"SQLite format 3\x00":
+                return False
+        conn = _open_readonly_sqlite(fts_path)
+        try:
+            quick = conn.execute("PRAGMA quick_check").fetchone()
+            if not quick or quick[0] != "ok":
+                return False
+            meta = dict(conn.execute("SELECT key, value FROM meta").fetchall())
+            if meta.get("version") != "1" or meta.get("source_digest") != expected_digest:
+                return False
+            df_count = conn.execute("SELECT count(*) FROM term_df").fetchone()
+            if not df_count or int(df_count[0]) < 0:
+                return False
+            if _fts5_supported():
+                fts_count = conn.execute("SELECT count(*) FROM chunks_fts").fetchone()
+                if not fts_count or int(fts_count[0]) != expected_doc_count:
+                    return False
+            return True
+        finally:
+            conn.close()
+    except Exception:
+        return False
+
+def _fts_search(terms: set[str], fts_bytes: Path | bytes | None) -> tuple[dict[str, float] | None, dict[str, int] | None]:
     if not fts_bytes or not terms or not _fts5_supported():
         return None, None
     tmp_path: Path | None = None
     temp_conn: sqlite3.Connection | None = None
     try:
-        cache = getattr(_FTS_THREAD_LOCAL, "conn_cache", None)
-        if cache is None or cache[0] != fts_bytes:
-            if cache is not None:
-                try:
-                    cache[1].close()
-                except Exception:
-                    pass
-            conn = sqlite3.connect(":memory:")
-            if hasattr(conn, "deserialize"):
-                conn.deserialize(fts_bytes)
-                _FTS_THREAD_LOCAL.conn_cache = (fts_bytes, conn)
-            else:
-                conn.close()
-                with tempfile.NamedTemporaryFile(prefix=".hfa-fts-q-", delete=False) as tmp:
-                    tmp.write(fts_bytes)
-                    tmp_path = Path(tmp.name)
-                temp_conn = sqlite3.connect(str(tmp_path))
-                conn = temp_conn
+        if isinstance(fts_bytes, Path):
+            if not fts_bytes.is_file():
+                return None, None
+            temp_conn = _open_readonly_sqlite(fts_bytes)
+            conn = temp_conn
         else:
-            conn = cache[1]
+            cache = getattr(_FTS_THREAD_LOCAL, "conn_cache", None)
+            if cache is None or cache[0] != fts_bytes:
+                if cache is not None:
+                    try:
+                        cache[1].close()
+                    except Exception:
+                        pass
+                conn = sqlite3.connect(":memory:")
+                if hasattr(conn, "deserialize"):
+                    conn.deserialize(fts_bytes)
+                    _FTS_THREAD_LOCAL.conn_cache = (fts_bytes, conn)
+                else:
+                    conn.close()
+                    with tempfile.NamedTemporaryFile(prefix=".hfa-fts-q-", delete=False) as tmp:
+                        tmp.write(fts_bytes)
+                        tmp_path = Path(tmp.name)
+                    temp_conn = sqlite3.connect(str(tmp_path))
+                    conn = temp_conn
+            else:
+                conn = cache[1]
         term_list = sorted(terms)
         placeholders = ",".join("?" for _ in term_list)
         df_rows = conn.execute(
@@ -724,15 +728,18 @@ def _summary_updates(root, chunks, epoch):
 
 _DERIVED_CACHE: dict[tuple[str, str], dict[str, str | bytes]] = {}
 
-def _derived(root, state, chunks, overrides=None):
+def _derived(root, state, chunks, overrides=None, include_fts=True):
     if overrides and "directory.md" in overrides:
         state = parse_directory_nodes(root / "directory.md", overrides["directory.md"])
     digest = _digest(root, overrides)
     config = _config(root)
     cache_key = (digest, _json(config))
     cached = _DERIVED_CACHE.get(cache_key)
-    if cached is not None:
-        return cached.copy()
+    if cached is not None and (not include_fts or "index/fts.sqlite" in cached):
+        res = cached.copy()
+        if not include_fts:
+            res.pop("index/fts.sqlite", None)
+        return res
     entries, projects = {}, {}
     for tier, group in state["nodes"].items():
         for node in group:
@@ -745,13 +752,16 @@ def _derived(root, state, chunks, overrides=None):
     documents = {c["id"]: {"heading": sorted(_search_terms(c["title"] + " " + " ".join(c["hitwords"]), config)),
                             "terms": sorted(_search_terms(c["title"] + " " + " ".join(c["hitwords"] + c["summary"]), config))}
                  for c in chunks}
-    result = {"index/search.json": _json({"version": 1, "source_digest": digest, "documents": documents}),
-              "index/hitwords.json": _json({"version": 1, "source_digest": digest, "entries": entries}),
-              "index/projects.json": _json({"version": 1, "source_digest": digest, "entries": projects}),
-              "index/fts.sqlite": _build_fts_cached(digest, _json(documents))}
+    result: dict[str, str | bytes] = {
+        "index/search.json": _json({"version": 1, "source_digest": digest, "documents": documents}),
+        "index/hitwords.json": _json({"version": 1, "source_digest": digest, "entries": entries}),
+        "index/projects.json": _json({"version": 1, "source_digest": digest, "entries": projects}),
+    }
+    if include_fts:
+        result["index/fts.sqlite"] = _build_fts_cached(digest, _json(documents))
     if len(_DERIVED_CACHE) >= 32:
         _DERIVED_CACHE.clear()
-    _DERIVED_CACHE[cache_key] = result
+    _DERIVED_CACHE[cache_key] = result.copy()
     return result.copy()
 
 def _chunk_text(chunk):
@@ -998,10 +1008,14 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid"):
         if not state["within_budget"]:
             raise MemoryError("L0 exceeds measured router budget; shorten it or change config explicitly")
         chunks = _chunks(root, state)
-        expected = _derived(root, state, chunks)
+        expected = _derived(root, state, chunks, include_fts=False)
         for relative, content in expected.items():
             if not _file_matches(root / relative, content):
                 raise MemoryError(f"Stale index: {relative}; run reindex")
+        fts_path = root / "index/fts.sqlite"
+        expected_digest = json.loads(str(expected["index/search.json"]))["source_digest"]
+        if not _verify_fts_file(fts_path, expected_digest, len(chunks)):
+            raise MemoryError("Stale index: index/fts.sqlite; run reindex")
         index = json.loads(_read_utf8(root / "index/hitwords.json"))["entries"]
         positive, refs, matched = _positive_query(query), [], []
         scores, kw_terms, content_terms = {}, {}, {}
@@ -1015,8 +1029,7 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid"):
                     kw_terms.setdefault(key, set()).add(word)
         if mode == "hybrid":
             documents = json.loads(_read_utf8(root / "index/search.json"))["documents"]
-            fts_bytes = expected.get("index/fts.sqlite")
-            for chunk_id, score, terms in _rank_content(positive, documents, config, fts_bytes=fts_bytes):
+            for chunk_id, score, terms in _rank_content(positive, documents, config, fts_bytes=fts_path):
                 key = ("chunk", chunk_id)
                 scores[key] = scores.get(key, 0) + score
                 content_terms[key] = set(terms)

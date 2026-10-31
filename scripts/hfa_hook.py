@@ -7,8 +7,9 @@
   injection step only when relevant memory or deferred/drift signals exist. Unmatched
   turns emit `{}` (zero tokens injected).
 - PostInvocation / Stop (`--phase post` / `--phase stop` or auto-detected turn end):
-  Reads structured conclusion payloads or assistant response text, filters out casual
-  chat noise and redacts secrets, distills `title`, `hit_words` (file paths, technical
+  Reads explicit structured decisions, or assistant prose only when the host sets
+  per-turn `memoryWriteAllowed: true`. User no-save requests take precedence.
+  Filters noise and known secret formats, distills `title`, `hit_words` (file paths, technical
   identifiers, CJK terms), and `conclusion`, and idempotently persists a structured
   L1 `chunk_XXXX.json` via `hfa_manager.py add-topic --request-id ... --json`.
 - Fail-open: Any missing directory, invalid payload, or subprocess timeout exits 0.
@@ -38,9 +39,38 @@ _SECRET_PATTERNS = re.compile(
     r"sk-[A-Za-z0-9_-]{20,}"
     r"|gh[pousr]_[A-Za-z0-9]{20,}"
     r"|AKIA[0-9A-Z]{16}"
-    r"|-----BEGIN [A-Z ]*PRIVATE KEY-----"
-    r"|(?i:api[_-]?key|password|passwd|secret|access[_-]?token)\s*[:=]\s*['\"]?[A-Za-z0-9_\-./+=]{8,}"
+    r"|github_pat_[A-Za-z0-9_]{20,}"
+    r"|(?i:api[_ -]?key|password|passwd|secret|access[_-]?token|密码)[\"']?\s*[:=：]\s*"
+    r"(?:\"[^\"\r\n]*\"|'[^'\r\n]*'|[^\s'\",;}]{4,})"
+    r"|(?i:Bearer)\s+[A-Za-z0-9_.~+/=-]{8,}"
 )
+
+_PRIVATE_KEY = re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?(?:-----END [A-Z ]*PRIVATE KEY-----|\Z)", re.S)
+_NO_SAVE = re.compile(
+    r"(?:不要|别|禁止|不许|不准|请勿|无需|不用|不必).{0,16}(?:保存|存储|记录|留存|记住|记入|存入|写入|记到|记忆)"
+    r"|(?:不写入|不保存|不记录|不留存|不记入|别记)|仅限本轮|不要形成长期记忆"
+    r"|\b(?:do\s+not|don't|don’t|never|no\s+need\s+to)\s+(?:\w+\s+){0,4}(?:save|store|persist|record|remember|memorize)\b"
+    r"|\boff[- ]the[- ]record\b|\b(?:no|without)\s+(?:long[- ]term\s+)?(?:memory|persistence)\b", re.I)
+_UNVERIFIED = re.compile(
+    r"假设|举例|示例|仅作示范|尚未|未执行|未验证|没有实际|并未|假如"
+    r"|\b(?:hypothetical|suppose|for example|example response|proposed|not verified|never been fixed|not executed)\b", re.I)
+
+def _redact(text: str) -> str:
+    # Redact entire multi-line keys BEFORE selecting/truncating lines.
+    return _SECRET_PATTERNS.sub("[REDACTED]", _PRIVATE_KEY.sub("[REDACTED]", str(text)))
+
+def _warn(message: str) -> None:
+    # Fixed diagnostics only: never echo user text, paths, credentials or CLI output.
+    print("[HFA] " + message, file=sys.stderr)
+
+def _write_denied(payload: dict) -> bool:
+    if "memoryWriteAllowed" in payload and type(payload["memoryWriteAllowed"]) is not bool:
+        return True
+    if payload.get("memoryWriteAllowed") is False:
+        return True
+    query = payload.get("lastUserInput") or payload.get("userInput") or payload.get("prompt") or ""
+    return isinstance(query, str) and bool(_NO_SAVE.search(query))
+
 _FILE_PATH_RE = re.compile(
     r"(?<![A-Za-z0-9_])(?:[A-Za-z0-9_.-]+[/\\])*[A-Za-z0-9_.-]+\."
     r"(?:py|js|ts|tsx|jsx|go|rs|java|c|cpp|h|json|yaml|yml|toml|md|sh|ps1|sql|html|css)(?![A-Za-z0-9_.-])"
@@ -101,34 +131,31 @@ def _default_memory_dir(explicit: Path | None = None) -> Path:
 def _resolve_memory_dir(explicit: Path | None, payload: dict, allow_auto_init: bool = False) -> Path | None:
     candidates: list[Path] = []
     auto_init_targets: list[Path] = []
-    if explicit is not None:
-        candidates.append(explicit)
-        auto_init_targets.append(explicit)
     env_dir = os.environ.get("HFA_MEMORY_DIR", "").strip()
-    if env_dir:
-        env_path = Path(env_dir)
-        candidates.append(env_path)
-        auto_init_targets.append(env_path)
-    workspaces = payload.get("workspacePaths")
-    has_ws_key = "workspacePaths" in payload or "workspacePath" in payload or "cwd" in payload
-    if not isinstance(workspaces, list):
-        single_ws = payload.get("workspacePath") or payload.get("cwd")
-        workspaces = [single_ws] if isinstance(single_ws, str) and single_ws.strip() else []
-    for ws in workspaces:
-        if isinstance(ws, str) and ws.strip():
-            base = Path(ws.strip())
-            candidates.append(base / "memory")
-            candidates.append(base / ".agents" / "memory")
-            candidates.append(base / ".hfa" / "memory")
-            try:
-                if base.resolve().is_dir():
-                    auto_init_targets.append(base.resolve() / "memory")
-            except OSError:
-                pass
-    if not candidates and not has_ws_key:
-        cwd = Path.cwd().resolve()
-        for rel in ("memory", ".agents/memory", ".hfa/memory"):
-            candidates.append(cwd / rel)
+    # Explicit configuration is binding; a missing/broken root must NEVER cause
+    # fallback into another workspace's memory, even when that one exists.
+    configured = Path(explicit) if explicit is not None else Path(env_dir) if env_dir else None
+    if configured is not None:
+        candidates = [configured]
+        auto_init_targets = [configured]
+    else:
+        workspaces = payload.get("workspacePaths")
+        has_ws_key = "workspacePaths" in payload or "workspacePath" in payload or "cwd" in payload
+        if not isinstance(workspaces, list):
+            single_ws = payload.get("workspacePath") or payload.get("cwd")
+            workspaces = [single_ws] if isinstance(single_ws, str) and single_ws.strip() else []
+        bases = list(dict.fromkeys(str(Path(ws.strip()).resolve()) for ws in workspaces
+                                  if isinstance(ws, str) and ws.strip()))
+        if len(bases) > 1:
+            _warn("Multiple workspaces; configure an explicit memory root before reading or saving.")
+            return None
+        if not bases and not has_ws_key:
+            bases = [str(Path.cwd().resolve())]
+        for ws in bases:
+            base = Path(ws)
+            candidates.extend(base / rel for rel in ("memory", ".agents/memory", ".hfa/memory"))
+            if base.is_dir():
+                auto_init_targets.append(base / "memory")
     for candidate in candidates:
         try:
             resolved = candidate.resolve()
@@ -186,12 +213,13 @@ def _detect_phase(explicit_phase: str, payload: dict) -> str:
 
 
 def _sanitize_hitword(word: str) -> str:
-    cleaned = re.sub(r"[,，、/\r\n`*_#\[\]()\"']+", " ", str(word)).strip()
+    cleaned = re.sub(r"[,，、/\r\n`*_#\[\]()\"']+", " ", _redact(str(word))).strip()
     cleaned = " ".join(cleaned.split())
-    return cleaned[:64]
+    return "" if cleaned == "REDACTED" else cleaned[:64]
 
 
 def _extract_hitwords_from_text(text: str, title: str) -> list[str]:
+    text, title = _redact(text), _redact(title)
     found: list[str] = []
 
     def _add(candidate: str) -> None:
@@ -232,7 +260,7 @@ def _extract_hitwords_from_text(text: str, title: str) -> list[str]:
 
 
 def _clean_line(line: str) -> str:
-    line = _SECRET_PATTERNS.sub("[REDACTED]", line)
+    line = _redact(line)
     line = re.sub(r"^\s*(?:#+|\*+|-+|\d+\.)\s*", "", line)
     line = re.sub(r"\*\*([^*]+)\*\*", r"\1", line)
     line = " ".join(line.split()).strip()
@@ -248,44 +276,64 @@ def _is_conclusion_candidate(line: str) -> bool:
     )
 
 
-def _read_latest_transcript_response(payload: dict) -> tuple[str, str]:
-    """Read the latest PLANNER_RESPONSE content and step_index from Antigravity transcriptPath."""
+def _transcript_records(payload: dict) -> list[dict]:
     transcript_raw = payload.get("transcriptPath") or payload.get("transcript_path")
     if not isinstance(transcript_raw, str) or not transcript_raw.strip():
-        return "", ""
+        return []
     try:
-        tpath = pathlib.Path(transcript_raw).expanduser()
-        if not tpath.is_file():
-            return "", ""
-        # Read tail bytes (up to last 128 KB) for speed on large transcripts
-        size = tpath.stat().st_size
-        with open(tpath, "rb") as fh:
-            if size > 131072:
-                fh.seek(size - 131072)
+        tpath = Path(transcript_raw).expanduser()
+        with tpath.open("rb") as fh:
+            fh.seek(0, os.SEEK_END)
+            start = max(0, fh.tell() - 131072)
+            fh.seek(start)
+            if start:
+                fh.readline()  # Never parse a truncated leading JSONL record.
             tail = fh.read().decode("utf-8", errors="replace")
-        for line in reversed(tail.splitlines()):
-            line = line.strip()
-            if not line or not line.startswith("{"):
-                continue
+        records = []
+        for line in tail.splitlines():
             try:
                 obj = json.loads(line)
-            except Exception:
+                if isinstance(obj, dict):
+                    records.append(obj)
+            except ValueError:
                 continue
-            if not isinstance(obj, dict):
-                continue
-            step_type = str(obj.get("type") or obj.get("role") or "").upper()
-            content = obj.get("content") or obj.get("text") or ""
-            if step_type in ("PLANNER_RESPONSE", "ASSISTANT", "MODEL") and isinstance(content, str) and content.strip():
-                step_idx = str(obj.get("step_index") if obj.get("step_index") is not None else "")
-                return content.strip(), step_idx
-    except Exception:
-        pass
+        return records
+    except (OSError, ValueError):
+        _warn("Transcript unavailable; no transcript-derived memory was saved.")
+        return []
+
+
+def _read_latest_transcript_response(payload: dict) -> tuple[str, str]:
+    """Only the most recent turn may supply a response; never reuse a previous one."""
+    for obj in reversed(_transcript_records(payload)):
+        role = str(obj.get("type") or obj.get("role") or "").upper()
+        if role in ("USER", "USER_INPUT", "USER_MESSAGE", "HUMAN"):
+            break
+        content = obj.get("content") or obj.get("text") or ""
+        if role in ("PLANNER_RESPONSE", "ASSISTANT", "MODEL") and isinstance(content, str) and content.strip():
+            step = obj.get("step_index")
+            return content.strip(), _redact(str(step))[:48] if step is not None else ""
     return "", ""
 
 
+def _with_transcript_user(payload: dict) -> dict:
+    if any(isinstance(payload.get(k), str) and payload[k].strip()
+           for k in ("lastUserInput", "userInput", "prompt")):
+        return payload
+    for obj in reversed(_transcript_records(payload)):
+        role = str(obj.get("type") or obj.get("role") or "").upper()
+        content = obj.get("content") or obj.get("text") or ""
+        if role in ("USER", "USER_INPUT", "USER_MESSAGE", "HUMAN") and isinstance(content, str):
+            return {**payload, "lastUserInput": content}
+    return payload
+
+
 def _extract_turn_decision(payload: dict, phase: str) -> dict | None:
-    conv_id = str(payload.get("conversationId") or payload.get("sessionId") or "local").strip()[:48]
-    turn_id = str(payload.get("turnId") or payload.get("requestId") or payload.get("messageId") or "").strip()[:48]
+    payload = _with_transcript_user(payload)
+    if _write_denied(payload):
+        return None
+    conv_id = _redact(str(payload.get("conversationId") or payload.get("sessionId") or "local")).strip()[:48]
+    turn_id = _redact(str(payload.get("turnId") or payload.get("requestId") or payload.get("messageId") or "")).strip()[:48]
     user_input = str(payload.get("lastUserInput") or payload.get("userInput") or payload.get("prompt") or "").strip()
 
     # 1. Explicit structured decision object in payload
@@ -313,6 +361,8 @@ def _extract_turn_decision(payload: dict, phase: str) -> dict | None:
 
     # 2. Check for fenced ```hfa-memory JSON block inside response_text
     if not isinstance(structured, dict) and response_text:
+        if _UNVERIFIED.search(response_text):
+            return None
         fenced = re.search(
             r"```(?:hfa-memory|hfa)\s*\r?\n\s*(\{.*?\})\s*\r?\n\s*```",
             response_text,
@@ -329,10 +379,10 @@ def _extract_turn_decision(payload: dict, phase: str) -> dict | None:
     if isinstance(structured, dict):
         raw_title = _clean_line(str(structured.get("title") or ""))[:120]
         raw_conclusion = structured.get("conclusion") or structured.get("summary") or ""
-        if isinstance(raw_conclusion, list):
-            c_lines = [_clean_line(str(x))[:150] for x in raw_conclusion if _clean_line(str(x))]
-        else:
-            c_lines = [_clean_line(ln)[:150] for ln in str(raw_conclusion).splitlines() if _clean_line(ln)]
+        raw_conclusion = _redact("\n".join(map(str, raw_conclusion)) if isinstance(raw_conclusion, list) else str(raw_conclusion))
+        if _UNVERIFIED.search(raw_conclusion):
+            return None
+        c_lines = [_clean_line(ln)[:150] for ln in raw_conclusion.splitlines() if _clean_line(ln)]
         conclusion = "\n".join(c_lines[:3])[:300].strip()
         if not conclusion:
             return None
@@ -340,15 +390,27 @@ def _extract_turn_decision(payload: dict, phase: str) -> dict | None:
             raw_title = conclusion.splitlines()[0][:80]
         raw_words = structured.get("hit_words") or structured.get("hitwords") or []
         if isinstance(raw_words, str):
-            raw_words = [w.strip() for w in re.split(r"[,，、/]+", raw_words) if w.strip()]
+            raw_words = [w.strip() for w in re.split(r"[,，、/]+", _redact(raw_words)) if w.strip()]
+        if not isinstance(raw_words, list) or not all(isinstance(w, str) for w in raw_words):
+            return None
         hit_words = [_sanitize_hitword(w) for w in raw_words if _sanitize_hitword(w)][:8]
         if not hit_words:
             hit_words = _extract_hitwords_from_text(conclusion, raw_title)
         project = str(structured.get("project") or "").strip() or None
-        supersedes = [str(x).strip() for x in (structured.get("supersedes") or []) if str(x).strip()]
+        raw_supersedes = structured.get("supersedes") or []
+        if not isinstance(raw_supersedes, list) or not all(isinstance(x, str) for x in raw_supersedes):
+            return None
+        supersedes = [x.strip() for x in raw_supersedes if x.strip()]
         source = _clean_line(str(structured.get("source") or f"hook:turn:{conv_id}"))[:240]
-        explicit_req_id = str(structured.get("request_id") or structured.get("requestId") or "").strip()
+        explicit_req_id = _redact(str(structured.get("request_id") or structured.get("requestId") or "")).strip()
     else:
+        # Free-text capture requires a trusted, per-turn host permission. Merely
+        # containing "Fixed" or "Conclusion" does not make prose verified memory.
+        if payload.get("memoryWriteAllowed") is not True:
+            return None
+        if _UNVERIFIED.search(response_text):
+            return None
+        response_text, user_input = _redact(response_text), _redact(user_input)
         if not response_text or len(response_text) < 12:
             return None
         # Strip outer 4+ backtick fences before 3-backtick fences and any unclosed trailing fence
@@ -517,8 +579,10 @@ def _handle_post_or_stop(root: Path, decision: dict, phase: str = "post", payloa
     try:
         proc = subprocess.run(cmd, capture_output=True, encoding="utf-8", timeout=10)
     except Exception:
+        _warn("Memory write interrupted; retry the same event after checking store health.")
         return _empty_phase_response(phase, payload)
     if proc.returncode != 0:
+        _warn("Memory write failed; run status/reindex before relying on this decision.")
         return _empty_phase_response(phase, payload)
     try:
         result = json.loads(proc.stdout)
@@ -632,6 +696,7 @@ def main() -> int:
             allow_auto_init=not args.no_auto_init,
         )
         if root is None:
+            _warn("Configured memory root unavailable; no fallback write was performed.")
             return _empty_phase_response(phase, payload)
         return _handle_post_or_stop(root, decision, phase=phase, payload=payload)
 

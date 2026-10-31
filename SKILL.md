@@ -30,7 +30,8 @@ python scripts/hfa_manager.py status ./memory --json
 
 若宿主已配置本项目生命周期钩子（`hooks.json` / `scripts/hfa_hook.py`）：
 - `PreInvocation`：每轮用户输入在模型运行前自动触发检索，未命中输出 `{}`（0 Token），命中则通过单轮 `ephemeralMessage` 注入相关片段与 `deferred` 提示。
-- `PostInvocation` / `Stop`：回合结束时若提供结构化 `decision`、```` ```hfa-memory ```` 代码块或含明确结论/修复方案/文件路径的回复，自动过滤闲聊并脱敏凭据后，按 `request_id` 幂等落盘为 `chunks/chunk_XXXX.json`。
+- `PostInvocation` / `Stop`：接受显式结构化 `decision` 或 ```` ```hfa-memory ```` 代码块；普通回复需要宿主本轮设置 `memoryWriteAllowed: true`。`false`、非法类型及命中的用户禁存指令优先拒绝所有入口。过滤闲聊、假设和未验证文本后，对正文与元数据中的已知凭据格式脱敏，按 `request_id` 幂等落盘为 `chunks/chunk_XXXX.json`。规则不能证明内容属实或识别所有秘密，代理仍须核对来源与用户意图。
+- 钩子目录绑定优先级为 `--memory-dir`、`HFA_MEMORY_DIR`、工作区发现；已绑定目录不可用时不得改写其他项目，多工作区须指定目录。读取或保存失败会输出固定 stderr 提示；宿主继续运行不代表记忆已保存。
 
 若宿主已配置本项目 MCP，优先调用 `recall_memory`、`remember_decision`、`memory_health`；未配置则按下述 CLI 执行。配置与宿主调用约定见 `docs/ai-integration.md`。工具可用并不保证模型会自动调用，每次依赖旧决定的工作要主动查询。
 
@@ -50,7 +51,7 @@ python scripts/hfa_manager.py recall ./memory --query "IDE 配置" --unlock "复
 
 CLI 返回的 `router_text` 和 `recall_text` 是计量载荷；`routed_files` 是实际文件路径。不要因为看到 `resident_references` 就自动读取整份主线或画像；必要读取需另行计量。
 
-默认 R/C 预算各 600，可在 `config.json` 调整。完整标题、括号、路径与标点都计入。`exact: false` 表示保守启发式估算 (`heuristic_estimate`)。不得把启发式估算表述为精确模型账单。
+默认 R/C 预算各 600，可在 `config.json` 调整。完整标题、括号、路径与标点都计入。`exact: false` 表示 UTF-8 字节上界 (`utf8_bytes_upper_bound`)，对 `o200k_base` 保守但可能明显少装内容；安装可选 tiktoken 后使用精确计量。不得把上界表述为精确模型账单。
 
 ## 选择性沉淀
 

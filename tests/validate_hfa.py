@@ -274,10 +274,9 @@ hfa.cmd_add_topic(Path(sys.argv[2]),"Committed","committed-key","fact")
         with patch.object(hfa, "_encoder", return_value=None):
             measured = hfa.measure_tokens("路径😀(link)")
             self.assertFalse(measured["exact"])
-            self.assertEqual(measured["count"], hfa._heuristic_tokens("路径😀(link)"))
-            # Without tiktoken, template L0 must leave ample headroom instead of
-            # counting raw UTF-8 bytes (~519) and locking out after one new branch.
-            self.assertLess(hfa.measure_tokens(base)["count"], 350)
+            self.assertEqual(measured["method"], "utf8_bytes_upper_bound")
+            self.assertEqual(measured["count"], len("路径😀(link)".encode("utf8")))
+            self.assertLessEqual(hfa.measure_tokens(base)["count"], 600)
         (self.mem / "directory.md").write_text(injected, encoding="utf-8")
         with self.assertRaises(hfa.MemoryError):
             self.route("anything")
@@ -419,6 +418,11 @@ hfa.cmd_add_topic(Path(sys.argv[2]),"Committed","committed-key","fact")
         self.assertIn("Custom architecture notes preserved.", read(fw))
 
     def test_custom_branch_tier_tombstone_without_tag_and_planned_mainline(self):
+        # This test adds L0 nodes; explicitly allocate enough router budget for
+        # their full byte bound when the optional tokenizer is unavailable.
+        config_path = self.mem / "config.json"
+        cfg = json.loads(read(config_path)); cfg["router_token_budget"] = 1000
+        config_path.write_text(json.dumps(cfg), encoding="utf8")
         (self.mem / "branches/DEV.md").write_text("# DEV branch\n", encoding="utf-8")
         (self.mem / "main/M2.md").write_text("# M2 planned mainline\n", encoding="utf-8")
         d = self.mem / "directory.md"

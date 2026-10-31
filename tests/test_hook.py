@@ -140,6 +140,7 @@ class HookIntegrationTests(unittest.TestCase):
 
         # 2. Technical conclusion response with CJK-adjacent file path and identifiers auto-distills and persists L1 chunk
         turn_end = json.dumps({
+            "memoryWriteAllowed": True,
             "conversationId": "conv-post-2",
             "turnId": "turn-01",
             "workspacePaths": [str(self.workspace)],

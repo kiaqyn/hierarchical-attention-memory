@@ -31,7 +31,7 @@ python -m venv .venv
 python -B scripts/hfa_hook.py --print-hooks --memory-dir ./my_memory
 ```
 
-倒数第二条命令输出包含绝对路径的 `mcpServers` JSON；最后一条命令输出包含绝对路径的 `hooks.json` 配置（同时注册 `PreInvocation` 自动按需检索，以及 `PostInvocation` / `Stop` 回合结束自动提炼结论、过滤闲聊、脱敏凭据并按 `request_id` 幂等落盘 L1 `chunk_XXXX.json`）。把其中的服务启动项或钩子配置放进所用软件的配置；不同软件可能使用不同外层配置格式。本项目不会覆盖应用现有配置。已有记忆目录不重复初始化，升级时先运行 `reindex`，再检查 `status`。
+倒数第二条命令输出包含绝对路径的 `mcpServers` JSON；最后一条命令输出包含绝对路径的 `hooks.json` 配置（注册 `PreInvocation` 自动按需检索，以及 `PostInvocation` / `Stop` 受控提炼与幂等保存）。把其中的服务启动项或钩子配置放进所用软件的配置；不同软件可能使用不同外层配置格式。本项目不会覆盖应用现有配置。已有记忆目录不重复初始化，升级时先运行 `reindex`，再检查 `status`。
 
 应用实际执行的命令相当于：
 
@@ -42,6 +42,20 @@ python -B scripts/hfa_hook.py --print-hooks --memory-dir ./my_memory
 手动启动后没有欢迎页面是正常的：它在等待宿主通过标准输入发送协议请求。使用绝对路径的配置可避免宿主工作目录不同导致找不到文件。
 
 新建记忆包含 HFA 的模板说明，不包含你的历史聊天。应先按实际项目核对 `main/` 和 `profile/`；不要把模板人物、示例内容当成事实。服务器每次只绑定指定的一棵记忆目录，工具参数不能更换根目录。
+
+## 钩子的保存许可与升级变化
+
+普通助手回复默认不自动入库。宿主只有在本轮允许提炼时才在钩子 JSON 顶层加入布尔值 `memoryWriteAllowed: true`；不能把用户文本里的同名字段直接提升为宿主许可，也不要将它固定为全局 true。仅安装 hooks 配置不会产生这一逐轮信号。宿主不支持时，可以由代理在核对用户意图后调用 MCP 保存工具，或输出明确的结构化决定。
+
+显式 `decision` 对象和助手回复里的 `hfa-memory` JSON 块表达保存意图，不要求额外的 true；顶层 `memoryWriteAllowed: false` 或非布尔类型会拒绝这些入口。当前用户文本中的常见中英文禁存表达（例如“不要保存到长期记忆”“don't save this”）也会拦截。自然语言规则不覆盖所有表达，宿主需要完整禁存保证时应传 false。程序不具备判断结论真实性的能力。
+
+Stop 仅有 `transcriptPath` 时会读取最近 128 KiB 的 JSONL；识别 `USER` / `USER_INPUT` / `USER_MESSAGE` / `HUMAN` 和 `PLANNER_RESPONSE` / `ASSISTANT` / `MODEL` 的字符串正文。遇到新用户回合不会回溯保存上一轮助手回复。超出尾部窗口、其他宿主格式或没有明确保存条件时可能跳过，需要适配器提供当前回合字段。
+
+钩子先对正文、标题、关键词、来源及事件标识中的已知凭据格式脱敏，再截断/提炼。支持常见 API 密钥、密码赋值、Bearer 和 PEM 私钥；任意格式的秘密可能无法识别，不能据此发送真实密码。CLI/MCP 的显式保存仍由调用方负责内容筛选；本修复不清洗历史文件。
+
+目录选择依次为 `--memory-dir`、`HFA_MEMORY_DIR`、工作区发现。已配置目录缺失时只初始化它，损坏或非空且未初始化时拒绝操作，不退回其他项目；多工作区没有指定根目录时也拒绝猜测。建议每个宿主项目生成独立的绝对路径配置。
+
+对话读取或保存失败会在 stderr 输出固定诊断，不包含聊天原文。钩子继续返回宿主要求的空对象或 Stop `{"decision":"allow"}`；这只表示允许宿主继续，**不表示保存成功**，应结合诊断与记忆健康检查核对。
 
 ## 代理的调用规则
 
@@ -75,6 +89,8 @@ python -B scripts/hfa_hook.py --print-hooks --memory-dir ./my_memory
 ```powershell
 .venv\Scripts\python.exe -B tests/test_mcp.py
 python -B tests/test_memory_quality.py
+python -B tests/test_hook.py
+python -B tests/test_review_regressions.py
 python -B tests/evaluate_memory.py
 ```
 

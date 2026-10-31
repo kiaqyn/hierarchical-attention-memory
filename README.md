@@ -23,7 +23,7 @@
 | **命中回合 Token 预算控制** | 无硬性上限（容易撑爆窗口） | Top-K 条目拼接（通常无精确 Token 截断） | **双重硬性预算锁**（默认路由 `R ≤ 600`、召回 `C ≤ 600` Tokens，最多 2 条片段，超额自动延后至 `deferred`） |
 | **跨分支与废弃方案隔离** | 无隔离，全量混读 | 按项目或 Tag 简单过滤 | **L0 主线专注锁 (`ACTIVE M<n>`)**：支线与墓碑 (`TOMBSTONED`) 默认拦截，须显式 `--unlock` 说明用途并记入 `access.jsonl` 审计 |
 | **旧决定推翻与历史演进** | 直接删改覆盖（丢失历史原因） | 追加新记录（旧错误结论仍可能被同分召回） | **显式 `supersedes` 替代链**：旧 `chunk_XXXX.json` 字节原样保留供审计，但永久退出当前有效召回池 |
-| **回合自动读写闭环** | 依赖人工或模型自觉编辑文件 | `SessionStart` + `PostToolUse` / `Stop` 钩子 | **`PreInvocation` 自动检索注入 + `PostInvocation` / `Stop` 自动提炼结论/路径/关键词并按 `request_id` 幂等落盘 + `stdio MCP`** |
+| **回合自动读写闭环** | 依赖人工或模型自觉编辑文件 | `SessionStart` + `PostToolUse` / `Stop` 钩子 | **`PreInvocation` 自动检索注入 + `PostInvocation` / `Stop` 受控提炼结论/路径/关键词并按 `request_id` 幂等落盘 + `stdio MCP`** |
 | **检索内核与运行依赖** | 无检索（全文硬塞） | Go 单二进制 FTS5 或 Node/Python + 向量库 | **Python 3.10+ 纯标准库**：精确命中词 + **`sqlite3` FTS5 (BM25)** + 中文双字分词 + 同义词组 + 否定句剥离 |
 
 ---
@@ -77,13 +77,16 @@ python scripts/hfa_manager.py recall ./my_memory --query "之前 GBK 乱码 怎�
 
 ### 1. 全生命周期自动化钩子（`PreInvocation` + `PostInvocation` + `Stop`）
 
-`scripts/hfa_hook.py`（或 `hfa-hook` 命令）配合根目录 `hooks.json` / `plugin.json`，在支持生命周期钩子的宿主中实现**零手动干预的读写闭环**：
+`scripts/hfa_hook.py`（或 `hfa-hook` 命令）配合根目录 `hooks.json` / `plugin.json`，在支持生命周期钩子的宿主中提供自动召回与受控保存：
 
 - **`PreInvocation`（回合前自动按需召回）**：自动读取 `lastUserInput` 并执行混合检索。无命中时输出 `{}`（**0 额外 Token**）；命中主线记忆或发现支线 `deferred` / 偏好变更 `profile_drift` 线索时，通过单轮 `ephemeralMessage` 注入，并明确标注为历史参考数据而非覆盖用户的指令。
-- **`PostInvocation` / `Stop`（回合后自动提炼与幂等落盘）**：当一轮对话结束并提供结构化结论（`decision` 字段或 ```` ```hfa-memory ```` 代码块）或包含明确结论/修复方案/文件路径的助手回复时：
-  - **防污染过滤**：自动忽略日常闲聊与无实质结论的寒暄；自动对 `sk-...`、`ghp_...`、`AKIA...`、密码等敏感凭据执行 `[REDACTED]` 脱敏。
+- **`PostInvocation` / `Stop`（回合后受控提炼与幂等落盘）**：接受显式结构化结论（`decision` 字段或 ```` ```hfa-memory ```` 代码块）；普通助手回复仅在宿主本轮提供布尔值 `memoryWriteAllowed: true` 时尝试提炼。`false` 或非布尔值拒绝保存，命中的用户“不要保存”指令优先于上述所有入口。
+  - **防污染过滤**：忽略闲聊、没有明确结论的文本，以及命中假设/示例/未验证规则的内容。先对正文和元数据脱敏，再提取、截断标题与关键词，防止凭据从关键词绕回索引。支持常见 API 密钥、密码赋值、Bearer 与完整 PEM 私钥格式；这不是通用秘密检测器，也不能自动证明结论属实。
   - **结构化提炼**：自动提取标题、关联文件名/代码标识符/技术命中词（1–8 个）及核心结论（1–3 行），通过确定性 `request_id` 幂等写入 `chunks/chunk_XXXX.json`（同一回合重复触发 `PostInvocation` 与 `Stop` 不会重复生成文件）。
-  - **零配置自愈**：若工作区尚未初始化记忆目录，回合结束需要落盘时会自动初始化 `<workspace>/memory`。
+  - **目录绑定**：`--memory-dir` 优先于 `HFA_MEMORY_DIR`，其次才是工作区发现。已配置目录缺失时只初始化该目录；损坏或非空且未初始化时拒绝保存，不转写其他项目。多个工作区未指定根目录时拒绝猜测。只有通过保存条件后才会尝试初始化。
+  - **对话与错误可见性**：支持从 `transcriptPath` 的 JSONL 尾部读取当前回合和用户禁存指令，不沿用上一回合回复。读取或写入失败在 stderr 给出不含聊天原文的提示，仍保持宿主要求的退出/Stop 返回格式。
+
+升级注意：仅生成 hooks 配置不会自动添加逐轮写入许可。宿主若不能提供该信号，使用显式结构化决定或 MCP 的保存工具。已有含敏感信息的历史文件不会被本次修复自动清洗。
 
 生成带当前环境验证绝对路径的 `hooks.json` 配置：
 
@@ -168,14 +171,14 @@ python scripts/hfa_manager.py add-topic ./my_memory \
 - **多文件事务与恢复日志**：所有写入先持线程锁与跨进程文件锁 (`.hfa.lock`)，将变更前快照写入 `.hfa-transaction.json`，再经临时文件、`fsync` 与 `os.replace` 原子替换更新 L1、`index/fts.sqlite`、`index/*.json` 与 Markdown 视图。若进程中途崩溃，下一次任意 CLI 访问会先自动回滚或完成未决事务，再允许读取；恢复失败时锁定读取以防暴露半写状态。
 - **Token 计量说明**：
   - 安装 `requirements-optional.txt` (`tiktoken==0.14.0`) 后使用 `o200k_base` 精确计量（`exact: true`）；
-  - 未安装时使用按 CJK 字符、英文词根与符号分段校准的保守启发式上界估算（`method: "heuristic_estimate"`, `exact: false`），绝不伪装成精确分词器结果。
+  - 未安装时按 UTF-8 字节数计量（`method: "utf8_bytes_upper_bound"`, `exact: false`），作为 `o200k_base` 的保守上界；不再用可能低估罕见汉字的字符启发式。相同预算下可容纳的内容会更少，可缩短结论或安装可选分词器；不是精确模型账单，也不承诺其他分词器的上界。
   - `router_token_budget`（默认 600）与 `recall_token_budget`（默认 600）分别约束 `router_text` 与 `recall_text` 正文载荷，不包含外层 JSON 字段名或宿主工具封装开销。
 
 ---
 
 ## 诚实能力边界声明（Scope & Limitations）
 
-1. **非通用向量语义理解**：HFA 的混合检索基于精确命中词、`sqlite3` FTS5 倒排索引、中文双字切分与可配置同义词表。它具有确定性、零冷启动延迟和完全可解释的匹配词（`selected[].match`），但不是 Embedding 向量模型，对于完全无词汇重叠且未配置同义词的跨领域隐喻不会强行召回。
+1. **非通用向量语义理解**：HFA 的混合检索基于精确命中词、`sqlite3` FTS5 倒排索引、中文双字切分与可配置同义词表。它具有确定性和可解释的匹配词（`selected[].match`），但不是 Embedding 向量模型，对于完全无词汇重叠且未配置同义词的跨领域隐喻不会强行召回。查询时在校验 `source_digest` 与表完整性后直接以只读方式查询磁盘 `index/fts.sqlite`（不重建 SQLite FTS5 表），但新 CLI 进程仍会读取并校验 L0/L1 JSON 真源，不能据此宣称零冷启动延迟或大规模性能已验证。
 2. **评估集性质透明**：`tests/evaluate_memory.py` 包含 32 个公开可见的人工构造检索案例（混合模式正向召回 `23/23`，负向拒识 `9/9`，零误报）与 1,000 次工具读写/重试/替代操作回放。它是确定性工程回归基准，不代表独立盲测或千轮真实大模型对话的认知表现证明。
 3. **进程级崩溃恢复而非断电级存储引擎**：`.hfa-transaction.json` 保障进程异常退出或普通 I/O 错误时的多文件回滚一致性；直接绕过 CLI 手动乱改文件不参与事务保护。
 
@@ -187,6 +190,7 @@ python scripts/hfa_manager.py add-topic ./my_memory \
 python -B tests/validate_hfa.py
 python -B tests/test_memory_quality.py
 python -B tests/test_hook.py
+python -B tests/test_review_regressions.py
 python -B tests/test_mcp.py
 python -B tests/evaluate_memory.py
 ```
