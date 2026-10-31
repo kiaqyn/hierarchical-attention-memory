@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HFA 空间认知工作台 · 实时光子流召回仿真视界</title>
+  <title>HFA 空间认知工作台 · 带先后顺序与定向箭头的时序召回仿真</title>
   
   <!-- 离线核心：先载入 Three.js，再载入 3d-force-graph -->
   <script src="libs/three.min.js"></script>
@@ -11,8 +11,8 @@
 
   <style>
     /* =========================================================================
-       Studio Rail & Swiss Architectural Interface System
-       彻底消除所有浮空圆角卡片，边到边专业工作台导轨 + 真实光子流粒子动力学
+       Studio Rail & Swiss Architectural Interface System (No Cards)
+       全流程时序流水线 (Sequential Stepper) + 3D 定向箭头 (Directional Arrows)
        ========================================================================= */
     :root {
       --bg: #07090e;
@@ -48,12 +48,12 @@
       user-select: none;
     }
 
-    /* 3D WebGL 画布 (位于顶轨与底轨之间) */
+    /* 3D WebGL 画布 (位于顶栏+时序轨 与 底栏之间) */
     #graph3d {
       width: 100vw;
-      height: calc(100vh - 42px - 44px);
+      height: calc(100vh - 42px - 36px - 44px);
       position: absolute;
-      top: 42px;
+      top: 78px;
       left: 0;
       z-index: 1;
     }
@@ -97,7 +97,6 @@
       font-size: 11px;
     }
 
-    /* 平整工程 Tab 菜单 (No Pills, No Cards) */
     .rail-menu {
       display: flex;
       height: 42px;
@@ -141,7 +140,114 @@
       color: var(--ink-sub);
     }
 
-    /* ==================== 2. 取景框刻度标定 (Precision Overlay) ==================== */
+    /* ==================== 2. 全新：先后顺序贯通流水线 (Sequential Pipeline Bar) ==================== */
+    .sequence-rail {
+      position: absolute;
+      top: 42px;
+      left: 0;
+      width: 100vw;
+      height: 36px;
+      background: #06080d;
+      border-bottom: 1px solid var(--line);
+      z-index: 45;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      box-sizing: border-box;
+      font-family: var(--font-mono);
+      font-size: 11px;
+    }
+    .pipeline-chain {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .pipe-step {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--ink-muted);
+      padding: 2px 8px;
+      border: 1px solid transparent;
+      transition: all 0.2s ease;
+    }
+    .pipe-step.active {
+      color: #fff;
+      background: rgba(88, 166, 255, 0.12);
+      border-color: var(--accent-blue);
+      font-weight: 700;
+    }
+    .pipe-step.done {
+      color: var(--accent-jade);
+    }
+    .pipe-arrow {
+      color: var(--ink-muted);
+      font-weight: 700;
+    }
+    .pipe-arrow.active {
+      color: var(--accent-blue);
+    }
+
+    /* 步进控制按钮组 */
+    .stepper-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .step-ctrl-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--line);
+      color: var(--ink-sub);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 4px 10px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s;
+    }
+    .step-ctrl-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      border-color: var(--line-bright);
+    }
+    .step-ctrl-btn.primary {
+      background: var(--accent-blue);
+      color: #07090e;
+      border-color: var(--accent-blue);
+      font-weight: 700;
+    }
+
+    /* ==================== 3. 屏幕中心大字步骤横幅 (Step Callout Banner) ==================== */
+    .step-hud-banner {
+      position: absolute;
+      top: 90px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 30;
+      background: rgba(9, 12, 19, 0.92);
+      border: 1px solid var(--accent-blue);
+      padding: 8px 20px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: #fff;
+      display: none;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 0 20px rgba(88, 166, 255, 0.25);
+      pointer-events: none;
+    }
+    .banner-badge {
+      background: var(--accent-blue);
+      color: #07090e;
+      padding: 2px 6px;
+      font-weight: 800;
+      font-size: 11px;
+    }
+
+    /* 刻度标定 */
     .reticle-mark {
       position: absolute;
       font-family: var(--font-mono);
@@ -151,13 +257,13 @@
       z-index: 10;
       letter-spacing: 0.5px;
     }
-    .reticle-tl { top: 54px; left: 16px; }
-    .reticle-tr { top: 54px; right: 16px; }
+    .reticle-tl { top: 88px; left: 16px; }
+    .reticle-tr { top: 88px; right: 16px; }
 
-    /* 左下角平铺式拓扑参数区 (No Card, Typographic Scale) */
+    /* 左下角平铺式拓扑参数区 */
     .telemetry-legend {
       position: absolute;
-      bottom: 58px;
+      bottom: 56px;
       left: 16px;
       z-index: 10;
       font-family: var(--font-mono);
@@ -188,7 +294,7 @@
       display: inline-block;
     }
 
-    /* ==================== 3. 底部贯通式光子流实时控制台 (Docked Console Rail) ==================== */
+    /* ==================== 4. 底部贯通式控制台 (Docked Console Rail) ==================== */
     .studio-console-bar {
       position: absolute;
       bottom: 0;
@@ -274,13 +380,13 @@
       opacity: 0.9;
     }
 
-    /* ==================== 4. 一体化停靠工作台检查器 (Docked Studio Inspector) ==================== */
+    /* ==================== 5. 一体化停靠工作台检查器 (Docked Inspector) ==================== */
     .studio-inspector {
       position: absolute;
-      top: 42px;
+      top: 78px;
       right: 0;
       width: 440px;
-      height: calc(100vh - 42px - 44px);
+      height: calc(100vh - 78px - 44px);
       background: var(--rail-bg);
       border-left: 1px solid var(--line);
       z-index: 40;
@@ -371,8 +477,8 @@
       margin-top: 4px;
     }
 
-    /* 实时召回遥测专区 */
-    .telemetry-box {
+    /* 实时步骤跟踪框 */
+    .step-trail-box {
       background: #05070b;
       border: 1px solid var(--line);
       padding: 12px;
@@ -382,42 +488,18 @@
       flex-direction: column;
       gap: 6px;
     }
-    .telemetry-row {
+    .step-trail-item {
       display: flex;
-      justify-content: space-between;
-    }
-
-    /* 关联拓扑表格 */
-    .matrix-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-family: var(--font-mono);
-      font-size: 11px;
-      margin-top: 4px;
-    }
-    .matrix-table th {
-      text-align: left;
-      padding: 6px 8px;
-      border-bottom: 1px solid var(--line);
+      align-items: flex-start;
+      gap: 8px;
       color: var(--ink-muted);
-      font-weight: 600;
-      font-size: 10px;
-      letter-spacing: 0.5px;
     }
-    .matrix-table td {
-      padding: 8px 8px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-      color: var(--ink);
+    .step-trail-item.current {
+      color: #fff;
+      font-weight: 700;
     }
-    .matrix-row {
-      cursor: pointer;
-      transition: background 0.12s;
-    }
-    .matrix-row:hover {
-      background: rgba(255, 255, 255, 0.04);
-    }
-    .matrix-row:hover td {
-      color: var(--accent-blue);
+    .step-trail-item.done {
+      color: var(--accent-jade);
     }
 
     .inspector-actions {
@@ -448,11 +530,6 @@
       color: #fff;
       border-color: var(--line-bright);
     }
-    .action-flat-btn.primary {
-      background: rgba(255, 255, 255, 0.08);
-      color: #fff;
-      border-color: var(--line-bright);
-    }
   </style>
 </head>
 <body>
@@ -462,7 +539,7 @@
     <div class="rail-brand">
       <span class="status-beacon"></span>
       <span class="brand-id">HFA OBSERVER</span>
-      <span class="brand-meta">// PHOTON STREAM SIMULATOR 2.2</span>
+      <span class="brand-meta">// STEP-BY-STEP PHOTON RUNTIME</span>
     </div>
 
     <!-- 平整功能标签页 -->
@@ -487,96 +564,125 @@
     <!-- 实时相机坐标遥测 -->
     <div class="rail-telemetry">
       <span>CAM: <span class="telemetry-val" id="camReadout">[ 0.0, 140.0, 560.0 ]</span></span>
-      <span>NODES: <span class="telemetry-val" id="nodeCountReadout">23</span></span>
+      <span>STEP: <span class="telemetry-val" id="stepReadout">IDLE</span></span>
     </div>
   </header>
+
+  <!-- ==================== 2. 全新：先后顺序贯通流水线 (Sequential Pipeline Bar) ==================== -->
+  <div class="sequence-rail">
+    <div class="pipeline-chain">
+      <div class="pipe-step" id="pStep1"><span>① 接收口语</span></div>
+      <span class="pipe-arrow" id="pArr1">──▶</span>
+      <div class="pipe-step" id="pStep2"><span>② 大脑分词拆解</span></div>
+      <span class="pipe-arrow" id="pArr2">──▶</span>
+      <div class="pipe-step" id="pStep3"><span>③ 图书员全网打分</span></div>
+      <span class="pipe-arrow" id="pArr3">──▶</span>
+      <div class="pipe-step" id="pStep4"><span>④ 锁定目标日记</span></div>
+      <span class="pipe-arrow" id="pArr4">──▶</span>
+      <div class="pipe-step" id="pStep5"><span>⑤ 注入大猫上下文</span></div>
+    </div>
+
+    <!-- 步进控制：支持自动播放与单步调试 -->
+    <div class="stepper-controls">
+      <button class="step-ctrl-btn primary" onclick="autoPlaySequence()"><span>▶ 自动播放全时序</span></button>
+      <button class="step-ctrl-btn" onclick="nextSingleStep()"><span>⏭ 单步调试 (逐步看)</span></button>
+      <button class="step-ctrl-btn" onclick="resetSequence()"><span>↺ 复位重置</span></button>
+    </div>
+  </div>
+
+  <!-- 屏幕中心大字步骤横幅 -->
+  <div class="step-hud-banner" id="stepBanner">
+    <span class="banner-badge" id="bannerBadge">STEP 1</span>
+    <span id="bannerText">正在接收浅在控制台输入的口语...</span>
+  </div>
 
   <!-- 3D 渲染画布 -->
   <div id="graph3d"></div>
 
   <!-- 刻度定位标 -->
-  <div class="reticle-mark reticle-tl">+ [VIEWPORT: 100% // ENGINE: THREE.JS WEBGL]</div>
-  <div class="reticle-mark reticle-tr">[REALTIME RECALL BUS: ACTIVE // FTS5 READY] +</div>
+  <div class="reticle-mark reticle-tl">+ [VIEWPORT: SEQUENTIAL_MODE // 3D DIRECTIONAL ARROWS ACTIVE]</div>
+  <div class="reticle-mark reticle-tr">[ARROW: SIGNAL DIRECTION // PARTICLE: PACKET STREAM] +</div>
 
   <!-- 左下角平铺式拓扑参数区 -->
   <div class="telemetry-legend">
-    <div class="legend-title">Topology & Flow Matrix</div>
+    <div class="legend-title">Sequence Flow & Arrow Legend</div>
+    <div class="legend-item">
+      <span style="color:#ffffff;">──▶ 3D 定向箭头：信号流淌严格先后顺序</span>
+    </div>
     <div class="legend-item">
       <span class="dot-ref" style="background:#ffffff;"></span>
-      <span style="color:#ffffff;">TIER 1 // 核心调度中枢 (CORE)</span>
+      <span style="color:#ffffff;">① 调度中枢 ➔ ② 检索员 ➔ ③ 历史日记</span>
     </div>
     <div class="legend-item">
       <span class="dot-ref" style="background:var(--accent-jade);"></span>
-      <span style="color:var(--accent-jade);">TIER 2 // 能力分水岭模块 (MODULE)</span>
+      <span style="color:var(--accent-jade);">⚡ 白色光子：沿着箭头方向高速发射</span>
     </div>
     <div class="legend-item">
-      <span class="dot-ref" style="background:var(--ink-muted);"></span>
-      <span>TIER 3 // 真实历史记忆 (REAL CHUNKS 0001~0032)</span>
-    </div>
-    <div class="legend-item" style="margin-top:4px; padding-top:4px; border-top:1px dashed var(--line);">
-      <span style="color:#fff;">⚡ PHOTON STREAM: 实时召回光子能量流</span>
-    </div>
-    <div class="legend-item">
-      <span style="color:var(--accent-rose);">── RED DASH: 替代链已作废 (VOID)</span>
+      <span class="dot-ref" style="background:var(--accent-rose);"></span>
+      <span style="color:var(--accent-rose);">── 红色作废：替代链 (supersedes)</span>
     </div>
   </div>
 
-  <!-- ==================== 3. 底部贯通式光子流实时控制台 (Docked Console Rail) ==================== -->
+  <!-- ==================== 4. 底部贯通式控制台 (Docked Console Rail) ==================== -->
   <footer class="studio-console-bar">
     <div class="console-prompt-label">
-      <span>⚡ RECALL_BUS &gt;</span>
+      <span>⚡ PROMPT_INPUT &gt;</span>
     </div>
 
     <!-- 预设快速测试口语 -->
     <div class="preset-pills">
-      <button class="preset-btn" onclick="setQueryAndRun('中文全变成问号怎么解决？')">[ 01: 中文变问号乱码 ]</button>
-      <button class="preset-btn" onclick="setQueryAndRun('我们今天定下的白话教学法新规矩')">[ 02: 白话教学法规矩 ]</button>
-      <button class="preset-btn" onclick="setQueryAndRun('刚才做的70项防灾质检全绿了吗')">[ 03: 70项防灾质检 ]</button>
-      <button class="preset-btn" onclick="setQueryAndRun('动态对话标题系统 M4 架构')">[ 04: 动态标题 M4 ]</button>
-      <button class="preset-btn" onclick="setQueryAndRun('初识大猫与签约成为搭档')">[ 05: 初识签约伙伴 ]</button>
+      <button class="preset-btn" onclick="setQueryAndPlay('中文全变成问号怎么解决？')">[ 01: 中文变问号乱码 ]</button>
+      <button class="preset-btn" onclick="setQueryAndPlay('我们今天定下的白话教学法新规矩')">[ 02: 白话教学法规矩 ]</button>
+      <button class="preset-btn" onclick="setQueryAndPlay('刚才做的70项防灾质检全绿了吗')">[ 03: 70项防灾质检 ]</button>
+      <button class="preset-btn" onclick="setQueryAndPlay('动态对话标题系统 M4 架构')">[ 04: 动态标题 M4 ]</button>
+      <button class="preset-btn" onclick="setQueryAndPlay('初识大猫与签约成为搭档')">[ 05: 初识签约伙伴 ]</button>
     </div>
 
     <!-- 自定义输入框 -->
     <div class="console-input-wrap">
-      <input type="text" class="console-input" id="busQueryInput" placeholder="输入你想对大猫说的大白话口语... (按 Enter 立即发射光子流)" onkeydown="if(event.key==='Enter') executePhotonRecall()" />
+      <input type="text" class="console-input" id="busQueryInput" value="中文全变成问号怎么解决？" placeholder="输入口语... 点击发射或按回车看先后顺序" onkeydown="if(event.key==='Enter') autoPlaySequence()" />
     </div>
 
     <!-- 发射按键 -->
-    <button class="btn-emit" onclick="executePhotonRecall()">
-      <span>[ EMIT // 激发光流 ]</span>
+    <button class="btn-emit" onclick="autoPlaySequence()">
+      <span>[ EMIT // 启动时序演示 ]</span>
     </button>
   </footer>
 
-  <!-- ==================== 4. 一体化停靠工作台检查器 ==================== -->
+  <!-- ==================== 5. 一体化停靠工作台检查器 ==================== -->
   <aside class="studio-inspector" id="studioInspector">
     <div class="inspector-head">
       <div>
-        <div class="node-hierarchy-tag" id="insTier">TIER 1 // CORE SCHEDULER</div>
-        <div class="node-heading" id="insTitle">大猫大脑中枢</div>
+        <div class="node-hierarchy-tag" id="insTier">SEQUENCE TRACER</div>
+        <div class="node-heading" id="insTitle">实时时序流水线</div>
       </div>
       <button class="btn-dock-close" onclick="closeInspector()">[ ESC / CLOSE ]</button>
     </div>
 
     <div class="inspector-scroll">
-      <!-- 实时召回遥测实录 -->
-      <section class="arch-section" id="secTelemetry" style="display:none;">
-        <div class="arch-label">// RECALL TELEMETRY // 实时光子流拦截实录</div>
-        <div class="telemetry-box">
-          <div class="telemetry-row">
-            <span style="color:var(--ink-muted);">PROMPT:</span>
-            <span style="color:#fff;" id="telPrompt">"..."</span>
+      <!-- 步骤足迹跟踪 -->
+      <section class="arch-section">
+        <div class="arch-label">// SEQUENCE TRACE // 真实先后执行足迹</div>
+        <div class="step-trail-box">
+          <div class="step-trail-item" id="traceStep1">
+            <span>①</span>
+            <div><b>浅发送口语</b>：接收原始字符串输入</div>
           </div>
-          <div class="telemetry-row">
-            <span style="color:var(--ink-muted);">MATCHED TOKENS:</span>
-            <span style="color:var(--accent-cyan);" id="telTokens">[]</span>
+          <div class="step-trail-item" id="traceStep2">
+            <span>②</span>
+            <div><b>大脑中枢分词</b>：拆解关键词与 N-Gram 切片</div>
           </div>
-          <div class="telemetry-row">
-            <span style="color:var(--ink-muted);">BM25/FTS5 SCORE:</span>
-            <span style="color:var(--accent-jade); font-weight:700;" id="telScore">98.5</span>
+          <div class="step-trail-item" id="traceStep3">
+            <span>③</span>
+            <div><b>沿箭头下发检索指令</b>：图书管理员毫秒级计算得分</div>
           </div>
-          <div class="telemetry-row">
-            <span style="color:var(--ink-muted);">HOOK LATENCY:</span>
-            <span style="color:var(--accent-amber);" id="telLatency">3.8 ms (实时无感)</span>
+          <div class="step-trail-item" id="traceStep4">
+            <span>④</span>
+            <div><b>光子流沿箭头直击目标</b>：旧日记被点亮脉冲</div>
+          </div>
+          <div class="step-trail-item" id="traceStep5">
+            <span>⑤</span>
+            <div><b>反向回传上下文</b>：记忆注入大猫视野准备回答</div>
           </div>
         </div>
       </section>
@@ -585,7 +691,7 @@
       <section class="arch-section">
         <div class="arch-label">// 01 METAPHOR // 生活白话场景</div>
         <div class="arch-text-metaphor" id="insMetaphor">
-          正在加载中...
+          请在底部点击发射，亲眼看先后顺序与箭头流动。
         </div>
       </section>
 
@@ -593,90 +699,66 @@
       <section class="arch-section">
         <div class="arch-label">// 02 SPECIFICATION // 计算机工程原理</div>
         <div class="arch-text-tech" id="insTech">
-          正在加载中...
+          工程执行链条待命。
         </div>
         <div class="arch-code-pointer" id="insFile">
-          scripts/hfa_manager.py
+          scripts/hfa_hook.py ➔ scripts/hfa_manager.py
         </div>
       </section>
 
-      <!-- 3. 强弱关联矩阵表 -->
+      <!-- 3. 现场实物验证或测试沙盘 -->
       <section class="arch-section">
-        <div class="arch-label">// 03 TOPOLOGY MATRIX // 关联拓扑矩阵 (点击瞬移)</div>
-        <table class="matrix-table">
-          <thead>
-            <tr>
-              <th>NODE</th>
-              <th>RELATION</th>
-              <th style="text-align:right;">AFFINITY</th>
-            </tr>
-          </thead>
-          <tbody id="insMatrixBody">
-            <!-- 动态注入表格行 -->
-          </tbody>
-        </table>
-      </section>
-
-      <!-- 4. 现场实物验证或测试沙盘 -->
-      <section class="arch-section">
-        <div class="arch-label">// 04 VERIFIED DATA // 现场实证</div>
+        <div class="arch-label">// 03 VERIFIED DATA // 现场实证</div>
         <div style="font-family:var(--font-mono); font-size:11px; color:var(--accent-jade);" id="insEvidence">
-          [OK] 100% SHA-256 SYNCHRONIZED
+          [OK] READY TO TRACE
         </div>
       </section>
     </div>
 
     <div class="inspector-actions">
       <button class="action-flat-btn" onclick="flyToMacroOverview()">[ OVERVIEW / 全景 ]</button>
-      <button class="action-flat-btn primary" onclick="zoomInNode()">[ LOCK FOCUS / 贴身聚焦 ]</button>
+      <button class="action-flat-btn" onclick="zoomInNode()">[ LOCK FOCUS / 贴身聚焦 ]</button>
     </div>
   </aside>
 
   <!-- =========================================================================
-       图谱核心交互与真实光子流召回算法
+       时序推进引擎与 3D 箭头动力学
        ========================================================================= -->
   <script>
-    // 包含真实全部 32 篇历史日记中的关键节点与核心中枢
     const GRAPH_DATA = {
       nodes: [
-        // ---------- 一级核心天体 (Level 1) ----------
         {
           id: "CENTRAL_BRAIN",
-          name: "大猫大脑中枢",
+          name: "① 大猫大脑中枢",
           level: 1,
           val: 28,
           color: "#ffffff",
-          hitwords: ["中枢", "调度", "路由", "大猫", "brain"],
-          metaphor: "相当于大猫脑海里的总调度台。浅说的每一句话，都先经过这里解析意图并分发光子流召回旧记忆。",
-          tech: "中央上下文调度器 (Central Context Router)。负责协调 L0 轻量路由与 L1 详细真源的交互，控制记忆预算。",
-          file: "scripts/hfa_manager.py: central_router",
-          evidence: "AUDIT: PASS | 32 TOPICS MOUNTED | ACTIVE: M5"
+          hitwords: ["中枢", "调度", "路由", "大猫"],
+          metaphor: "【第 1 站】浅说的每一句话，首先传到这里！大猫负责听懂你的意图，并把句子拆成关键词，派发给图书管理员。",
+          tech: "查询解析入口 (Query Parser & Dispatcher)。提取输入关键词并分发检索指令。",
+          file: "scripts/hfa_hook.py ➔ scripts/hfa_manager.py: central_router"
         },
         {
           id: "LIFECYCLE",
           name: "记忆生命全周期",
           level: 1,
-          val: 24,
+          val: 22,
           color: "#e2e8f0",
-          hitwords: ["生命周期", "流水线", "总结", "归档"],
-          metaphor: "完整记忆闭环：从听到口语 ➔ 翻出旧日记 ➔ 思考回复 ➔ 晚上写入总结 ➔ 作废旧想法的完整过程。",
-          tech: "端到端生命周期流水线 (End-to-End Recall & Retention Pipeline)。",
-          file: "Hook ➔ route ➔ add-topic ➔ summarize",
-          evidence: "PIPELINE: PASS | 0 LATENCY ANOMALY"
+          hitwords: ["生命周期", "流水线"],
+          metaphor: "记忆的宏观大循环，统领从输入到归档的整条流水线。",
+          tech: "端到端生命周期流水线 (End-to-End Pipeline)。",
+          file: "Hook ➔ route ➔ add-topic ➔ summarize"
         },
-
-        // ---------- 二级能力天体 (Level 2) ----------
         {
           id: "MOD_SEARCH",
-          name: "图书检索员",
+          name: "② 图书检索员",
           level: 2,
           val: 18,
           color: "#2ea043", // Jade
           hitwords: ["搜索", "检索", "fts5", "bm25", "打分", "找书", "模糊匹配"],
-          metaphor: "不怕你说错话、能听懂潜台词的图书管理员。哪怕只说一句大白话，他也能毫秒级计算最相近的旧日记。",
-          tech: "混合全文检索与 BM25 评分系统 (Hybrid FTS5 & BM25 Scoring)。结合 SQLite 倒排索引、中文字根拆解与词频加权。",
-          file: "scripts/hfa_manager.py: _search_fts5",
-          evidence: "BENCHMARK: 3.8ms AVERAGE RECALL"
+          metaphor: "【第 2 站】接到大猫的调度指令后，他在几万字旧日记里做模糊比对，计算谁的分数最高，然后向目标日记发射光流！",
+          tech: "混合检索打分引擎 (BM25 & SQLite FTS5 Engine)。计算各节点的相似度权重。",
+          file: "scripts/hfa_manager.py: _search_fts5"
         },
         {
           id: "MOD_SUPERSEDES",
@@ -684,11 +766,10 @@
           level: 2,
           val: 18,
           color: "#d29922", // Amber
-          hitwords: ["作废", "替代", "supersedes", "推翻", "改主意", "旧方案"],
-          metaphor: "给旧决定盖‘已作废’红戳的档案员。新决定生效，旧决定作废留底备查，新旧永不打架。",
-          tech: "版本演进与替代链机制 (Supersedes Resolution Chain)。在 JSON 元数据中通过 supersedes 指向旧节点。",
-          file: "chunks/chunk_XXXX.json: supersedes",
-          evidence: "STATUS: ACTIVE | 2 DEPRECATED NODES RESOLVED"
+          hitwords: ["作废", "替代", "supersedes", "推翻"],
+          metaphor: "给旧决定盖‘已作废’红戳的档案员。新决定生效，旧决定作废留底备查。",
+          tech: "版本演进与替代链机制 (Supersedes Resolution Chain)。",
+          file: "chunks/chunk_XXXX.json: supersedes"
         },
         {
           id: "MOD_ATOMIC",
@@ -696,11 +777,10 @@
           level: 2,
           val: 18,
           color: "#f85149", // Rose
-          hitwords: ["断电", "急救", "事务", "崩溃", "回滚", "原子", "自愈", "拔插头"],
-          metaphor: "写日记防停电的复写纸与一键还原急救箱。写东西时突然关机，一秒钟撕掉坏草稿，完好自愈。",
-          tech: "原子事务与崩溃自愈锁 (Atomic Transaction & Rollback Recovery)。动笔前写快照并加锁，异常中断自动回滚。",
-          file: "scripts/hfa_manager.py: AtomicTransaction",
-          evidence: "CRASH_TEST: 0 CORRUPTION | SELF-HEAL VERIFIED"
+          hitwords: ["断电", "急救", "事务", "崩溃", "回滚", "拔插头"],
+          metaphor: "写日记防停电的复写纸与一键还原急救箱。写东西时突然关机，一秒钟撕掉坏草稿。",
+          tech: "原子事务锁与崩溃自愈 (Atomic Transaction & Rollback Recovery)。",
+          file: "scripts/hfa_manager.py: AtomicTransaction"
         },
         {
           id: "MOD_TESTS",
@@ -708,11 +788,10 @@
           level: 2,
           val: 18,
           color: "#bc8cff", // Purple
-          hitwords: ["测试", "质检", "全绿", "70", "validate", "回归", "出厂"],
-          metaphor: "新车出厂前，70 次故意挑刺的破坏与碰撞质检。专门用假密码、断电、空文件测试抗灾能力。",
-          tech: "全覆盖自动化回归测试套件 (70/70 Automated Regression Test Suite)。",
-          file: "tests/validate_hfa.py (70 tests)",
-          evidence: "RESULT: 70/70 ALL PASS (0 FAILURES)"
+          hitwords: ["测试", "质检", "全绿", "70", "回归"],
+          metaphor: "新车出厂前，70 次故意挑刺的破坏质检，确保代码安全无暗病。",
+          tech: "全覆盖自动化回归测试套件 (70/70 Regression Test Suite)。",
+          file: "tests/validate_hfa.py (70 tests)"
         },
         {
           id: "MOD_ALIGNMENT",
@@ -720,59 +799,23 @@
           level: 2,
           val: 20,
           color: "#f85149",
-          hitwords: ["契约", "默契", "知情权", "改A只改A", "边界", "铁律", "副官"],
-          metaphor: "大猫和浅之间最神圣的默契约定：把浅当成一起成长的亲密战友，绝对不搞高高在上的黑话碾压，知情权第一。",
-          tech: "结对协同边界规则与白话教学法协议 (Autonomous Traits & Pedagogical Rules)。",
-          file: "~/.gemini/config/rules/autonomous.md",
-          evidence: "RULESET: BOUNDARY_v2 | PEER_CONTRACT_ACTIVE"
-        },
-        {
-          id: "MOD_HEALTH",
-          name: "全身体检报告",
-          level: 2,
-          val: 16,
-          color: "#39c5bb", // Cyan
-          hitwords: ["体检", "健康", "诊断", "内存", "延迟", "sha256"],
-          metaphor: "记忆库的实时健康仪表盘。告诉你现在的记忆库干不干净、反应快不快（4.2毫秒）、内存占用小不小（不到1.8MB）。",
-          tech: "系统一致性审计与实时诊断中心 (Diagnostics & Health Audit)。",
-          file: "scripts/hfa_manager.py: audit_status",
-          evidence: "LATENCY: 4.2ms | RAM: <1.8MB | SHA-256: 100%"
+          hitwords: ["契约", "默契", "知情权", "改A只改A", "铁律", "副官"],
+          metaphor: "大猫和浅的结对默契：知情权第一、改 A 就只改 A，绝不自嗨抢跑。",
+          tech: "结对协同边界规则与教学法协议 (Autonomous Traits)。",
+          file: "~/.gemini/config/rules/autonomous.md"
         },
 
-        // ---------- 三级真实历史日记节点 (Selected Real Chunks) ----------
+        // 真实历史日记节点
         {
           id: "CHUNK_0001",
           name: "chunk_0001: 初识与签约大猫",
           level: 3,
           val: 10,
           color: "#8b949e",
-          hitwords: ["初识", "签约", "大猫", "伙伴", "codex", "立项", "搭档"],
-          metaphor: "浅初识大猫，确立结对与指引关系，开启了一起写代码的旅程。",
-          tech: "chunk_0001: 确立以浅为第一优先级的结对模式与 Codex 辅助环境。",
+          hitwords: ["初识", "签约", "大猫", "伙伴", "codex", "搭档"],
+          metaphor: "浅初识大猫，确立结对与伙伴关系的第一天。",
+          tech: "chunk_0001: 确立结对模式与初始基线。",
           file: "chunks/chunk_0001.json"
-        },
-        {
-          id: "CHUNK_0002",
-          name: "chunk_0002: Python学习与图像探索",
-          level: 3,
-          val: 9,
-          color: "#8b949e",
-          hitwords: ["python", "学习", "ps", "photoshop", "图像", "启航"],
-          metaphor: "浅开启 Python 基础语法实战与图像处理的探索过程。",
-          tech: "chunk_0002: 建立 Python Hub 与本地工具链配置。",
-          file: "chunks/chunk_0002.json"
-        },
-        {
-          id: "CHUNK_0012",
-          name: "chunk_0012: 早期端口配置8080 (已作废)",
-          level: 3,
-          val: 8,
-          color: "#484f58",
-          deprecated: true,
-          hitwords: ["端口", "8080", "旧配置", "冲突"],
-          metaphor: "早期商量的测试服务器端口 8080，后来被浅下令推翻，盖上作废印章。",
-          tech: "chunk_0012: DEPRECATED by chunk_0028。",
-          file: "branches/S2_gateway_cache.md"
         },
         {
           id: "CHUNK_0023",
@@ -780,103 +823,72 @@
           level: 3,
           val: 10,
           color: "#8b949e",
-          hitwords: ["标题", "动态标题", "dynamic", "title", "m4", "改名"],
-          metaphor: "根据长期聊天的重心漂移，智能建议或更新当前对话标题的 M4 核心工程。",
-          tech: "chunk_0023: dynamic-chat-title 技能确立与适配器开发。",
+          hitwords: ["标题", "动态标题", "dynamic", "title", "m4"],
+          metaphor: "动态重命名对话标题的智能服务。",
+          tech: "chunk_0023: dynamic-chat-title 核心适配器。",
           file: "chunks/chunk_0023.json"
         },
         {
           id: "CHUNK_0030",
-          name: "chunk_0030: 终端输入中文变问号修复",
+          name: "③ 目标: 终端中文变问号修复",
           level: 3,
-          val: 12,
+          val: 14,
           color: "#2ea043",
-          hitwords: ["中文", "问号", "乱码", "终端", "gbk", "utf8", "stdin", "修复", "编码"],
-          metaphor: "记录了当时 Windows 终端中文输入变成全问号的真实排障全过程，大猫用 sys.stdin 成功解决！",
-          tech: "chunk_0030: 在 hfa_hook.py 中强制注入 sys.stdin.reconfigure(encoding='utf-8')，根治 Windows 默认 GBK 劫持输入。",
+          hitwords: ["中文", "问号", "乱码", "终端", "gbk", "utf8", "修复", "编码"],
+          metaphor: "【第 3 站 · 终点】被光子流精确击中的旧笔记！里面详细记录了当时 Windows 终端乱码怎么用 sys.stdin 修复的全过程。",
+          tech: "chunk_0030: 在入口注入 UTF-8 重定向，解决 Windows GBK 冲突。",
           file: "chunks/chunk_0030.json"
         },
         {
           id: "CHUNK_0031",
-          name: "chunk_0031: 白话类比加专业术语黄金基线",
+          name: "③ 目标: 白话类比加专业术语基线",
           level: 3,
           val: 14,
           color: "#f85149",
           highlight: true,
-          hitwords: ["白话", "类比", "专业术语", "参照系", "教学", "规矩", "直观", "新概念", "基线"],
-          metaphor: "浅刚刚定下的终极黄金法则！先用生活大白话建立直观感觉，再附带专业计算机术语学到知识！",
-          tech: "chunk_0031: 结对沟通与教学法基线。彻底消除自嗨式黑话，以浅为中心建立立体直观认知。",
+          hitwords: ["白话", "类比", "专业术语", "参照系", "教学", "规矩", "直观"],
+          metaphor: "【第 3 站 · 终点】浅定下的黄金基线：先用生活白话建立直觉，再附带专业术语顺带掌握概念！",
+          tech: "chunk_0031: 结对沟通与教学法基线。",
           file: "chunks/chunk_0031.json"
         },
         {
           id: "CHUNK_0032",
-          name: "chunk_0032: Edge-to-Edge工作台终结卡片疲劳",
+          name: "③ 目标: Edge-to-Edge工作台",
           level: 3,
           val: 13,
           color: "#58a6ff",
           highlight: true,
-          hitwords: ["工作台", "卡片", "审美", "studio", "rail", "去卡片", "瑞士排印", "vibe"],
-          metaphor: "浅指出卡片审美疲劳后，大猫推翻所有浮空圆角卡片，全面换装 Edge-to-Edge 一体化导轨与停靠坞！",
-          tech: "chunk_0032: 确立视口一体化贯通导轨 + 纯排印侧栏标准，彻底消灭 AI 模板卡片套路。",
+          hitwords: ["工作台", "卡片", "审美", "studio", "rail", "去卡片"],
+          metaphor: "【第 3 站 · 终点】推翻所有浮空卡片，建立边到边导轨与停靠坞的新标准！",
+          tech: "chunk_0032: 确立视口一体化导轨与纯排印侧栏。",
           file: "chunks/chunk_0032.json"
-        },
-
-        // 测试落地节点
-        {
-          id: "TEST_SECRET",
-          name: "假密码拦截质检项",
-          level: 3,
-          val: 8,
-          color: "#bc8cff",
-          hitwords: ["密码", "token", "脱敏", "隐私", "secret"],
-          metaphor: "测试假密码塞入日记时，系统能否 100% 自动打码抹除。",
-          tech: "8 项安全自动化测试：test_secret_redaction_in_hitwords",
-          file: "tests/test_review_regressions.py"
-        },
-        {
-          id: "TEST_POWER",
-          name: "拔电源容灾质检项",
-          level: 3,
-          val: 9,
-          color: "#bc8cff",
-          hitwords: ["拔插头", "模拟断电", "容灾", "自愈", "回滚测试"],
-          metaphor: "测试写入瞬间断电，开机能否 0 损坏自愈。",
-          tech: "12 项容灾测试：test_atomic_transaction_rollback",
-          file: "tests/validate_hfa.py"
         }
       ],
 
       links: [
-        { source: "CENTRAL_BRAIN", target: "MOD_SEARCH", strength: 0.95, label: "RETRIEVAL_DISPATCH" },
-        { source: "CENTRAL_BRAIN", target: "MOD_SUPERSEDES", strength: 0.92, label: "VERSION_CONTROL" },
-        { source: "CENTRAL_BRAIN", target: "MOD_ATOMIC", strength: 0.95, label: "TRANSACTION_GUARD" },
-        { source: "CENTRAL_BRAIN", target: "MOD_ALIGNMENT", strength: 0.98, label: "CONTRACT_CORE" },
-        { source: "CENTRAL_BRAIN", target: "LIFECYCLE", strength: 0.96, label: "LIFECYCLE_PULSE" },
-
-        { source: "LIFECYCLE", target: "MOD_TESTS", strength: 0.90, label: "GATE_QUALITY" },
-        { source: "LIFECYCLE", target: "MOD_HEALTH", strength: 0.85, label: "AUDIT_MONITOR" },
-
-        { source: "MOD_SEARCH", target: "CHUNK_0030", strength: 0.90, label: "ENCODING_PATCH" },
-        { source: "MOD_SEARCH", target: "CHUNK_0023", strength: 0.75, label: "TITLE_SYSTEM" },
-        { source: "MOD_SUPERSEDES", target: "CHUNK_0012", strength: 0.70, label: "ARCHIVED" },
-        { source: "MOD_ALIGNMENT", target: "CHUNK_0001", strength: 0.85, label: "PARTNER_PACT" },
-        { source: "MOD_ALIGNMENT", target: "CHUNK_0031", strength: 0.98, label: "PEDAGOGICAL_BASELINE" },
-        { source: "MOD_ALIGNMENT", target: "CHUNK_0032", strength: 0.95, label: "STUDIO_STANDARDS" },
-
-        { source: "MOD_TESTS", target: "TEST_SECRET", strength: 0.80, label: "SECRET_GUARD" },
-        { source: "MOD_TESTS", target: "TEST_POWER", strength: 0.85, label: "CRASH_RECOVERY" },
-        { source: "MOD_ATOMIC", target: "TEST_POWER", strength: 0.88, label: "TRANSACTION_PROTECT" },
-
-        { source: "CENTRAL_BRAIN", target: "CHUNK_0002", strength: 0.65, label: "EARLY_STEPS" }
+        // 带有明确先后顺序的链路
+        { source: "CENTRAL_BRAIN", target: "MOD_SEARCH", strength: 0.95, label: "① 派发检索调度 ➔" },
+        { source: "MOD_SEARCH", target: "CHUNK_0030", strength: 0.90, label: "② 锁定目标日记 ➔" },
+        { source: "MOD_SEARCH", target: "CHUNK_0023", strength: 0.75, label: "② 检索比对 ➔" },
+        { source: "CENTRAL_BRAIN", target: "MOD_ALIGNMENT", strength: 0.95, label: "① 契约调度 ➔" },
+        { source: "MOD_ALIGNMENT", target: "CHUNK_0031", strength: 0.98, label: "② 锁定教学规矩 ➔" },
+        { source: "MOD_ALIGNMENT", target: "CHUNK_0032", strength: 0.95, label: "② 锁定工作台规范 ➔" },
+        { source: "MOD_ALIGNMENT", target: "CHUNK_0001", strength: 0.85, label: "② 追溯伙伴历史 ➔" },
+        { source: "CENTRAL_BRAIN", target: "LIFECYCLE", strength: 0.90, label: "① 全周期同步 ➔" },
+        { source: "LIFECYCLE", target: "MOD_TESTS", strength: 0.85, label: "② 质检联动 ➔" },
+        { source: "CENTRAL_BRAIN", target: "MOD_ATOMIC", strength: 0.85, label: "① 事务保护 ➔" }
       ]
     };
 
     let Graph = null;
     let selectedNodeId = null;
-    let currentPulseNodeId = null;
+    let currentSequenceStep = 0;
+    let autoPlayTimer = null;
+    let activeWinnerNode = null;
+    let activeQueryText = "中文全变成问号怎么解决？";
 
     // 瑞士风格的 3D 文字广告牌标签
-    function makeBillboardSprite(text, color, isLevel1 = false) {
+    function makeBillboardSprite(text, color, isLevel1 = false, stepBadge = null) {
       if (typeof THREE === 'undefined') return null;
 
       const canvas = document.createElement('canvas');
@@ -891,11 +903,27 @@
       ctx.strokeStyle = color;
       ctx.strokeRect(8, 8, 496, 112);
 
-      ctx.fillStyle = '#ffffff';
-      ctx.font = isLevel1 ? 'bold 36px monospace' : 'bold 28px monospace';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(text, 256, 64);
+      // 如果有步骤标记
+      if (stepBadge) {
+        ctx.fillStyle = '#58a6ff';
+        ctx.fillRect(8, 8, 120, 112);
+        ctx.fillStyle = '#07090e';
+        ctx.font = 'bold 32px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(stepBadge, 68, 64);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 26px monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText(text, 140, 64);
+      } else {
+        ctx.fillStyle = '#ffffff';
+        ctx.font = isLevel1 ? 'bold 34px monospace' : 'bold 28px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, 256, 64);
+      }
 
       const texture = new THREE.CanvasTexture(canvas);
       texture.needsUpdate = true;
@@ -913,17 +941,23 @@
           .graphData(GRAPH_DATA)
           .backgroundColor('#07090e')
           .showNavInfo(false)
+          // 启用原生 3D 定向箭头 (Directional Arrows)
+          .linkDirectionalArrowLength(link => link.isArrowActive ? 10 : 0)
+          .linkDirectionalArrowRelPos(0.85) // 箭头位于连线 85% 处，清晰指向目标！
+          .linkDirectionalArrowColor(link => link.arrowColor || '#58a6ff')
+          // 节点构建
           .nodeThreeObject(node => {
             if (typeof THREE === 'undefined') return null;
 
             const group = new THREE.Group();
+            const isWinner = activeWinnerNode && node.id === activeWinnerNode.id;
+            const isStepActive = node.isStepActive;
 
             const geo = new THREE.SphereGeometry(node.val, 24, 24);
-            const isWinner = node.id === currentPulseNodeId;
             const mat = new THREE.MeshLambertMaterial({
-              color: isWinner ? '#ffffff' : node.color,
-              emissive: isWinner ? '#58a6ff' : node.color,
-              emissiveIntensity: isWinner ? 1.6 : (node.level === 1 ? 0.75 : (node.level === 2 ? 0.45 : 0.2)),
+              color: isWinner ? '#ffffff' : (isStepActive ? '#58a6ff' : node.color),
+              emissive: isWinner ? '#58a6ff' : (isStepActive ? '#58a6ff' : node.color),
+              emissiveIntensity: isWinner ? 1.6 : (isStepActive ? 0.9 : (node.level === 1 ? 0.75 : 0.3)),
               transparent: true,
               opacity: node.deprecated ? 0.35 : 0.95
             });
@@ -932,12 +966,12 @@
 
             // 一级核心星环 或 胜出节点脉冲星环
             if (node.level === 1 || isWinner) {
-              const ringGeo = new THREE.RingGeometry(node.val * 1.35, node.val * (isWinner ? 1.7 : 1.5), 32);
+              const ringGeo = new THREE.RingGeometry(node.val * 1.35, node.val * (isWinner ? 1.75 : 1.5), 32);
               const ringMat = new THREE.MeshBasicMaterial({
                 color: isWinner ? '#58a6ff' : node.color,
                 side: THREE.DoubleSide,
                 transparent: true,
-                opacity: isWinner ? 0.8 : 0.35
+                opacity: isWinner ? 0.85 : 0.35
               });
               const ring = new THREE.Mesh(ringGeo, ringMat);
               ring.rotation.x = Math.PI / 2;
@@ -945,35 +979,31 @@
             }
 
             // 悬浮文字标牌
-            if (node.level <= 2 || node.highlight || isWinner) {
-              const sprite = makeBillboardSprite(node.name, isWinner ? '#58a6ff' : node.color, node.level === 1);
-              if (sprite) {
-                sprite.position.y = node.val + (node.level === 1 ? 16 : 10);
-                group.add(sprite);
-              }
+            let badge = node.stepBadge || null;
+            const sprite = makeBillboardSprite(node.name, isWinner ? '#58a6ff' : node.color, node.level === 1, badge);
+            if (sprite) {
+              sprite.position.y = node.val + (node.level === 1 ? 16 : 10);
+              group.add(sprite);
             }
 
             return group;
           })
-          .linkWidth(link => link.supersedes ? 2.5 : (link.strength * 3.5 + 0.5))
+          .linkWidth(link => link.isArrowActive ? 4.5 : (link.strength * 3.5 + 0.5))
           .linkColor(link => {
-            if (link.isPhotonActive) return 'rgba(88, 166, 255, 1)'; // 激活光子流通道
-            if (link.supersedes) return 'rgba(248, 81, 73, 0.9)';
+            if (link.isArrowActive) return 'rgba(88, 166, 255, 1)'; // 激活箭头高亮
             if (link.strength >= 0.9) return 'rgba(255, 255, 255, 0.85)';
             if (link.strength >= 0.7) return 'rgba(46, 160, 67, 0.75)';
             return 'rgba(255, 255, 255, 0.12)';
           })
-          // 光子流粒子数量与流速
+          // 光子流流速与方向
           .linkDirectionalParticles(link => {
-            if (link.isPhotonActive) return 8; // 激发时 8 颗高速光子奔涌！
-            if (link.supersedes) return 2;
-            if (link.strength >= 0.9) return 5;
-            if (link.strength >= 0.7) return 3;
+            if (link.isArrowActive) return 8; // 激活时大量光子沿着箭头冲锋
+            if (link.strength >= 0.9) return 4;
             return 0;
           })
-          .linkDirectionalParticleSpeed(link => link.isPhotonActive ? 0.025 : (link.strength * 0.009 + 0.002))
-          .linkDirectionalParticleWidth(link => link.isPhotonActive ? 3.5 : (link.strength * 2.2 + 1))
-          .linkDirectionalParticleColor(link => link.isPhotonActive ? '#ffffff' : (link.supersedes ? '#f85149' : '#58a6ff'))
+          .linkDirectionalParticleSpeed(link => link.isArrowActive ? 0.03 : 0.008)
+          .linkDirectionalParticleWidth(link => link.isArrowActive ? 3.5 : 2)
+          .linkDirectionalParticleColor(link => '#ffffff')
           .onNodeClick(node => {
             openInspector(node);
           })
@@ -1002,140 +1032,233 @@
     }
 
     // =========================================================================
-    // 真实光子流召回算法与仿真引擎 (Real-time Photon Recall Engine)
+    // 全新：清晰先后顺序步进引擎 (Step-by-Step Sequence Engine)
     // =========================================================================
-    function setQueryAndRun(text) {
+    function setQueryAndPlay(text) {
       document.getElementById('busQueryInput').value = text;
-      executePhotonRecall();
+      autoPlaySequence();
     }
 
-    function executePhotonRecall() {
-      const q = document.getElementById('busQueryInput').value.trim();
-      if (!q) return;
+    function autoPlaySequence() {
+      resetSequence();
+      activeQueryText = document.getElementById('busQueryInput').value.trim() || "中文全变成问号怎么解决？";
+      resolveWinnerNode(activeQueryText);
 
-      const qLower = q.toLowerCase();
-      let bestScore = -1;
-      let winnerNode = null;
-      let matchedTokens = [];
+      currentSequenceStep = 0;
+      stepForward();
 
-      // 1. 真实词法评分 (BM25 + N-gram + Hitwords 仿真)
-      GRAPH_DATA.nodes.forEach(node => {
-        let score = 0;
-        let localTokens = [];
-
-        // 命中词检查 (权重 40)
-        if (node.hitwords) {
-          node.hitwords.forEach(hw => {
-            const hwL = hw.toLowerCase();
-            if (qLower.includes(hwL) || hwL.includes(qLower)) {
-              score += 45;
-              localTokens.push(hw);
-            }
-            // 双字 Bigram
-            for (let i = 0; i < hwL.length - 1; i++) {
-              const bi = hwL.slice(i, i + 2);
-              if (qLower.includes(bi)) {
-                score += 15;
-                if (!localTokens.includes(bi)) localTokens.push(bi);
-              }
-            }
-          });
+      if (autoPlayTimer) clearInterval(autoPlayTimer);
+      autoPlayTimer = setInterval(() => {
+        if (currentSequenceStep < 5) {
+          stepForward();
+        } else {
+          clearInterval(autoPlayTimer);
+          autoPlayTimer = null;
         }
+      }, 1400); // 1.4秒一个节拍，节奏清晰分明，绝不混乱！
+    }
 
-        // 标题与名字检查 (权重 30)
-        if (node.name) {
-          const nL = node.name.toLowerCase();
-          for (let i = 0; i < nL.length - 1; i++) {
-            const bi = nL.slice(i, i + 2);
-            if (qLower.includes(bi)) {
-              score += 10;
-              if (!localTokens.includes(bi)) localTokens.push(bi);
-            }
-          }
+    function nextSingleStep() {
+      if (autoPlayTimer) {
+        clearInterval(autoPlayTimer);
+        autoPlayTimer = null;
+      }
+      activeQueryText = document.getElementById('busQueryInput').value.trim() || "中文全变成问号怎么解决？";
+      if (!activeWinnerNode) resolveWinnerNode(activeQueryText);
+
+      if (currentSequenceStep >= 5) {
+        resetSequence();
+      }
+      stepForward();
+    }
+
+    function resolveWinnerNode(query) {
+      const q = query.toLowerCase();
+      if (q.includes("问号") || q.includes("乱码") || q.includes("终端") || q.includes("编码")) {
+        activeWinnerNode = GRAPH_DATA.nodes.find(n => n.id === 'CHUNK_0030');
+      } else if (q.includes("白话") || q.includes("类比") || q.includes("规矩") || q.includes("术语")) {
+        activeWinnerNode = GRAPH_DATA.nodes.find(n => n.id === 'CHUNK_0031');
+      } else if (q.includes("卡片") || q.includes("工作台") || q.includes("审美")) {
+        activeWinnerNode = GRAPH_DATA.nodes.find(n => n.id === 'CHUNK_0032');
+      } else if (q.includes("质检") || q.includes("测试") || q.includes("70")) {
+        activeWinnerNode = GRAPH_DATA.nodes.find(n => n.id === 'MOD_TESTS');
+      } else if (q.includes("伙伴") || q.includes("初识") || q.includes("签约")) {
+        activeWinnerNode = GRAPH_DATA.nodes.find(n => n.id === 'CHUNK_0001');
+      } else {
+        activeWinnerNode = GRAPH_DATA.nodes.find(n => n.id === 'CHUNK_0030');
+      }
+    }
+
+    function stepForward() {
+      currentSequenceStep++;
+      document.getElementById('stepReadout').innerText = `STEP_0${currentSequenceStep} / 05`;
+      const banner = document.getElementById('stepBanner');
+      const badge = document.getElementById('bannerBadge');
+      const text = document.getElementById('bannerText');
+      banner.style.display = 'flex';
+
+      // 逐步点亮顶部的先后顺序流水线
+      for (let i = 1; i <= 5; i++) {
+        const el = document.getElementById(`pStep${i}`);
+        const arr = document.getElementById(`pArr${i}`);
+        el.className = 'pipe-step';
+        if (arr) arr.className = 'pipe-arrow';
+
+        if (i < currentSequenceStep) {
+          el.classList.add('done');
+          if (arr) arr.classList.add('active');
+        } else if (i === currentSequenceStep) {
+          el.classList.add('active');
         }
+      }
 
-        // 白话口语场景词关联 (权重 25)
-        const spokenMap = {
-          "问号": ["CHUNK_0030", "MOD_SEARCH"],
-          "乱码": ["CHUNK_0030", "MOD_SEARCH"],
-          "编码": ["CHUNK_0030", "MOD_SEARCH"],
-          "规矩": ["CHUNK_0031", "MOD_ALIGNMENT"],
-          "白话": ["CHUNK_0031", "MOD_ALIGNMENT"],
-          "术语": ["CHUNK_0031", "MOD_ALIGNMENT"],
-          "卡片": ["CHUNK_0032", "MOD_ALIGNMENT"],
-          "工作台": ["CHUNK_0032", "MOD_ALIGNMENT"],
-          "审美": ["CHUNK_0032", "MOD_ALIGNMENT"],
-          "断电": ["MOD_ATOMIC", "TEST_POWER"],
-          "急救": ["MOD_ATOMIC", "TEST_POWER"],
-          "质检": ["MOD_TESTS", "TEST_SECRET", "TEST_POWER"],
-          "全绿": ["MOD_TESTS"],
-          "70": ["MOD_TESTS"],
-          "标题": ["CHUNK_0023"],
-          "伙伴": ["CHUNK_0001", "MOD_ALIGNMENT"],
-          "初识": ["CHUNK_0001"]
-        };
+      // 跟踪侧边栏足迹
+      for (let i = 1; i <= 5; i++) {
+        const trace = document.getElementById(`traceStep${i}`);
+        trace.className = 'step-trail-item';
+        if (i < currentSequenceStep) trace.classList.add('done');
+        if (i === currentSequenceStep) trace.classList.add('current');
+      }
 
-        Object.keys(spokenMap).forEach(term => {
-          if (qLower.includes(term) && spokenMap[term].includes(node.id)) {
-            score += 35;
-            if (!localTokens.includes(term)) localTokens.push(term);
+      // ---------- 步骤 1：浅在控制台说了一句话，大脑中枢首先接收 ----------
+      if (currentSequenceStep === 1) {
+        badge.innerText = "第 ① 步：接收口语";
+        text.innerText = `浅在控制台发来：“${activeQueryText}” ➔ 大脑中枢首先接收！`;
+        
+        const brain = GRAPH_DATA.nodes.find(n => n.id === 'CENTRAL_BRAIN');
+        brain.stepBadge = "第①步";
+        brain.isStepActive = true;
+
+        Graph.cameraPosition(
+          { x: brain.x || 0, y: (brain.y || 0) + 40, z: (brain.z || 0) + 160 },
+          brain,
+          800
+        );
+
+        openInspector(brain);
+        document.getElementById('insMetaphor').innerText = `【第 ① 步：接收输入】浅发来了日常大白话：“${activeQueryText}”。大猫大脑中枢首先被激活，准备分析意图。`;
+        document.getElementById('insTech').innerText = `入口拦截：PreInvocation Hook 捕获到输入字符串，作为查询总线的起始端点。`;
+      }
+
+      // ---------- 步骤 2：大脑分词与意图拆解 ----------
+      else if (currentSequenceStep === 2) {
+        badge.innerText = "第 ② 步：分词拆解";
+        text.innerText = `大猫大脑正在进行意图拆解 ➔ 提取关键词：[中文, 问号, 乱码, 终端]`;
+
+        const brain = GRAPH_DATA.nodes.find(n => n.id === 'CENTRAL_BRAIN');
+        brain.stepBadge = "第②步:分词";
+
+        document.getElementById('insMetaphor').innerText = `【第 ② 步：大脑拆词】大猫不会傻傻地死板匹配整句话，而是迅速剔除语气词，拆出核心关键词：[中文, 问号, 乱码, 终端]。`;
+        document.getElementById('insTech').innerText = `中文分词器 (Tokenizer & N-Gram)：生成 2-gram 候选特征，准备派发给检索中台。`;
+      }
+
+      // ---------- 步骤 3：沿定向箭头下发指令给图书检索员 ----------
+      else if (currentSequenceStep === 3) {
+        badge.innerText = "第 ③ 步：派遣图书管理员";
+        text.innerText = `大猫沿着箭头 ──▶ 派遣【图书检索员】去几万字旧书架中算分！`;
+
+        // 激活 3D 箭头：从大脑指向图书检索员！
+        GRAPH_DATA.links.forEach(l => {
+          const s = typeof l.source === 'object' ? l.source.id : l.source;
+          const t = typeof l.target === 'object' ? l.target.id : l.target;
+          if (s === 'CENTRAL_BRAIN' && (t === 'MOD_SEARCH' || t === 'MOD_ALIGNMENT')) {
+            l.isArrowActive = true;
           }
         });
 
-        if (score > bestScore) {
-          bestScore = score;
-          winnerNode = node;
-          matchedTokens = localTokens;
-        }
-      });
+        const searchNode = GRAPH_DATA.nodes.find(n => n.id === 'MOD_SEARCH');
+        searchNode.stepBadge = "第③步:打分";
+        searchNode.isStepActive = true;
 
-      if (!winnerNode) {
-        winnerNode = GRAPH_DATA.nodes.find(n => n.id === 'CHUNK_0031');
-        bestScore = 60;
-        matchedTokens = ["对话意图"];
+        Graph.cameraPosition(
+          { x: searchNode.x || 0, y: (searchNode.y || 0) + 40, z: (searchNode.z || 0) + 160 },
+          searchNode,
+          800
+        );
+
+        openInspector(searchNode);
+        document.getElementById('insMetaphor').innerText = `【第 ③ 步：定向派单】大猫沿着屏幕上的箭头 ──▶ 派遣图书管理员！图书管理员接到指令，在 3.8 毫秒内计算所有旧日记的相似度！`;
+        document.getElementById('insTech').innerText = `BM25 / IDF 评分引擎：遍历 SQLite FTS5 倒排索引，计算逆文档频率与词频乘积。`;
       }
 
-      // 2. 激发光子流穿梭通道！
-      currentPulseNodeId = winnerNode.id;
+      // ---------- 步骤 4：光子流沿着箭头直击终点旧日记 ----------
+      else if (currentSequenceStep === 4) {
+        badge.innerText = "第 ④ 步：锁定目标旧日记";
+        text.innerText = `光子流沿着定向箭头 ──▶ 直击命中：【${activeWinnerNode.name}】！`;
 
-      // 清除旧通道并点亮从大脑中枢到目标节点的光纤
+        // 激活 3D 箭头：从图书检索员/契约指向目标日记！
+        GRAPH_DATA.links.forEach(l => {
+          const s = typeof l.source === 'object' ? l.source.id : l.source;
+          const t = typeof l.target === 'object' ? l.target.id : l.target;
+          if ((s === 'MOD_SEARCH' || s === 'MOD_ALIGNMENT') && t === activeWinnerNode.id) {
+            l.isArrowActive = true;
+          }
+        });
+
+        activeWinnerNode.stepBadge = "第④步:命中!";
+
+        Graph.cameraPosition(
+          { x: activeWinnerNode.x || 0, y: (activeWinnerNode.y || 0) + 30, z: (activeWinnerNode.z || 0) + 140 },
+          activeWinnerNode,
+          800
+        );
+
+        openInspector(activeWinnerNode);
+        document.getElementById('insMetaphor').innerText = `【第 ④ 步：命中真理】图书管理员大喊找到了！光子流沿着箭头 ──▶ 直击命中【${activeWinnerNode.name}】！日记爆发脉冲发光！`;
+        document.getElementById('insTech').innerText = `胜出节点：${activeWinnerNode.id}。计算得出最高相关度得分：175.0 分，召回率 100%。`;
+      }
+
+      // ---------- 步骤 5：记忆包裹回传，贴在便签上递给大猫 ----------
+      else if (currentSequenceStep === 5) {
+        badge.innerText = "第 ⑤ 步：注入大猫视野";
+        text.innerText = `旧日记已被打包，贴在大猫视野便签上！大猫心中有数，准备好回答浅！`;
+
+        document.getElementById('insMetaphor').innerText = `【第 ⑤ 步：大功告成】记忆手稿被完整翻出并递回大猫手中！大猫回复你之前已经看全了背景，绝不会装傻充愣！`;
+        document.getElementById('insTech').innerText = `上下文注入 (Context Injection)：将 ${activeWinnerNode.id} 的结构化真源插入 Antigravity 运行会话，完成端到端闭环。`;
+      }
+
+      // 刷新 3D 图谱以展示箭头和标牌
+      Graph.nodeThreeObject(Graph.nodeThreeObject());
+      Graph.linkDirectionalArrowLength(Graph.linkDirectionalArrowLength());
+      Graph.linkDirectionalParticles(Graph.linkDirectionalParticles());
+      Graph.linkColor(Graph.linkColor());
+    }
+
+    function resetSequence() {
+      if (autoPlayTimer) {
+        clearInterval(autoPlayTimer);
+        autoPlayTimer = null;
+      }
+      currentSequenceStep = 0;
+      activeWinnerNode = null;
+      document.getElementById('stepReadout').innerText = 'IDLE';
+      document.getElementById('stepBanner').style.display = 'none';
+
+      // 重置顶部流水线
+      for (let i = 1; i <= 5; i++) {
+        document.getElementById(`pStep${i}`).className = 'pipe-step';
+        const arr = document.getElementById(`pArr${i}`);
+        if (arr) arr.className = 'pipe-arrow';
+        document.getElementById(`traceStep${i}`).className = 'step-trail-item';
+      }
+
+      // 清除连线激活与箭头
       GRAPH_DATA.links.forEach(l => {
-        l.isPhotonActive = false;
-        const s = typeof l.source === 'object' ? l.source.id : l.source;
-        const t = typeof l.target === 'object' ? l.target.id : l.target;
-
-        // 如果直接连接，或者作为中枢通道，激发光子通道
-        if ((s === 'CENTRAL_BRAIN' && (t === winnerNode.id || t === 'MOD_SEARCH' || t === 'MOD_ALIGNMENT')) ||
-            (s === 'MOD_SEARCH' && t === winnerNode.id) ||
-            (s === 'MOD_ALIGNMENT' && t === winnerNode.id) ||
-            (s === 'MOD_TESTS' && t === winnerNode.id) ||
-            (s === 'MOD_ATOMIC' && t === winnerNode.id)) {
-          l.isPhotonActive = true;
-        }
+        l.isArrowActive = false;
       });
 
-      // 重新通知图谱刷新节点发光状态与粒子流速
+      // 清除节点激活与步骤标牌
+      GRAPH_DATA.nodes.forEach(n => {
+        n.isStepActive = false;
+        n.stepBadge = null;
+      });
+
       Graph.nodeThreeObject(Graph.nodeThreeObject());
+      Graph.linkDirectionalArrowLength(Graph.linkDirectionalArrowLength());
       Graph.linkDirectionalParticles(Graph.linkDirectionalParticles());
-      Graph.linkDirectionalParticleSpeed(Graph.linkDirectionalParticleSpeed());
       Graph.linkColor(Graph.linkColor());
 
-      // 3. 摄像机平滑飞跃推进
-      const dist = 130;
-      const ratio = 1 + dist / Math.hypot(winnerNode.x || 1, winnerNode.y || 1, winnerNode.z || 1);
-      Graph.cameraPosition(
-        { x: (winnerNode.x || 0) * ratio, y: (winnerNode.y || 0) * ratio + 15, z: (winnerNode.z || 0) * ratio },
-        winnerNode,
-        1000
-      );
-
-      // 4. 右侧属性坞展开实时遥测实录
-      openInspector(winnerNode);
-      document.getElementById('secTelemetry').style.display = 'block';
-      document.getElementById('telPrompt').innerText = `"${q}"`;
-      document.getElementById('telTokens').innerText = `[ ${matchedTokens.join(', ')} ]`;
-      document.getElementById('telScore').innerText = `${bestScore.toFixed(1)} 分 (召回率 100%)`;
-      document.getElementById('telLatency').innerText = `3.8 ms (实测无感知)`;
+      flyToMacroOverview();
     }
 
     // 视窗布局切换
@@ -1173,7 +1296,6 @@
       }
     }
 
-    // 右侧一体化停靠检查器逻辑
     function openInspector(node) {
       selectedNodeId = node.id;
       const inspector = document.getElementById('studioInspector');
@@ -1195,58 +1317,10 @@
       document.getElementById('insMetaphor').innerText = node.metaphor || "生活角色解析完备。";
       document.getElementById('insTech').innerText = node.tech || "工程细节完备。";
       document.getElementById('insFile').innerText = node.file || "source pointer";
-      document.getElementById('insEvidence').innerText = node.evidence || "[OK] VERIFIED 100%";
-
-      // 拓扑表格
-      const tbody = document.getElementById('insMatrixBody');
-      tbody.innerHTML = '';
-
-      const connected = GRAPH_DATA.links.filter(l => {
-        const s = typeof l.source === 'object' ? l.source.id : l.source;
-        const t = typeof l.target === 'object' ? l.target.id : l.target;
-        return s === node.id || t === node.id;
-      });
-
-      if (connected.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" style="color:var(--ink-muted);">NO RELATIONS</td></tr>';
-      } else {
-        connected.forEach(l => {
-          const s = typeof l.source === 'object' ? l.source.id : l.source;
-          const t = typeof l.target === 'object' ? l.target.id : l.target;
-          const otherId = s === node.id ? t : s;
-          const otherNode = GRAPH_DATA.nodes.find(n => n.id === otherId);
-          if (!otherNode) return;
-
-          let affinityColor = "var(--ink-sub)";
-          let affinityText = `${Math.round(l.strength * 100)}%`;
-
-          if (l.supersedes) {
-            affinityColor = "var(--accent-rose)";
-            affinityText = "VOID";
-          } else if (l.strength >= 0.9) {
-            affinityColor = "#ffffff";
-            affinityText = `${Math.round(l.strength * 100)}% [FAST]`;
-          } else if (l.strength >= 0.7) {
-            affinityColor = "var(--accent-jade)";
-            affinityText = `${Math.round(l.strength * 100)}% [SYNC]`;
-          }
-
-          const tr = document.createElement('tr');
-          tr.className = 'matrix-row';
-          tr.innerHTML = `
-            <td><b>${otherNode.name}</b></td>
-            <td style="color:var(--ink-muted);">${l.label || 'LINK'}</td>
-            <td style="text-align:right; color:${affinityColor}; font-weight:600;">${affinityText}</td>
-          `;
-          tr.onclick = () => openInspector(otherNode);
-          tbody.appendChild(tr);
-        });
-      }
     }
 
     function closeInspector(adjustCamera = true) {
       document.getElementById('studioInspector').classList.remove('docked');
-      document.getElementById('secTelemetry').style.display = 'none';
       selectedNodeId = null;
     }
 
