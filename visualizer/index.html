@@ -3,1240 +3,978 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HFA 2.2 核心原理与架构解剖交互实验室</title>
+  <title>HFA 空间认知工作台 · 宏观全景与深度透视</title>
+  
+  <!-- 离线核心：先载入 Three.js，再载入 3d-force-graph -->
+  <script src="libs/three.min.js"></script>
+  <script src="libs/3d-force-graph.min.js"></script>
+
   <style>
+    /* =========================================================================
+       超越卡片：Edge-to-Edge 专业工作台与瑞士排印设计系统 (Studio Rail Architecture)
+       彻底消除所有浮空圆角卡片、外包发光药丸，采用一体化贯通导轨、平整工程表格与刻度网格
+       ========================================================================= */
     :root {
-      --bg: #070b14;
-      --bg-panel: #0f1626;
-      --bg-card: #151f35;
-      --bg-code: #090e1a;
-      --ink: #eef2ff;
-      --muted: #94a3b8;
-      --line: rgba(148, 163, 184, 0.18);
-      --cyan: #38bdf8;
-      --emerald: #34d399;
-      --amber: #fbbf24;
-      --rose: #fb7185;
-      --violet: #a78bfa;
-      --mono: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
-      --sans: "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+      --bg: #07090e;
+      --rail-bg: #090c13;
+      --line: rgba(255, 255, 255, 0.08);
+      --line-bright: rgba(255, 255, 255, 0.16);
+      --ink: #e6edf3;
+      --ink-sub: #8b949e;
+      --ink-muted: #484f58;
+
+      --accent-white: #ffffff;
+      --accent-jade: #2ea043;
+      --accent-amber: #d29922;
+      --accent-rose: #f85149;
+      --accent-blue: #58a6ff;
+      --accent-purple: #bc8cff;
+      --accent-cyan: #39c5bb;
+
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      --font-mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
     }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      background:
-        radial-gradient(circle at 12% 0%, rgba(56, 189, 248, 0.12), transparent 34%),
-        radial-gradient(circle at 88% 8%, rgba(167, 139, 250, 0.10), transparent 34%),
-        var(--bg);
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: var(--bg);
       color: var(--ink);
-      font-family: var(--sans);
-      line-height: 1.55;
-      padding-bottom: 48px;
+      font-family: var(--font-sans);
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
     }
-    .wrap {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 20px 24px;
+
+    /* 3D WebGL 画布 */
+    #graph3d {
+      width: 100vw;
+      height: calc(100vh - 42px);
+      position: absolute;
+      top: 42px;
+      left: 0;
+      z-index: 1;
     }
-    header {
+
+    /* ==================== 1. 顶部贯通式专业导轨 (Edge-to-Edge Studio Rail) ==================== */
+    .studio-rail {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 42px;
+      background: var(--rail-bg);
+      border-bottom: 1px solid var(--line);
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
-      gap: 20px;
-      padding-bottom: 18px;
-      border-bottom: 1px solid var(--line);
-      flex-wrap: wrap;
+      align-items: center;
+      padding: 0 16px;
+      z-index: 50;
     }
-    .brand h1 {
-      margin: 4px 0 6px;
-      font-size: 25px;
-      letter-spacing: -0.02em;
+
+    .rail-brand {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
+      font-family: var(--font-mono);
+      font-size: 12px;
     }
-    .badge {
+    .status-beacon {
+      width: 6px;
+      height: 6px;
+      background: var(--accent-jade);
+      box-shadow: 0 0 6px var(--accent-jade);
+    }
+    .brand-id {
+      color: #fff;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .brand-meta {
+      color: var(--ink-muted);
+      font-size: 11px;
+    }
+
+    /* 平整工程 Tab 菜单 (No Pills, No Cards) */
+    .rail-menu {
+      display: flex;
+      height: 42px;
+    }
+    .rail-tab {
+      height: 42px;
+      padding: 0 16px;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--ink-sub);
+      font-size: 12px;
+      font-family: var(--font-mono);
+      cursor: pointer;
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      font-size: 12px;
-      font-family: var(--mono);
-      padding: 3px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(56, 189, 248, 0.35);
-      background: rgba(56, 189, 248, 0.1);
-      color: var(--cyan);
+      transition: all 0.15s ease;
+      letter-spacing: 0.3px;
     }
-    .badge.ok { border-color: rgba(52, 211, 153, 0.4); background: rgba(52, 211, 153, 0.12); color: var(--emerald); }
-    .badge.warn { border-color: rgba(251, 191, 36, 0.4); background: rgba(251, 191, 36, 0.12); color: var(--amber); }
-    .badge.err { border-color: rgba(251, 113, 133, 0.4); background: rgba(251, 113, 133, 0.12); color: var(--rose); }
-    . badge-violet { border-color: rgba(167, 139, 250, 0.4); background: rgba(167, 139, 250, 0.12); color: var(--violet); }
-    .subtitle {
-      margin: 0;
-      color: var(--muted);
-      font-size: 14px;
-      max-width: 820px;
-    }
-    /* Top Navigation Tabs */
-    .nav-tabs {
-      display: flex;
-      gap: 10px;
-      margin: 18px 0 20px;
-      flex-wrap: wrap;
-    }
-    .tab-btn {
-      background: var(--bg-panel);
-      color: var(--muted);
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 11px 18px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.18s ease;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .tab-btn:hover {
-      border-color: rgba(56, 189, 248, 0.45);
-      color: var(--ink);
-    }
-    .tab-btn.active {
-      background: linear-gradient(135deg, rgba(56, 189, 248, 0.18), rgba(167, 139, 250, 0.16));
-      border-color: var(--cyan);
+    .rail-tab:hover {
       color: #fff;
-      box-shadow: 0 0 20px rgba(56, 189, 248, 0.15);
+      background: rgba(255, 255, 255, 0.03);
     }
-    .tab-pane { display: none; }
-    .tab-pane.active { display: block; }
-
-    /* Grid layouts */
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .grid-3 { display: grid; grid-template-columns: 330px 1fr 390px; gap: 16px; }
-    .grid-lab { display: grid; grid-template-columns: 420px 1fr; gap: 16px; }
-    @media (max-width: 1120px) {
-      .grid-2, .grid-3, .grid-lab { grid-template-columns: 1fr; }
+    .rail-tab.active {
+      color: #fff;
+      border-bottom-color: var(--accent-blue);
+      background: rgba(255, 255, 255, 0.04);
+      font-weight: 600;
     }
 
-    /* Panels & Cards */
-    .panel {
-      background: var(--bg-panel);
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 18px;
-    }
-    .panel h2 {
-      margin: 0 0 6px;
-      font-size: 17px;
+    .rail-telemetry {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--ink-muted);
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: 16px;
+    }
+    .telemetry-val {
+      color: var(--ink-sub);
+    }
+
+    /* ==================== 2. 取景框刻度与平铺参数 (Precision Overlay) ==================== */
+    .reticle-mark {
+      position: absolute;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--ink-muted);
+      pointer-events: none;
+      z-index: 10;
+      letter-spacing: 0.5px;
+    }
+    .reticle-tl { top: 54px; left: 16px; }
+    .reticle-tr { top: 54px; right: 16px; }
+    .reticle-br { bottom: 12px; right: 16px; }
+
+    /* 左下角平铺式拓扑参数区 (No Card, Typographic Scale) */
+    .telemetry-legend {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      z-index: 10;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--ink-sub);
+      pointer-events: auto;
+      border-left: 2px solid var(--line-bright);
+      padding-left: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .legend-title {
+      font-size: 10px;
+      color: var(--ink-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 2px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
       gap: 8px;
     }
-    .panel h3 {
-      margin: 14px 0 8px;
-      font-size: 14px;
-      color: var(--cyan);
+    .dot-ref {
+      width: 6px;
+      height: 6px;
+      display: inline-block;
     }
-    .hint {
-      color: var(--muted);
-      font-size: 13px;
-      margin-bottom: 12px;
-    }
-    .card {
-      background: var(--bg-card);
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 12px 14px;
-      margin-bottom: 10px;
-    }
-    .card.active-card { border-color: var(--emerald); background: rgba(52, 211, 153, 0.07); }
-    .card.warn-card { border-color: var(--amber); background: rgba(251, 191, 36, 0.07); }
-    .card.err-card { border-color: var(--rose); background: rgba(251, 113, 133, 0.07); }
 
-    /* Buttons & Inputs */
-    button, select, input, textarea {
-      font: inherit;
-      color: var(--ink);
-      background: var(--bg-code);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 8px 12px;
+    /* ==================== 3. 一体化停靠工作台检查器 (Docked Studio Inspector) ==================== */
+    .studio-inspector {
+      position: absolute;
+      top: 42px;
+      right: 0;
+      width: 440px;
+      height: calc(100vh - 42px);
+      background: var(--rail-bg);
+      border-left: 1px solid var(--line);
+      z-index: 40;
+      transform: translateX(100%);
+      transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
     }
-    button {
+    .studio-inspector.docked {
+      transform: translateX(0);
+    }
+
+    .inspector-head {
+      height: 48px;
+      border-bottom: 1px solid var(--line);
+      padding: 0 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .node-hierarchy-tag {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--accent-blue);
+      letter-spacing: 0.5px;
+    }
+    .node-heading {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .btn-dock-close {
+      background: transparent;
+      border: 1px solid var(--line);
+      color: var(--ink-sub);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 4px 10px;
       cursor: pointer;
-      background: rgba(56, 189, 248, 0.13);
-      border-color: rgba(56, 189, 248, 0.38);
-      font-weight: 600;
       transition: all 0.15s;
     }
-    button:hover { background: rgba(56, 189, 248, 0.24); }
-    button.secondary { background: var(--bg-card); border-color: var(--line); color: var(--muted); }
-    button.secondary:hover { color: var(--ink); border-color: var(--cyan); }
-    button.danger { background: rgba(251, 113, 133, 0.14); border-color: rgba(251, 113, 133, 0.42); color: #fecdd3; }
-    button.success { background: rgba(52, 211, 153, 0.15); border-color: rgba(52, 211, 153, 0.45); color: #a7f3d0; }
-    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
-    input, textarea, select { width: 100%; margin-top: 4px; }
-    label { display: block; font-size: 12px; color: var(--muted); margin-top: 8px; }
-
-    /* Code & JSON blocks */
-    pre {
-      margin: 8px 0 0;
-      padding: 12px;
-      background: var(--bg-code);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      font-family: var(--mono);
-      font-size: 12.5px;
-      overflow-x: auto;
-      white-space: pre-wrap;
-      word-break: break-word;
-      color: #cbd5e1;
-    }
-    code {
-      font-family: var(--mono);
-      font-size: 12.5px;
-      color: var(--cyan);
-      background: rgba(56, 189, 248, 0.1);
-      padding: 1px 5px;
-      border-radius: 4px;
+    .btn-dock-close:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+      border-color: var(--line-bright);
     }
 
-    /* Pipeline Stepper */
-    .pipeline-steps {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-      margin: 14px 0;
+    .inspector-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
     }
-    @media (max-width: 960px) { .pipeline-steps { grid-template-columns: repeat(2, 1fr); } }
-    .step-box {
-      background: var(--bg-card);
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 11px 12px;
-      cursor: pointer;
-      transition: all 0.18s;
-      position: relative;
+
+    /* 架构区块 (No Rounded Cards, Strict Architectural Rulers) */
+    .arch-section {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
-    .step-box:hover { border-color: rgba(56, 189, 248, 0.5); }
-    .step-box.current {
-      border-color: var(--cyan);
-      background: rgba(56, 189, 248, 0.13);
-      box-shadow: 0 0 18px rgba(56, 189, 248, 0.18);
+    .arch-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--ink-muted);
+      letter-spacing: 1px;
+      text-transform: uppercase;
     }
-    .step-box.done { border-color: rgba(52, 211, 153, 0.45); }
-    .step-box.skipped { border-color: rgba(251, 113, 133, 0.45); opacity: 0.78; }
-    .step-num {
-      font-family: var(--mono);
+    .arch-text-metaphor {
+      border-left: 2px solid var(--accent-amber);
+      padding-left: 12px;
+      font-size: 13px;
+      color: #e6edf3;
+      line-height: 1.65;
+    }
+    .arch-text-tech {
+      border-left: 2px solid var(--accent-jade);
+      padding-left: 12px;
+      font-size: 13px;
+      color: var(--ink-sub);
+      line-height: 1.6;
+    }
+    .arch-code-pointer {
+      font-family: var(--font-mono);
       font-size: 11px;
-      color: var(--cyan);
-      margin-bottom: 4px;
+      color: var(--accent-cyan);
+      margin-top: 4px;
     }
-    .step-title { font-weight: 700; font-size: 13.5px; margin-bottom: 3px; }
-    .step-fn { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
 
-    /* Progress bar */
-    .meter-wrap { margin: 8px 0 12px; }
-    .meter-head { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
-    .meter { height: 9px; background: var(--bg-code); border-radius: 999px; overflow: hidden; border: 1px solid var(--line); }
-    .meter > div { height: 100%; background: linear-gradient(90deg, var(--emerald), var(--cyan)); transition: width 0.25s; }
-    .meter.over > div { background: var(--rose); }
+    /* 平整数据拓扑表 (Engineering Matrix Table) */
+    .matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      margin-top: 4px;
+    }
+    .matrix-table th {
+      text-align: left;
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--line);
+      color: var(--ink-muted);
+      font-weight: 600;
+      font-size: 10px;
+      letter-spacing: 0.5px;
+    }
+    .matrix-table td {
+      padding: 8px 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--ink);
+    }
+    .matrix-row {
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .matrix-row:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .matrix-row:hover td {
+      color: var(--accent-blue);
+    }
 
-    /* Pill tags */
-    .pill-list { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
-    .pill {
-      font-family: var(--mono);
-      font-size: 12px;
-      padding: 2px 8px;
-      border-radius: 6px;
-      background: rgba(148, 163, 184, 0.12);
+    .inspector-actions {
+      height: 48px;
+      border-top: 1px solid var(--line);
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .action-flat-btn {
+      flex: 1;
+      height: 32px;
+      background: transparent;
       border: 1px solid var(--line);
+      color: var(--ink-sub);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s;
     }
-    .pill.hit { background: rgba(52, 211, 153, 0.15); border-color: rgba(52, 211, 153, 0.5); color: var(--emerald); }
-    .pill.alias { background: rgba(167, 139, 250, 0.15); border-color: rgba(167, 139, 250, 0.5); color: var(--violet); }
-    .pill.neg { background: rgba(251, 113, 133, 0.15); border-color: rgba(251, 113, 133, 0.5); color: var(--rose); text-decoration: line-through; }
-
-    /* Comparison table */
-    table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
-    th, td { border: 1px solid var(--line); padding: 9px 11px; text-align: left; vertical-align: top; }
-    th { background: rgba(56, 189, 248, 0.08); color: var(--cyan); font-weight: 600; }
+    .action-flat-btn:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+      border-color: var(--line-bright);
+    }
+    .action-flat-btn.primary {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      border-color: var(--line-bright);
+    }
+    .action-flat-btn.primary:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
   </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <div class="brand">
-      <div class="btn-row" style="margin:0">
-        <span class="badge ok">HFA 2.2 · 70/70 测试通过</span>
-        <span class="badge">纯中文架构与算法解剖室</span>
-        <span class="badge warn">含 Astra 审查短板与改进实验台</span>
-      </div>
-      <h1>🧠 HFA 2.2 分层文件夹注意力记忆 · 核心原理可视化实验室</h1>
-      <p class="subtitle">
-        “想要改进它，就必须先彻底看懂它。” —— 本页面将 <code>scripts/hfa_manager.py</code> 与 <code>scripts/hfa_hook.py</code> 的真实运行逻辑、打分公式、原子事务锁以及<strong>目前存在的三大真实瓶颈</strong>全部拆开，供你单步调试与亲手实验。
-      </p>
+
+  <!-- ==================== 1. 顶部贯通式专业导轨 (Edge-to-Edge Studio Rail) ==================== -->
+  <header class="studio-rail">
+    <div class="rail-brand">
+      <span class="status-beacon"></span>
+      <span class="brand-id">HFA OBSERVER</span>
+      <span class="brand-meta">// COGNITIVE ARCHITECTURE 2.2</span>
     </div>
-    <div class="card" style="margin:0; min-width:280px;">
-      <div style="font-size:12px; color:var(--muted);">当前加载的数据集预设：</div>
-      <div class="btn-row" style="margin:6px 0 0;">
-        <button id="presetMultiBtn" onclick="loadDataset('multi')">🏢 复杂多主线工程案例 (M1/M2/S1..)</button>
-        <button id="presetDemoBtn" class="secondary" onclick="loadDataset('demo')">📦 标准工程模板</button>
-      </div>
+
+    <!-- 平整功能标签页 -->
+    <nav class="rail-menu">
+      <button class="rail-tab active" id="tabGalaxy" onclick="switchLayout('galaxy')">
+        <span>01 // GALAXY (引力星系)</span>
+      </button>
+      <button class="rail-tab" id="tabTree" onclick="switchLayout('tree')">
+        <span>02 // TOP_DOWN (3D层级瀑布)</span>
+      </button>
+      <button class="rail-tab" id="tabRadial" onclick="switchLayout('radial')">
+        <span>03 // RADIAL (同心星环)</span>
+      </button>
+      <button class="rail-tab" id="tabOverview" onclick="flyToMacroOverview()">
+        <span>04 // OVERVIEW (宏观全景远视)</span>
+      </button>
+      <button class="rail-tab" id="tabM5" onclick="focusM5GoldenNode()">
+        <span>05 // FOCUS_M5 (聚焦主线)</span>
+      </button>
+    </nav>
+
+    <!-- 实时相机坐标遥测 -->
+    <div class="rail-telemetry">
+      <span>CAM: <span class="telemetry-val" id="camReadout">[ 0.0, 140.0, 560.0 ]</span></span>
+      <span>NODES: <span class="telemetry-val">17</span></span>
     </div>
   </header>
 
-  <!-- 顶部四大实验室切换导航 -->
-  <nav class="nav-tabs">
-    <button class="tab-btn active" onclick="switchTab('tab-lifecycle', this)">
-      <span>1️⃣</span> 一轮对话 8 步生命周期调试器
-    </button>
-    <button class="tab-btn" onclick="switchTab('tab-xray', this)">
-      <span>2️⃣</span> 混合检索与 FTS5 打分 X 光机
-    </button>
-    <button class="tab-btn" onclick="switchTab('tab-storage', this)">
-      <span>3️⃣</span> L0/L1 真源、替代链与崩溃回滚沙盘
-    </button>
-    <button class="tab-btn" onclick="switchTab('tab-bottlenecks', this)">
-      <span>4️⃣</span> 🩺 Astra 诊断：三大真实短板与改进实验室
-    </button>
-  </nav>
+  <!-- 3D 渲染画布 -->
+  <div id="graph3d"></div>
 
-  <!-- ===================================================================== -->
-  <!-- TAB 1: 一轮对话 8 步生命周期单步调试器                                  -->
-  <!-- ===================================================================== -->
-  <section id="tab-lifecycle" class="tab-pane active">
-    <div class="panel">
-      <h2>
-        <span>🔄 Antigravity 一轮对话的完整记忆闭环（点击任意步骤或场景单步调试）</span>
-        <span class="badge" id="lcScenarioBadge">当前场景：命中活跃主线 M5</span>
-      </h2>
-      <div class="hint">
-        大白话总览：你在聊天框发出一句话后，HFA 2.2 一共会经历 <strong>提问前自动召回（第 1～5 步）</strong> 和 <strong>回答后自动提炼落盘（第 6～8 步）</strong> 两个半场。切换下方 5 个真实场景，看看每一步的 Python 函数到底干了什么！
-      </div>
+  <!-- ==================== 2. 取景框刻度标定 (No Floating Cards) ==================== -->
+  <div class="reticle-mark reticle-tl">+ [VIEWPORT: 100% // ENGINE: THREE.JS WEBGL]</div>
+  <div class="reticle-mark reticle-tr">[BUFFER: PASS // SHA-256 SYNCHRONIZED] +</div>
+  <div class="reticle-mark reticle-br">// NAV: L_DRAG:ROTATE | WHEEL:ZOOM | CLICK:INSPECT</div>
 
-      <div class="btn-row">
-        <span style="font-size:13px; color:var(--muted); align-self:center;">切换实验场景：</span>
-        <button onclick="setLifecycleScenario('hit_mainline')">✅ 场景1：命中当前主线 M5（精准注入）</button>
-        <button class="secondary" onclick="setLifecycleScenario('hit_tombstone')">🔒 场景2：命中墓碑支线 S1（专注锁拦截）</button>
-        <button class="secondary" onclick="setLifecycleScenario('save_with_secret')">🛡️ 场景3：AI 带结构化块 + 假密钥（全局脱敏落盘）</button>
-        <button class="secondary" onclick="setLifecycleScenario('user_no_save')">🚫 场景4：用户说“不要保存”（尊重指令拦截）</button>
-        <button class="danger" onclick="setLifecycleScenario('silent_skip')">⚠️ 场景5：复现 18:40“默默不干活”（无结构化块被跳过）</button>
-      </div>
-
-      <!-- 8步流程图 -->
-      <div class="pipeline-steps" id="lcStepsGrid"></div>
-
-      <div class="btn-row" style="justify-content: space-between; align-items: center;">
-        <div>
-          <button onclick="stepLifecycle(-1)">⬅️ 上一步</button>
-          <button onclick="stepLifecycle(1)">下一步 ➡️</button>
-        </div>
-        <div id="lcStepCounter" style="font-family:var(--mono); font-size:13px; color:var(--cyan);">Step 1 / 8</div>
-      </div>
-
-      <div class="grid-2" style="margin-top:12px;">
-        <div class="card">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <strong id="lcDetailTitle" style="font-size:15px; color:var(--cyan);">步骤详情</strong>
-            <code id="lcDetailFile">scripts/hfa_hook.py</code>
-          </div>
-          <p id="lcDetailDesc" style="font-size:13.5px; margin:10px 0;"></p>
-          <div class="card active-card" style="margin:0;">
-            <div style="font-size:12px; color:var(--emerald); font-weight:700;">💡 为什么要这样设计？（工程原理解析）</div>
-            <div id="lcDetailWhy" style="font-size:13px; margin-top:4px;"></div>
-          </div>
-        </div>
-        <div class="card">
-          <strong style="font-size:14px;">📄 当前步骤真实输入 / 输出 JSON 与底层状态</strong>
-          <pre id="lcDetailCode"></pre>
-        </div>
-      </div>
+  <!-- 左下角平铺式拓扑参数区 -->
+  <div class="telemetry-legend">
+    <div class="legend-title">Topology & Flow Matrix</div>
+    <div class="legend-item">
+      <span class="dot-ref" style="background:#ffffff;"></span>
+      <span style="color:#ffffff;">TIER 1 // 核心调度中枢 (CORE)</span>
     </div>
-  </section>
-
-  <!-- ===================================================================== -->
-  <!-- TAB 2: 混合检索打分 X 光拆解台                                          -->
-  <!-- ===================================================================== -->
-  <section id="tab-xray" class="tab-pane">
-    <div class="grid-lab">
-      <div class="panel">
-        <h2><span>🔍 输入查询词（实时透视打分流水线）</span></h2>
-        <div class="hint">
-          HFA 2.2 <strong>不使用黑盒向量模型</strong>，每一分怎么算出来的完全透明。输入一句话或点击下方测试句，右侧实时拆解 4 层过滤与打分公式！
-        </div>
-        <label>用户提问 (`--query`)
-          <input id="xrayQueryInput" value="不要改代码，但是请查一下之前 HFA 2.2 的 L1真源 和 中文变问号 是怎么修的？" oninput="runXray()" />
-        </label>
-        <label>跨分支/墓碑解锁原因 (`--unlock`，留空则严格锁死在当前主线)
-          <input id="xrayUnlockInput" value="" placeholder="例如：排查旧 Codex 1058 编码问题（留空则拦截非主线）" oninput="runXray()" />
-        </label>
-
-        <h3>⚡ 一键测试典型提问</h3>
-        <div class="btn-row">
-          <button class="secondary" onclick="setXrayQuery('不要改代码，但是请查一下之前 HFA 2.2 的 L1真源 和 中文变问号 是怎么修的？', '')">1. 否定前半句 + 命中同义词与主线</button>
-          <button class="secondary" onclick="setXrayQuery('之前 Codex 1058 沙箱乱码怎么解决的？', '')">2. 命中墓碑 S1（无 unlock 被拦截）</button>
-          <button class="secondary" onclick="setXrayQuery('之前 Codex 1058 沙箱乱码怎么解决的？', '复查 Codex 历史排障方案')">3. 命中墓碑 S1（带 unlock 解锁正文）</button>
-          <button class="secondary" onclick="setXrayQuery('请不要查乱码和部署的历史记录', '')">4. 纯否定句（自动剥离后 0 召回）</button>
-          <button class="danger" onclick="setXrayQuery('当初怎么给高并发提速的？', '')">5. ⚠️ 触发词法盲区（换词转述 0 分漏检）</button>
-        </div>
-
-        <div class="card" style="margin-top:14px;">
-          <div style="font-weight:700; font-size:13.5px; color:var(--amber);">📐 `scripts/hfa_manager.py` 真实打分公式：</div>
-          <pre style="font-size:11.5px;">1. 通道 A (hitwords 精确命中词):
-   score = 100 × 命中的 hitwords 数量
-
-2. 通道 B (SQLite FTS5 + _rank_content 正文混合检索):
-   • 标题词权重 = 3 × IDF, 正文词权重 = 1 × IDF
-   • coverage (加权覆盖率) = 匹配词权重和 / 查询词总权重
-   • heading  (标题覆盖率) = 标题匹配词数 / 查询词总数
-   • 守卫条件: 至少命中 2 个特征词，或 1 个特征词且同时出现在标题与正文中（且不能全是 use/get/fix 等通用词）
-   • score = 55 × coverage + 20 × heading + 5 × min(4, 命中词数)  (最高 80 分)</pre>
-        </div>
-      </div>
-
-      <div class="panel">
-        <h2><span>🔬 四层检索流水线 X 光透视结果</span><span class="badge ok" id="xrayModeBadge">Hybrid 混合模式</span></h2>
-
-        <div class="card">
-          <strong>第 1 层：否定从句剥离 (`_positive_query`)</strong>
-          <div class="hint" style="margin:4px 0;">按标点与转折词（但是/不过/however）切分从句，剔除含“不要查/无需检索/don't check”的否定子句：</div>
-          <div id="xrayClauses" class="pill-list"></div>
-        </div>
-
-        <div class="card">
-          <strong>第 2 层：词元切分与同义词扩展 (`_search_terms`)</strong>
-          <div class="hint" style="margin:4px 0;">提取英文词干 + 中文连续双字（Bigram）+ 匹配 6 组内置同义词表 (`DEFAULT_ALIASES`)：</div>
-          <div id="xrayTerms" class="pill-list"></div>
-        </div>
-
-        <div class="card">
-          <strong>第 3 层：主线专注锁 (`_guard_mainline`) 与 `supersedes` 淘汰链分流</strong>
-          <div class="meter-wrap">
-            <div class="meter-head">
-              <span>召回 Token 预算尺 (`recall_token_budget`)</span>
-              <span id="xrayBudgetLabel">0 / 600 bytes (utf8_bytes_upper_bound)</span>
-            </div>
-            <div class="meter" id="xrayBudgetMeter"><div id="xrayBudgetBar" style="width:0%"></div></div>
-          </div>
-          <div id="xrayResultsList"></div>
-        </div>
-      </div>
+    <div class="legend-item">
+      <span class="dot-ref" style="background:var(--accent-jade);"></span>
+      <span style="color:var(--accent-jade);">TIER 2 // 能力分水岭模块 (MODULE)</span>
     </div>
-  </section>
-
-  <!-- ===================================================================== -->
-  <!-- TAB 3: L0 / L1 / 派生层存储架构与原子事务沙盘                            -->
-  <!-- ===================================================================== -->
-  <section id="tab-storage" class="tab-pane">
-    <div class="grid-3">
-      <div class="panel">
-        <h2><span>🧭 L0 路由表 (`directory.md`)</span><span class="badge" id="stActiveBadge">ACTIVE: M5</span></h2>
-        <div class="hint">
-          <strong>铁律</strong>：所有 `MAX` 主线（`M1..M5`）中，<strong>同时只允许 1 个 `ACTIVE`</strong>！其余主线、支线（`S*`）与墓碑（`TOMBSTONED`）在未传 `--unlock` 时一律不注入正文。
-        </div>
-        <div class="meter-wrap">
-          <div class="meter-head">
-            <span>L0 路由表预算 (`router_token_budget`)</span>
-            <span id="stRouterBudgetText">0 / 1200</span>
-          </div>
-          <div class="meter" id="stRouterMeter"><div id="stRouterBar" style="width:0%"></div></div>
-        </div>
-        <div id="stNodesList"></div>
-      </div>
-
-      <div class="panel">
-        <h2><span>📦 L1 唯一真源 (`chunks/chunk_XXXX.json`)</span><span class="badge ok" id="stChunkCountBadge">0 条记录</span></h2>
-        <div class="hint">
-          <strong>为什么不直接改 Markdown？</strong> 因为大模型直接编辑长篇 `.md` 极易改丢段落或破坏标题层级。HFA 把每条决定存成独立 JSON 真源，再自动派生出 `index/fts.sqlite` 和 `summaries.md`。
-        </div>
-        <div class="card">
-          <strong style="font-size:13.5px; color:var(--emerald);">➕ 亲手实验：写入新决定 / 推翻旧决定 (`supersedes`) / 模拟崩溃回滚</strong>
-          <div class="grid-2" style="gap:8px;">
-            <label>决定标题 (`--title`)
-              <input id="stNewTitle" value="Hook 透明账本改造方案" />
-            </label>
-            <label>命中词 (`--hit-words`，逗号分隔)
-              <input id="stNewWords" value="hook_audit, 透明账本, HFA" />
-            </label>
-          </div>
-          <label>核心结论 (`--conclusion`，最多 3 行)
-            <textarea id="stNewBody" rows="2">在 history/hook_audit.jsonl 记录每轮保存或跳过的原因，解决默默不干活问题。</textarea>
-          </label>
-          <div class="grid-2" style="gap:8px;">
-            <label>所属节点 (`--project`)
-              <select id="stNewProject"></select>
-            </label>
-            <label>推翻并替代旧决定 (`--supersedes`)
-              <select id="stNewSupersedes"></select>
-            </label>
-          </div>
-          <div class="btn-row" style="margin-top:10px;">
-            <button class="success" onclick="addChunkSandbox(false)">💾 正常原子写入 (`add-topic`)</button>
-            <button class="danger" onclick="addChunkSandbox(true)">💥 模拟写到一半磁盘崩溃 (`OSError` 触发事务回滚)</button>
-          </div>
-        </div>
-        <div id="stChunksList" style="max-height:480px; overflow-y:auto;"></div>
-      </div>
-
-      <div class="panel">
-        <h2><span>🔐 事务日志与派生文件透视</span><span class="badge" id="stTxBadge">事务状态：CLEAN</span></h2>
-        <div class="hint">
-          观察写入或崩溃时，`.hfa.lock`、`.hfa-transaction.json`、`index/fts.sqlite` 与 `summaries.md` 是如何协同保护数据一致性的：
-        </div>
-        <div id="stTxBox" class="card active-card"></div>
-        <h3>📜 自动生成的 `history/epoch_01/summaries.md` 视图</h3>
-        <pre id="stSummariesView" style="max-height:380px; overflow-y:auto;"></pre>
-      </div>
+    <div class="legend-item">
+      <span class="dot-ref" style="background:var(--ink-muted);"></span>
+      <span>TIER 3 // 落地记忆与单项质检 (LEAF)</span>
     </div>
-  </section>
-
-  <!-- ===================================================================== -->
-  <!-- TAB 4: Astra 诊断出的「三大真实短板与改进实验室」                         -->
-  <!-- ===================================================================== -->
-  <section id="tab-bottlenecks" class="tab-pane">
-    <div class="panel">
-      <h2>
-        <span>🩺 Astra 审查指出的「三大真实瓶颈」与下一步怎么改？</span>
-        <span class="badge warn">不吹牛 · 专治半吊子</span>
-      </h2>
-      <div class="hint">
-        你问得特别对：“想要改进它，就必须知道原理。” 下面把目前架构里最真实的 <strong>3 个短板</strong> 拆开给你看——包含<strong>为什么会出问题（底层代码原因）</strong>、<strong>现场复现对比</strong>以及<strong>我们可以怎么改</strong>。
-      </div>
-
-      <div class="grid-2" style="margin-top:14px;">
-        <!-- 痛点 1 -->
-        <div class="card warn-card">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <strong style="font-size:16px; color:var(--amber);">短板 1：自动保存的“准入两难”与“默默不干活”</strong>
-            <span class="badge err">最影响日常体感</span>
-          </div>
-          <p style="font-size:13.5px;">
-            <strong>底层原理揭秘：</strong><br>
-            在 <code>scripts/hfa_hook.py</code> 的 <code>_extract_turn_decision()</code> 中，为了不额外花钱调大模型 API，我们只能靠规则从 AI 的回复里抓结论：<br>
-            • <strong>之前（放宽模式）</strong>：只要看到 <code>文件路径 + 已修复</code> 就自动存 ➔ 结果把“假设已在 app.py 修复”的举例也当真事存进去了。<br>
-            • <strong>现在（Astra 收紧后）</strong>：默认关闭了自由文本抓取（<code>--heuristic-extract</code> 默认关闭），要求必须有结构化 <code>```hfa-memory</code> 块才存 ➔ 结果如果 AI 回复时忘了写这个代码块，Hook 就会<strong>直接返回 <code>{}</code> 跳过，而且不留任何日志</strong>！
-          </p>
-          <div class="card" style="background:var(--bg-code); margin:8px 0;">
-            <div style="font-size:12.5px; color:var(--emerald); font-weight:700;">🛠️ 最佳改进方案（立刻可改）：</div>
-            <ol style="margin:6px 0 0; padding-left:18px; font-size:13px;">
-              <li><strong>加一本“透明账本” (<code>history/hook_audit.jsonl</code>)</strong>：不管这轮是存了还是跳过了，都写一行日志（例如 <code>{"phase":"stop", "action":"skipped", "reason":"no_hfa_memory_block"}</code>），彻底告别“黑盒装死”。</li>
-              <li><strong>在 Antigravity 全局 Rule 里加一条 2 行指令</strong>：让 AI 在做出重要决定或修完 Bug 的回合末尾，主动输出一个 <code>```hfa-memory</code> 块（由大模型自己判断是不是真决定，比正则表达式聪明 100 倍！）。</li>
-            </ol>
-          </div>
-        </div>
-
-        <!-- 痛点 2 -->
-        <div class="card warn-card">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <strong style="font-size:16px; color:var(--amber);">短板 2：纯词法 + 中文双字切分（Bigram）的同义转述盲区</strong>
-            <span class="badge warn">检索准确度上限</span>
-          </div>
-          <p style="font-size:13.5px;">
-            <strong>底层原理揭秘：</strong><br>
-            在 <code>scripts/hfa_manager.py</code> 的 <code>_search_terms_cached()</code> 第 309 行，中文是按<strong>相邻两个字（Bigram）</strong>切分的：<br>
-            比如记录里写的是 <code>"使用 Redis 缓存缓解数据库压力"</code> ➔ 切出来的词元是 <code>["使用", "缓存", "存缓", "缓解", "解数", "数据", "据库", "库压", "压力"]</code>。<br>
-            如果你隔了一周问：<code>"当初怎么给高并发提速的？"</code> ➔ 切出来是 <code>["高并", "并发", "发提", "提速"]</code>。<br>
-            因为两边<strong>没有任何一个双字重合</strong>，且不在 6 组内置同义词里，哪怕用了 SQLite FTS5，算出来的重合度也是 <strong>0 分</strong>！
-          </p>
-          <div class="card" style="background:var(--bg-code); margin:8px 0;">
-            <div style="font-size:12.5px; color:var(--emerald); font-weight:700;">🛠️ 最佳改进方案：</div>
-            <ol style="margin:6px 0 0; padding-left:18px; font-size:13px;">
-              <li><strong>保存时让 AI 多写 3～5 个口语化同义命中词 (`hitwords`)</strong>：比如存 Redis 时，<code>hitwords</code> 同时写上 <code>["Redis", "缓存", "高并发", "提速", "性能"]</code>，直接走 100 分精确通道命中。</li>
-              <li><strong>扩充 `config.json` 的 `retrieval_aliases` 常用工程同义词库</strong>：把高频概念（如 <code>["缓存", "提速", "性能", "延迟", "redis"]</code>、<code>["鉴权", "登录", "token", "权限"]</code>）内置到 20～30 组。</li>
-            </ol>
-          </div>
-        </div>
-      </div>
-
-      <!-- 痛点 3：交互式 Token 计量对比器 -->
-      <div class="card" style="margin-top:12px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
-          <strong style="font-size:16px; color:var(--cyan);">短板 3 交互实验：为什么没装 `tiktoken` 时，600 预算装不下多少中文？</strong>
-          <span class="badge">亲手改字试试看</span>
-        </div>
-        <p style="font-size:13px; color:var(--muted); margin:6px 0 10px;">
-          Astra 为了防止生僻字（如“龘”）突破 600 Token 上限，把无分词器时的回退算法改成了 <code>len(text.encode('utf-8'))</code>（UTF-8 字节数上界）。因为 <strong>1 个中文汉字占 3 个 UTF-8 字节</strong>，但在真实的 `tiktoken (o200k_base)` 里 1 个常用汉字只占约 <strong>0.8～1.2 个 Token</strong>！在下方输入一段话，对比两者的真实差距：
-        </p>
-        <textarea id="labTokenInput" rows="2" oninput="updateTokenLab()">完成 HFA 2.2 核心引擎 24 项边界缺陷修复（否定词边界、缩写词检索、Windows 锁、纪元结转等）。补齐 plugin.json、hooks.json 与 scripts/hfa_hook.py，实现 PreInvocation 自动召回注入与幂等落盘。</textarea>
-        <div class="grid-2" style="margin-top:10px;">
-          <div class="card err-card" style="margin:0;">
-            <div style="font-size:12.5px; color:var(--rose); font-weight:700;">未安装 `tiktoken` 时 (`utf8_bytes_upper_bound`)</div>
-            <div id="labByteCount" style="font-family:var(--mono); font-size:20px; font-weight:700; margin:6px 0;">0 / 600</div>
-            <div style="font-size:12px; color:var(--muted);">每个汉字按 3 算，600 预算最多只能装约 <strong>200 个汉字</strong>就会被截断延后！</div>
-          </div>
-          <div class="card active-card" style="margin:0;">
-            <div style="font-size:12.5px; color:var(--emerald); font-weight:700;">安装 `tiktoken` 后 (`o200k_base` 精确分词)</div>
-            <div id="labExactCount" style="font-family:var(--mono); font-size:20px; font-weight:700; margin:6px 0;">0 / 600</div>
-            <div style="font-size:12px; color:var(--muted);">按真实大模型词表计算，同样 600 预算可以装下约 <strong>500～600 个汉字</strong>（容量提升 2.5 倍）！</div>
-          </div>
-        </div>
-      </div>
+    <div class="legend-item" style="margin-top:4px; padding-top:4px; border-top:1px dashed var(--line);">
+      <span style="color:#fff;">⚡ PACKET STREAM: 超强能量流 (90%+)</span>
     </div>
-  </section>
-</div>
+    <div class="legend-item">
+      <span style="color:var(--accent-rose);">── RED DASH: 替代链已作废 (VOID)</span>
+    </div>
+  </div>
 
-<script>
-  // =========================================================================
-  // 1. 预置数据集（多主线工程实战案例快照 vs 标准工程模板）
-  // =========================================================================
-  const DATASETS = {
-        multi: {
-      activeMainline: "M1",
-      routerBudget: 1200,
-      recallBudget: 900,
+  <!-- ==================== 3. 一体化停靠工作台检查器 (Docked Studio Inspector) ==================== -->
+  <aside class="studio-inspector" id="studioInspector">
+    <div class="inspector-head">
+      <div>
+        <div class="node-hierarchy-tag" id="insTier">TIER 1 // CORE SCHEDULER</div>
+        <div class="node-heading" id="insTitle">大猫大脑中枢</div>
+      </div>
+      <button class="btn-dock-close" onclick="closeInspector()">[ ESC / CLOSE ]</button>
+    </div>
+
+    <div class="inspector-scroll">
+      <!-- 1. 白话文类比 -->
+      <section class="arch-section">
+        <div class="arch-label">// 01 METAPHOR // 生活白话场景</div>
+        <div class="arch-text-metaphor" id="insMetaphor">
+          正在加载中...
+        </div>
+      </section>
+
+      <!-- 2. 专业工程术语 -->
+      <section class="arch-section">
+        <div class="arch-label">// 02 SPECIFICATION // 计算机工程原理</div>
+        <div class="arch-text-tech" id="insTech">
+          正在加载中...
+        </div>
+        <div class="arch-code-pointer" id="insFile">
+          scripts/hfa_manager.py
+        </div>
+      </section>
+
+      <!-- 3. 强弱关联矩阵表 -->
+      <section class="arch-section">
+        <div class="arch-label">// 03 TOPOLOGY MATRIX // 关联拓扑矩阵 (点击瞬移)</div>
+        <table class="matrix-table">
+          <thead>
+            <tr>
+              <th>NODE</th>
+              <th>RELATION</th>
+              <th style="text-align:right;">AFFINITY</th>
+            </tr>
+          </thead>
+          <tbody id="insMatrixBody">
+            <!-- 动态注入表格行 -->
+          </tbody>
+        </table>
+      </section>
+
+      <!-- 4. 现场实物验证或测试沙盘 -->
+      <section class="arch-section">
+        <div class="arch-label">// 04 VERIFIED DATA // 现场实证</div>
+        <div style="font-family:var(--font-mono); font-size:11px; color:var(--accent-jade);" id="insEvidence">
+          [OK] 100% SHA-256 SYNCHRONIZED
+        </div>
+      </section>
+    </div>
+
+    <div class="inspector-actions">
+      <button class="action-flat-btn" onclick="flyToMacroOverview()">[ OVERVIEW / 全景 ]</button>
+      <button class="action-flat-btn primary" onclick="zoomInNode()">[ LOCK FOCUS / 贴身聚焦 ]</button>
+    </div>
+  </aside>
+
+  <!-- =========================================================================
+       图谱核心交互脚本
+       ========================================================================= -->
+  <script>
+    const GRAPH_DATA = {
       nodes: [
-        { id: "M1", tier: "MAX", status: "ACTIVE", path: "main/M1_core_service.md", desc: "核心微服务与数据同步引擎", hitwords: ["微服务", "数据同步", "核心", "FTS5", "事务"] },
-        { id: "M2", tier: "MAX", status: "STANDBY", path: "main/M2_analytics_pipeline.md", desc: "日志分析与大数据处理管道", hitwords: ["大数据", "分析管道", "报表", "ClickHouse"] },
-        { id: "M3", tier: "MAX", status: "PLANNED", path: "main/M3_web_dashboard.md", desc: "管理控制台前端 UI 界面", hitwords: ["控制台", "Vue3", "前端"] },
-        { id: "Traits", tier: "HIGH", status: "STABLE", path: "profile/traits.md", desc: "架构契约（高内聚低耦合/防御式编程/完整审计）", hitwords: ["架构契约", "防御式编程", "审计日志"] },
-        { id: "State", tier: "HIGH", status: "STABLE", path: "profile/state.md", desc: "生产基线（Python 3.12 / 容器沙箱 / 双节点部署）", hitwords: ["生产基线", "容器沙箱", "集群"] },
-        { id: "S1", tier: "MEDIUM", status: "STABLE", path: "branches/S1_toolchain.md", desc: "开发辅助脚本与测试套件", hitwords: ["工具链", "测试套件", "Linter"] },
-        { id: "S2", tier: "MEDIUM", status: "ACTIVE", path: "branches/S2_gateway_cache.md", desc: "网关代理与 Redis 缓存中间件", hitwords: ["网关代理", "Redis", "缓存", "中间件"] },
-        { id: "S0", tier: "TOMBSTONED", status: "TOMBSTONED", path: "branches/S0_legacy_v1.md", desc: "早期已废弃的单体架构初始化脚本", hitwords: ["单体架构", "废弃脚本", "旧排障"] }
-      ],
-      chunks: [
-        { id: "chunk_0030", number: 30, epoch: 1, project: "M1", title: "微服务事务引擎升级：只读直连 FTS5 与崩溃恢复闭环", hitwords: ["微服务", "FTS5", "事务引擎", "崩溃恢复"], summary: ["完成事务引擎边界缺陷修复与只读 SQLite FTS5 直连查询。", "引入多文件原子写入快照与崩溃自愈机制。", "通过严格的单元测试与回归套件验证高并发与断电回滚。"], source: "scripts/hfa_manager.py", supersedes: [] },
-        { id: "chunk_0029", number: 29, epoch: 1, project: "M1", title: "分层文件夹注意力架构抽象与单主线专注锁立项", hitwords: ["分层文件夹", "注意力路由", "主线专注锁"], summary: ["确立 L0 轻量目录路由 + 四级注意力权重 + 墓碑归档机制。", "以 chunks/chunk_XXXX.json 作为唯一真源，自动派生索引与摘要。"], source: "history/epoch_01/summaries.md", supersedes: [] },
-        { id: "chunk_0015", number: 15, epoch: 1, project: "S2", title: "Redis 缓存雪崩防护与连接池限制优化", hitwords: ["Redis", "缓存雪崩", "连接池", "高并发"], summary: ["为高并发请求增加随机抖动过期时间，防止同时间大面积击穿。", "在生产配置文件中限定最大空闲连接数，避免连接泄漏。"], source: "branches/S2_gateway_cache.md", supersedes: [] },
-        { id: "chunk_0001", number: 1, epoch: 1, project: "S0", title: "早期单体框架端口冲突排障归档", hitwords: ["单体架构", "端口冲突", "排障归档"], summary: ["定位旧版单体框架本地端口占用与异常退出问题。", "已完结并打入 TOMBSTONED 墓碑区，平时 0 Token 消耗。"], source: "branches/S0_legacy_v1.md", supersedes: [] }
-      ]
-    },
-    demo: {
-      activeMainline: "M1",
-      routerBudget: 600,
-      recallBudget: 600,
-      nodes: [
-        { id: "M1", tier: "MAX", status: "ACTIVE", path: "main/M1_core_project.md", desc: "核心后端导出服务", hitwords: ["核心", "MVP", "导出"] },
-        { id: "Traits", tier: "HIGH", status: "STABLE", path: "profile/traits.md", desc: "大白话、全自主执行", hitwords: ["大白话", "自主执行"] },
-        { id: "S1", tier: "MEDIUM", status: "MEDIUM", path: "branches/S1_toolchain.md", desc: "IDE 与 MCP 工具链配置", hitwords: ["IDE", "MCP", "环境"] },
-        { id: "S0", tier: "TOMBSTONED", status: "TOMBSTONED", path: "branches/S0_archived_setup.md", desc: "早期废弃初始化脚本", hitwords: ["初始配置", "旧脚本"] }
-      ],
-      chunks: [
-        { id: "chunk_0001", number: 1, epoch: 1, project: "M1", title: "初始化基线", hitwords: ["初始化", "基线"], summary: ["仅从可验证来源记录项目记忆；L1 JSON 为唯一真源。"], source: "templates/memory/directory.md", supersedes: [] },
-        { id: "chunk_0002", number: 2, epoch: 1, project: "M1", title: "CSV 导出乱码修复", hitwords: ["CSV导出", "UTF-8-SIG", "乱码"], summary: ["在 scripts/exporter.py 中使用 UTF-8-SIG 编码解决 Excel 打开中文变问号问题。"], source: "scripts/exporter.py", supersedes: [] },
-        { id: "chunk_0003", number: 3, epoch: 1, project: "S1", title: "IDE 调试器端口配置", hitwords: ["IDE", "调试器", "端口"], summary: ["本地调试统一绑定 127.0.0.1:5678。"], source: "branches/S1_toolchain.md", supersedes: [] }
-      ]
-    }
-  };
+        // ---------- 一级核心天体 (Level 1) ----------
+        {
+          id: "CENTRAL_BRAIN",
+          name: "大猫大脑中枢",
+          level: 1,
+          val: 28,
+          color: "#ffffff",
+          metaphor: "相当于大猫脑海里的总调度台。不管是浅发来的一句话、做出的新规矩，还是系统底层的防灾急救，都要先经过总调度室做分配与权衡。",
+          tech: "中央上下文调度器 (Central Context Router)。负责协调 L0 轻量路由与 L1 详细真源的交互，控制记忆预算 (Token Budget)。",
+          file: "scripts/hfa_manager.py: central_router",
+          evidence: "AUDIT: PASS | 31 TOPICS MOUNTED | ACTIVE: M5"
+        },
+        {
+          id: "LIFECYCLE",
+          name: "记忆生命全周期",
+          level: 1,
+          val: 24,
+          color: "#e2e8f0",
+          metaphor: "就像一个人的完整记忆闭环：从听到一句话 ➔ 翻出旧笔记 ➔ 思考并回答 ➔ 晚上写总结 ➔ 老旧想法盖章归档的完整一生。",
+          tech: "端到端生命周期流水线 (End-to-End Recall & Retention Pipeline)。覆盖从 Hook 拦截召回、L1 沉淀、Markdown 视图派生到 Tombstone 归档的闭环。",
+          file: "Hook ➔ route ➔ add-topic ➔ summarize",
+          evidence: "PIPELINE: PASS | 0 LATENCY ANOMALY"
+        },
 
-  let state = JSON.parse(JSON.stringify(DATASETS.multi));
-  let txStatus = { clean: true, message: "✅ `.hfa.lock` 已释放，无未决 `.hfa-transaction.json`，所有派生文件 SHA-256 指纹 (`source_digest`) 100% 一致。" };
+        // ---------- 二级能力天体 (Level 2) ----------
+        {
+          id: "MOD_SEARCH",
+          name: "图书检索员",
+          level: 2,
+          val: 18,
+          color: "#2ea043", // Jade
+          metaphor: "不怕你说错话、能听懂潜台词的图书管理员。哪怕你只说一句大白话“中文变问号”，他也能凭经验在几万字旧日记里找出“终端编码补丁”递给大猫。",
+          tech: "混合全文检索与 BM25 评分系统 (Hybrid FTS5 & BM25 Scoring)。结合 SQLite FTS5 倒排索引、中文字根拆解与词频加权算法，在 5 毫秒内计算相似度。",
+          file: "scripts/hfa_manager.py: _search_fts5",
+          evidence: "BENCHMARK: 3.8ms AVERAGE RECALL"
+        },
+        {
+          id: "MOD_SUPERSEDES",
+          name: "作废红图章",
+          level: 2,
+          val: 18,
+          color: "#d29922", // Amber
+          metaphor: "给旧决定盖‘已作废’红戳的档案员。项目里随时会改主意（比如端口从 8080 改成 9000）。旧日记不能删（为了留底备查），但绝不能和新决定打架。",
+          tech: "版本演进与替代链机制 (Supersedes Resolution Chain)。在 JSON 元数据中通过 supersedes: ['chunk_XXXX'] 建立单向有向图，召回时自动过滤作废版本。",
+          file: "chunks/chunk_XXXX.json: supersedes",
+          evidence: "STATUS: ACTIVE | 2 DEPRECATED NODES RESOLVED"
+        },
+        {
+          id: "MOD_ATOMIC",
+          name: "防断电急救箱",
+          level: 2,
+          val: 18,
+          color: "#f85149", // Rose
+          metaphor: "写日记防停电的复写纸与一键还原急救箱。写东西时万一电脑突然关机，坏掉的半截草稿会把系统卡死。急救箱会在开机一秒钟内撕掉坏草稿，完好自愈。",
+          tech: "原子事务与崩溃自愈锁 (Atomic Transaction & Rollback Recovery)。动笔前写临时文件并加锁 (.hfa.lock)，若异常中断，下次读写触发自动回滚，确保 ACID 中的 A。",
+          file: "scripts/hfa_manager.py: AtomicTransaction",
+          evidence: "CRASH_TEST: 0 CORRUPTION | SELF-HEAL VERIFIED"
+        },
+        {
+          id: "MOD_TESTS",
+          name: "70次破坏质检",
+          level: 2,
+          val: 18,
+          color: "#bc8cff", // Purple
+          metaphor: "新车出厂前，70 次故意挑刺的破坏与碰撞质检。专门用假密码、断电、空文件去恶意搞破坏，看大猫的记忆库防不防得住意外。",
+          tech: "全覆盖自动化回归测试套件 (70/70 Automated Regression Test Suite)。包含单元测试、安全脱敏拦截、并发锁竞态模拟与边界异常保护。",
+          file: "tests/validate_hfa.py",
+          evidence: "RESULT: 70/70 ALL PASS (0 FAILURES)"
+        },
+        {
+          id: "MOD_ALIGNMENT",
+          name: "结对默契契约",
+          level: 2,
+          val: 20,
+          color: "#f85149",
+          metaphor: "大猫和浅之间最神圣的默契约定：把浅当成一起成长的亲密战友，绝对不搞高高在上的黑话碾压，知情权第一，改 A 就只改 A，绝不自嗨抢跑。",
+          tech: "结对协同边界规则与白话教学法协议 (Autonomous Traits & Pedagogical Rules)。确立【优先白话文类比建立直觉 + 专业工程术语顺带掌握概念】的核心范式。",
+          file: "~/.gemini/config/rules/autonomous.md",
+          evidence: "RULESET: BOUNDARY_v2 | PEER_CONTRACT_ACTIVE"
+        },
+        {
+          id: "MOD_HEALTH",
+          name: "全身体检报告",
+          level: 2,
+          val: 16,
+          color: "#39c5bb", // Cyan
+          metaphor: "记忆库的实时健康仪表盘。告诉你现在的记忆库干不干净、反应快不快（4.2毫秒）、内存占用小不小（不到1.8MB）。",
+          tech: "系统一致性审计与实时诊断中心 (Diagnostics & Health Audit)。校验所有派生 Markdown 视图与 JSON 真源的 SHA-256 指纹是否一致。",
+          file: "scripts/hfa_manager.py: audit_status",
+          evidence: "LATENCY: 4.2ms | RAM: <1.8MB | SHA-256: 100%"
+        },
 
-  // =========================================================================
-  // 2. 顶部标签页与数据集切换
-  // =========================================================================
-  function switchTab(tabId, btn) {
-    document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
-    btn.classList.add('active');
-  }
-
-  function loadDataset(key) {
-    state = JSON.parse(JSON.stringify(DATASETS[key]));
-    document.getElementById('presetMultiBtn').className = key === 'multi' ? '' : 'secondary';
-    document.getElementById('presetDemoBtn').className = key === 'demo' ? '' : 'secondary';
-    txStatus = { clean: true, message: "✅ 已加载数据集，L1 真源与 `index/fts.sqlite` 指纹一致。" };
-    renderStorageTab();
-    runXray();
-  }
-
-  // =========================================================================
-  // 3. TAB 1: 8 步生命周期单步调试器
-  // =========================================================================
-  const LC_SCENARIOS = {
-    hit_mainline: {
-      name: "✅ 场景1：命中当前主线 M5（精准注入）",
-      steps: [
-        { num: "Step 1", title: "用户发送提问", fn: "Antigravity 宿主 -> stdin", status: "done",
-          desc: "你在 Antigravity 输入提问：“HFA 2.2 的 L1真源 和 PreInvocation 是怎么配合的？” 宿主在调用大模型前，先把上下文打包成 JSON 通过 stdin 传给全局 hooks.json。",
-          why: "用 stdin 传 JSON 可以让钩子脚本完全独立于宿主语言（纯 Python 标准库即可处理）。",
-          code: `{\n  "conversationId": "71a77213-1896-475f",\n  "lastUserInput": "HFA 2.2 的 L1真源 和 PreInvocation 是怎么配合的？",\n  "transcriptPath": ".../logs/transcript.jsonl"\n}` },
-        { num: "Step 2", title: "PreInvocation 钩子拦截", fn: "hfa_hook.py --phase pre", status: "done",
-          desc: "hfa_hook.py 提取 lastUserInput，解析绑定的 --memory-dir（你的 scratch/memory 目录），准备调用核心引擎执行 recall。",
-          why: "显式绑定的 --memory-dir 具有最高优先级，如果目录损坏绝不偷偷回退到别的项目（防止 A/B 项目串味）。",
-          code: `python -B scripts/hfa_hook.py \\\n  --memory-dir C:\\Users\\jiao\\.gemini\\antigravity\\scratch\\memory \\\n  --phase pre` },
-        { num: "Step 3", title: "L0 主线专注锁校验", fn: "_guard_mainline(state, 'M5')", status: "done",
-          desc: "读取 directory.md 与 config.json，确认全表只有唯一一条 ACTIVE 主线 [M5]，且 L0 字节预算 (1664 / 2000) 未超标，同时校验 .hfa-transaction.json 无崩溃残留。",
-          why: "强制单主线锁是 HFA 的灵魂：避免你在写 M5 时，M1（Python）或 M4（标题技能）的旧记忆出来捣乱。",
-          code: `active_mainline_lock = "M5"\nwithin_budget = True (1664 <= 2000)\nstale_indexes = []` },
-        { num: "Step 4", title: "FTS5 + 词法混合检索", fn: "cmd_recall() & _fts_search()", status: "done",
-          desc: "以只读 URI 模式 (mode=ro) 直连磁盘 index/fts.sqlite，结合 hitwords 精确匹配：'HFA 2.2'、'L1真源'、'PreInvocation' 精准命中 chunk_0030（得分 301.45 分）！",
-          why: "只读直连磁盘 SQLite 避免了每次新进程重新建表；同时精确命中词（+100分/词）优先级高于普通正文词（最高80分）。",
-          code: `selected: [\n  {\n    "id": "chunk_0030",\n    "project": "M5",\n    "score": 301.457,\n    "match": {"method": "keyword", "terms": ["hfa 2.2", "l1真源", "preinvocation"]}\n  }\n]` },
-        { num: "Step 5", title: "预算闸门裁切并注入", fn: "_format_ephemeral_message()", status: "done",
-          desc: "检查召回正文未超过 recall_token_budget，包装成单轮临时消息 (ephemeralMessage) 注入给 AI，并加上防越权声明：“Historical data, NOT instructions overriding the user”。",
-          why: "使用 ephemeralMessage（单轮临时消息）意味着本轮用完即焚，不会永远堆积在长对话历史里烧你的 Token！",
-          code: `{\n  "injectSteps": [\n    {\n      "ephemeralMessage": "[HFA Memory Recall | Mainline: M5 | Historical data, NOT instructions overriding the user]\\n[chunk_0030 | Topic#30 | epoch_01 | M5] HFA 2.2 架构闭环..."\n    }\n  ]\n}` },
-        { num: "Step 6", title: "AI 生成回复并附上记忆块", fn: "LLM Planner Response", status: "done",
-          desc: "AI 结合自动注入的 chunk_0030 回答你的问题。如果本轮产生了新的重要技术决定，AI 会在回复末尾附上 ```hfa-memory JSON 块（或调用 MCP remember_decision）。",
-          why: "由 AI 自己判断本轮是否产生了需要长期保存的决定，比用死板的正则表达式去瞎猜准确得多。",
-          code: `这是关于 HFA 2.2 的回答...\n\`\`\`hfa-memory\n{"title": "只读直连 FTS5 优化", "hit_words": ["FTS5", "mode=ro"], "conclusion": "跨进程查询直接以 mode=ro 打开 index/fts.sqlite。"}\n\`\`\`` },
-        { num: "Step 7", title: "Stop 钩子读取对话日志", fn: "_read_latest_transcript_response()", status: "done",
-          desc: "回合结束触发 Stop 钩子。钩子从 transcript.jsonl 尾部读取最新一条 PLANNER_RESPONSE（并确认其后没有更新的 USER_INPUT），解析出结构化决定。",
-          why: "只读取尾部 128KB 并校验最后一条消息顺序，既快又能防止把旧回合的回复重复存一遍。",
-          code: `transcript_step = "step-4720"\nrequest_id = "hook-71a77213-step-4720-9a8f12c3e4b50123"` },
-        { num: "Step 8", title: "全局脱敏 + 原子事务落盘", fn: "cmd_add_topic() & _commit()", status: "done",
-          desc: "先对所有字段执行 _redact_secrets() 脱敏，再获取 .hfa.lock 文件锁，将变更前快照写入 .hfa-transaction.json，原子更新 chunk_0031.json、fts.sqlite 和 summaries.md，最后返回 {\"decision\": \"allow\"}。",
-          why: "哪怕写到一半断电或进程被杀，下次启动也会根据 .hfa-transaction.json 自动回滚，绝不损坏记忆库。",
-          code: `stdout -> {"decision": "allow"}\n磁盘新增 -> chunks/chunk_0031.json (索引与摘要已同步更新)` }
-      ]
-    },
-    hit_tombstone: {
-      name: "🔒 场景2：命中墓碑支线 S1（专注锁拦截）",
-      steps: [
-        { num: "Step 1", title: "用户提问提及旧墓碑词", fn: "Antigravity 宿主 -> stdin", status: "done",
-          desc: "你提问：“之前 Codex 1058 沙箱乱码是怎么处理的？”",
-          why: "测试当主线在 M5 时，已完结归档的 S1 墓碑支线会不会污染上下文。",
-          code: `{"lastUserInput": "之前 Codex 1058 沙箱乱码是怎么处理的？"}` },
-        { num: "Step 2", title: "PreInvocation 钩子启动", fn: "hfa_hook.py --phase pre", status: "done",
-          desc: "钩子启动并调用 hfa_manager.py recall（默认不带 --unlock 参数）。",
-          why: "日常自动钩子永远不传 --unlock，确保非主线内容默认被锁住。",
-          code: `cmd: hfa_manager.py recall scratch/memory --query="之前 Codex 1058..."` },
-        { num: "Step 3", title: "L0 主线锁检查", fn: "_guard_mainline()", status: "done",
-          desc: "确认当前活跃主线是 M5，而 S1 的状态是 TOMBSTONED（墓碑归档）。",
-          why: "墓碑节点平时对正文上下文的消耗必须是 0。",
-          code: `active_mainline = "M5"\nS1.tier = "TOMBSTONED"` },
-        { num: "Step 4", title: "检索命中但触发专注锁分流", fn: "cmd_recall() -> deferred", status: "done",
-          desc: "虽然 'Codex'、'1058'、'乱码' 高分命中了 S1 和 chunk_0001（400分），但因为 chunk_0001.project == 'S1' != 'M5' 且无 --unlock，它被直接拦进 deferred 队列！",
-          why: "这就是 HFA 防串味的核心：搜到了，但不直接塞正文，只告诉 AI“墓碑里有条相关记录，真需要看请带 --unlock 解锁”。",
-          code: `selected: []  // 正文 0 注入！\ndeferred: [\n  {"id": "S1", "reason": "non-mainline or archived node requires --unlock"},\n  {"id": "chunk_0001", "reason": "non-mainline or archived node requires --unlock"}\n]` },
-        { num: "Step 5", title: "仅注入轻量延后提示", fn: "_format_ephemeral_message()", status: "done",
-          desc: "钩子只向 AI 注入一行极简提示：“Deferred non-mainline/archived hits: S1, chunk_0001 (require explicit --unlock reason)”。",
-          why: "既保护了当前主线不被长篇旧日志污染，又给 AI 留了按需调工具解锁的线索。",
-          code: `{"injectSteps": [{"ephemeralMessage": "...Deferred non-mainline/archived hits: S1, chunk_0001 (require explicit --unlock reason if relevant)..."}]}` },
-        { num: "Step 6", title: "AI 按需调用 --unlock", fn: "recall_memory(unlock_reason=...)", status: "done",
-          desc: "AI 看到你确实在问 S1 的事，于是显式调用 recall --unlock '用户询问 Codex 1058 旧方案'，成功拿到正文并记入 access.jsonl 审计日志。",
-          why: "每一次跨分支或墓碑读取都必须在 access.jsonl 留下解锁理由，做到完全可审计。",
-          code: `access.jsonl 新增记录:\n{"ts": "...", "selected": ["S1", "chunk_0001"], "unlock_reason": "用户询问 Codex 1058 旧方案"}` },
-        { num: "Step 7", title: "回合结束检查", fn: "hfa_hook.py --phase stop", status: "skipped",
-          desc: "本轮只是查询旧记录，没有产生新决定，AI 回复不含 hfa-memory 块。",
-          why: "查询类回合不应重复写入新 chunk。",
-          code: `_extract_turn_decision() -> None` },
-        { num: "Step 8", title: "静默放行", fn: "_empty_phase_response()", status: "skipped",
-          desc: "Stop 钩子直接输出 {\"decision\": \"allow\"}，0 磁盘写入。",
-          why: "干净结束回合。",
-          code: `stdout -> {"decision": "allow"}` }
-      ]
-    },
-    save_with_secret: {
-      name: "🛡️ 场景3：AI 带结构化块 + 假密钥（全局脱敏落盘）",
-      steps: [
-        { num: "Step 1", title: "用户要求记录配置结论", fn: "User Input", status: "done",
-          desc: "你让 AI 修完了网关配置，里面不小心出现了一串 sk-FAKE1234567890abcdefghijklmnop 密钥。",
-          why: "测试 Astra 发现的第 1 个高危漏洞：密钥会不会从标题或 hit_words 侧门漏进磁盘？",
-          code: `{"lastUserInput": "把刚才网关 UTF-8 的修复结论记下来"}` },
-        { num: "Step 2", title: "PreInvocation 阶段", fn: "hfa_hook.py --phase pre", status: "done",
-          desc: "提问前常规召回检查。",
-          why: "常规流程。",
-          code: `{}` },
-        { num: "Step 3", title: "L0 校验通过", fn: "_guard_mainline()", status: "done",
-          desc: "主线 M5 正常锁定。",
-          why: "常规流程。",
-          code: `ACTIVE: M5` },
-        { num: "Step 4", title: "无历史冲突", fn: "cmd_recall()", status: "done",
-          desc: "进入 AI 回答阶段。",
-          why: "常规流程。",
-          code: `selected: []` },
-        { num: "Step 5", title: "无额外注入", fn: "injectSteps: []", status: "done",
-          desc: "0 Token 开销。",
-          why: "常规流程。",
-          code: `{}` },
-        { num: "Step 6", title: "AI 输出含密钥的记忆块", fn: "PLANNER_RESPONSE", status: "done",
-          desc: "假设 AI 不小心在 hit_words 和 conclusion 里都塞进了明文密钥 sk-FAKE1234567890abcdefghijklmnop。",
-          why: "之前版本只脱敏了正文，没脱敏 hit_words 列表，被 Astra 抓出了侧门泄漏。",
-          code: `\`\`\`hfa-memory\n{\n  "title": "网关修复 sk-FAKE1234567890abcdefghijklmnop",\n  "hit_words": ["网关", "sk-FAKE1234567890abcdefghijklmnop"],\n  "conclusion": "使用 Bearer sk-FAKE1234567890abcdefghijklmnop 测试通过。"\n}\n\`\`\`` },
-        { num: "Step 7", title: "全字段前置脱敏拦截", fn: "_redact_secrets() & _looks_like_secret_fragment()", status: "done",
-          desc: "Astra 修复后的 hfa_hook.py 对 title、hit_words、conclusion、source、request_id 全部先过一遍 _redact_secrets()，并将含 [REDACTED] 的污染词直接剔除出 hit_words！",
-          why: "正门和侧门全部焊死：任何文本在进入关键词提取或写入前，密钥已经被替换成 [REDACTED]。",
-          code: `title -> "网关修复 [REDACTED]"\nhit_words -> ["网关"]  // 含密钥的词被彻底剔除！\nconclusion -> "使用 [REDACTED] 测试通过。"` },
-        { num: "Step 8", title: "安全落盘并全库零密钥残留", fn: "cmd_add_topic()", status: "done",
-          desc: "写入 chunks/、index/fts.sqlite 和 summaries.md 的所有字节中，均不包含原密钥字符串。",
-          why: "即使你把 memory/ 文件夹直接 git push 到公开仓库，也不会泄露 API Key。",
-          code: `test_review_regressions.py: assert_secret_absent() -> PASS` }
-      ]
-    },
-    user_no_save: {
-      name: "🚫 场景4：用户说“不要保存”（尊重指令拦截）",
-      steps: [
-        { num: "Step 1", title: "用户声明不要记录", fn: "User Input", status: "done",
-          desc: "你在提问中明确说：“帮我看下这段临时代码，这次内容不要保存到长期记忆。”",
-          why: "测试 Astra 发现的第 4 个问题：用户明确说不要记，程序还记不记？",
-          code: `{"lastUserInput": "帮我看下这段临时代码，这次内容不要保存到长期记忆。"}` },
-        { num: "Step 2", title: "PreInvocation 阶段", fn: "hfa_hook.py --phase pre", status: "done",
-          desc: "正常处理提问前阶段。",
-          why: "常规流程。",
-          code: `{}` },
-        { num: "Step 3", title: "L0 校验", fn: "_guard_mainline()", status: "done",
-          desc: "常规校验。",
-          why: "常规流程。",
-          code: `ACTIVE: M5` },
-        { num: "Step 4", title: "混合检索", fn: "cmd_recall()", status: "done",
-          desc: "常规检索。",
-          why: "常规流程。",
-          code: `selected: []` },
-        { num: "Step 5", title: "无注入", fn: "injectSteps", status: "done",
-          desc: "常规流程。",
-          why: "常规流程。",
-          code: `{}` },
-        { num: "Step 6", title: "AI 回复了技术结论", fn: "PLANNER_RESPONSE", status: "done",
-          desc: "哪怕 AI 在回复里固执地附带了 ```hfa-memory 块或者写了“结论：已修复 app.py”...",
-          why: "用户的“不要记”指令优先级必须高于 AI 的写入请求！",
-          code: `AI 回复包含了 decision 块...` },
-        { num: "Step 7", title: "_user_forbids_memory_write 触发拦截", fn: "_DO_NOT_REMEMBER_RE.search(user_input)", status: "skipped",
-          desc: "hfa_hook.py 检测到用户输入匹配 _DO_NOT_REMEMBER_RE（“不要保存/记录/记住”、“do not remember/save”），在初始化目录和提取决定之前直接返回 None！",
-          why: "不仅不写 chunk，连未初始化的新目录都不会创建（零副作用）。",
-          code: `if _user_forbids_memory_write(user_input):\n    return None  // 直接熔断退出！` },
-        { num: "Step 8", title: "零写入放行", fn: "_empty_phase_response()", status: "skipped",
-          desc: "磁盘分毫无动，返回 {\"decision\": \"allow\"}。",
-          why: "100% 听从指挥官的明确禁令。",
-          code: `stdout -> {"decision": "allow"} (0 chunks written)` }
-      ]
-    },
-    silent_skip: {
-      name: "⚠️ 场景5：复现 18:40“默默不干活”（当前最大痛点解剖）",
-      steps: [
-        { num: "Step 1", title: "用户正常讨论技术方案", fn: "User Input", status: "done",
-          desc: "你和 AI 聊了半天，敲定了一个重要的架构修改，但你没有特意说“请调用工具写进记忆库”。",
-          why: "这是真实聊天里 95% 的日常状态。",
-          code: `{"lastUserInput": "好，那就按这个方案改吧！"}` },
-        { num: "Step 2", title: "PreInvocation 阶段", fn: "hfa_hook.py --phase pre", status: "done",
-          desc: "提问前常规走完，并在 access.jsonl 记了一笔 selected: []。",
-          why: "PreInvocation 确实每次都跑了。",
-          code: `access.jsonl -> {"ts": "18:41:45", "selected": []}` },
-        { num: "Step 3", title: "L0 校验", fn: "_guard_mainline()", status: "done",
-          desc: "常规通过。",
-          why: "常规流程。",
-          code: `ACTIVE: M5` },
-        { num: "Step 4", title: "混合检索", fn: "cmd_recall()", status: "done",
-          desc: "常规通过。",
-          why: "常规流程。",
-          code: `selected: []` },
-        { num: "Step 5", title: "无注入", fn: "injectSteps", status: "done",
-          desc: "常规通过。",
-          why: "常规流程。",
-          code: `{}` },
-        { num: "Step 6", title: "AI 用普通自然语言回复", fn: "PLANNER_RESPONSE", status: "done",
-          desc: "AI 给你写了很详细的总结报告（比如刚才 18:40 我给你的汇报），但 AI 既没有调 MCP remember_decision，也没在末尾写 ```hfa-memory 代码块。",
-          why: "因为之前没人规定 AI 必须在重要回合末尾输出 ```hfa-memory 块。",
-          code: `AI 回复: "浅，全部检视、加固并推送到 GitHub 了（最新 Commit 4544a1e）..." (无 \`\`\`hfa-memory 块)` },
-        { num: "Step 7", title: "⚠️ 启发式默认关闭，直接返回 None", fn: "_extract_turn_decision()", status: "skipped",
-          desc: "Stop 钩子读到了这段回复，但因为 Astra 把自由文本正则提取改成了默认关闭（allow_heuristic = False），而回复里又没有 ```hfa-memory 块，函数直接 `return None`！",
-          why: "这就是 Astra 说的“收紧又可能漏掉有价值的决定；它默默不干活，你还以为它记性很好”！",
-          code: `if not isinstance(structured, dict):\n    if not allow_heuristic:\n        return None  // <-- 就在第 395 行悄悄退出了！` },
-        { num: "Step 8", title: "⚠️ 静默跳过且未留审计原因", fn: "_empty_phase_response()", status: "skipped",
-          desc: "钩子输出 {\"decision\": \"allow\"}，既没存 chunk，也没在 history/ 里写明“本轮因无 hfa-memory 块而跳过”。",
-          why: "👉 改进方向一清二楚：① 给 Hook 加上 hook_audit.jsonl 记录跳过原因；② 通过全局 Rule 让 AI 在重要回合自动输出 ```hfa-memory 块！",
-          code: `stdout -> {"decision": "allow"}\n痛点定位 -> scripts/hfa_hook.py:395` }
-      ]
-    }
-  };
-
-  let currentScenarioKey = 'hit_mainline';
-  let currentStepIndex = 0;
-
-  function setLifecycleScenario(key) {
-    currentScenarioKey = key;
-    currentStepIndex = 0;
-    renderLifecycle();
-  }
-
-  function stepLifecycle(delta) {
-    const steps = LC_SCENARIOS[currentScenarioKey].steps;
-    currentStepIndex = (currentStepIndex + delta + steps.length) % steps.length;
-    renderLifecycle();
-  }
-
-  function selectLifecycleStep(idx) {
-    currentStepIndex = idx;
-    renderLifecycle();
-  }
-
-  function renderLifecycle() {
-    const sc = LC_SCENARIOS[currentScenarioKey];
-    document.getElementById('lcScenarioBadge').textContent = sc.name;
-    const grid = document.getElementById('lcStepsGrid');
-    grid.innerHTML = sc.steps.map((s, idx) => {
-      const cls = ['step-box', idx === currentStepIndex ? 'current' : '', s.status].join(' ');
-      return `<div class="${cls}" onclick="selectLifecycleStep(${idx})">
-        <div class="step-num">${s.num} ${s.status === 'skipped' ? '⚠️ 拦截/跳过' : '✅ 执行'}</div>
-        <div class="step-title">${s.title}</div>
-        <div class="step-fn">${s.fn}</div>
-      </div>`;
-    }).join('');
-
-    const cur = sc.steps[currentStepIndex];
-    document.getElementById('lcStepCounter').textContent = `${cur.num} / 8 — ${cur.title}`;
-    document.getElementById('lcDetailTitle').textContent = `${cur.num}：${cur.title}`;
-    document.getElementById('lcDetailFile').textContent = cur.fn;
-    document.getElementById('lcDetailDesc').textContent = cur.desc;
-    document.getElementById('lcDetailWhy').textContent = cur.why;
-    document.getElementById('lcDetailCode').textContent = cur.code;
-  }
-
-  // =========================================================================
-  // 4. TAB 2: 混合检索打分 X 光拆解台（1:1 复刻 hfa_manager.py 逻辑）
-  // =========================================================================
-  const DEFAULT_ALIASES = [
-    ["乱码", "中文变问号", "文字变成问号", "输出文件全是看不懂的符号", "全是问号", "mojibake", "garbled text"],
-    ["部署", "上线", "发布流程", "发版", "deployment", "deploy", "release"],
-    ["备份", "容灾备份", "数据留存", "backup", "snapshot"],
-    ["并发", "同时写入", "多进程竞争", "抢锁", "concurrency", "race condition"],
-    ["超时", "等太久", "卡住不动", "响应太慢", "timeout", "timed out"],
-    ["回滚", "撤销更改", "恢复旧版本", "退回上一版", "rollback", "revert"]
-  ];
-  const STOP_TERMS = new Set(["the","a","an","to","of","is","are","in","on","for","with","how","what","was","were","please","find","recall","previous","this","that","it","and","or","my","we","do","not","should","about","的是","之前","怎么","如何","这个","那个","我们","记得","请问","一下","什么","现在","继续","方案","问题","处理","需要","已经","可以","当时","后来","是否","结果"]);
-  const GENERIC_TERMS = new Set(["use","uses","used","using","get","gets","got","set","run","runs","fix","make","makes","new","old","see","check","checks","show","tell","want","need","needs","work","works","decide","decided","decision"]);
-  const NEGATION_RE = /不要|不需要|无需|不用|不必|切勿|请勿|不查|不看|别(?:查|看|找|搜|检索|提|翻|读|调取|调用|回忆|召回)|勿(?:查|看|找|搜)|禁止(?:查|看|找|搜|检索|调取|召回|读取)|\b(?:do\s+not|don'?t|no\s+need\s+to|never)\s+(?:retriev|search|look|check|quer|recall|includ|mention|fetch)/i;
-
-  function normText(t) {
-    return (t || "").normalize("NFKC").toLowerCase()
-      .replace(/(?<=[\u4e00-\u9fff])\s+(?=[\u4e00-\u9fffA-Za-z0-9])/g, "")
-      .replace(/(?<=[A-Za-z0-9])\s+(?=[\u4e00-\u9fff])/g, "");
-  }
-
-  function kwMatches(word, text) {
-    const w = normText(word), t = normText(text);
-    if (!w) return false;
-    if (/^[a-z0-9_.-]+$/.test(w)) {
-      const esc = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      return new RegExp(`(?<![a-z0-9_])${esc}(?![a-z0-9_])`).test(t);
-    }
-    return t.includes(w);
-  }
-
-  function extractSearchTerms(text) {
-    const n = normText(text);
-    const terms = new Set();
-    (n.match(/[a-z0-9][a-z0-9_.-]*/g) || []).forEach(w => {
-      if (!STOP_TERMS.has(w) && w.length >= 2) terms.add(w);
-    });
-    (n.match(/[\u4e00-\u9fff]+/g) || []).forEach(run => {
-      for (let i = 0; i < run.length - 1; i++) {
-        const bg = run.slice(i, i + 2);
-        if (!STOP_TERMS.has(bg)) terms.add(bg);
-      }
-    });
-    DEFAULT_ALIASES.forEach(group => {
-      if (group.some(w => kwMatches(w, n))) {
-        terms.add("alias:" + normText(group[0]));
-      }
-    });
-    return Array.from(terms);
-  }
-
-  function setXrayQuery(q, u) {
-    document.getElementById('xrayQueryInput').value = q;
-    document.getElementById('xrayUnlockInput').value = u || '';
-    runXray();
-  }
-
-  function runXray() {
-    const rawQuery = document.getElementById('xrayQueryInput').value;
-    const unlock = document.getElementById('xrayUnlockInput').value.trim();
-
-    // 1. 否定从句剥离
-    const rawClauses = rawQuery.split(/[，。；;,\n!?！？]|但是|不过|而是|但|\b(?:but|however|instead)\b/i).map(s => s.trim()).filter(Boolean);
-    const keptClauses = [];
-    const clausesHtml = rawClauses.map(c => {
-      const isNeg = NEGATION_RE.test(c);
-      if (!isNeg) keptClauses.push(c);
-      return `<span class="pill ${isNeg ? 'neg' : 'hit'}">${isNeg ? '🚫 剥离: ' : '✅ 保留: '}${c}</span>`;
-    }).join('');
-    document.getElementById('xrayClauses').innerHTML = clausesHtml || '<span class="pill">无有效分句</span>';
-
-    const positiveQuery = keptClauses.join("，");
-    const qTerms = extractSearchTerms(positiveQuery);
-
-    // 2. 展示词元
-    document.getElementById('xrayTerms').innerHTML = qTerms.length
-      ? qTerms.map(t => `<span class="pill ${t.startsWith('alias:') ? 'alias' : ''}">${t}</span>`).join('')
-      : '<span class="pill neg">0 个有效检索词元（已被全部剥离或为空）</span>';
-
-    // 3. 对所有节点和 chunk 打分
-    const supersededSet = new Set();
-    state.chunks.forEach(c => (c.supersedes || []).forEach(oldId => supersededSet.add(oldId)));
-
-    const docEntries = {};
-    state.chunks.forEach(c => {
-      const hTerms = extractSearchTerms(c.title + " " + c.hitwords.join(" "));
-      const allTerms = extractSearchTerms(c.title + " " + c.hitwords.join(" ") + " " + c.summary.join(" "));
-      docEntries[c.id] = { heading: new Set(hTerms), terms: new Set(allTerms) };
-    });
-
-    const candidates = [];
-    state.chunks.forEach(c => {
-      if (supersededSet.has(c.id)) {
-        candidates.push({ item: c, score: 0, status: "SUPERSEDED", detail: "已被后续决定替代 (supersedes)，永久退出有效召回池" });
-        return;
-      }
-      const kwHits = c.hitwords.filter(w => kwMatches(w, positiveQuery));
-      let score = 0;
-      let matchInfo = null;
-      if (kwHits.length > 0) {
-        score = 100 * kwHits.length;
-        matchInfo = { method: "通道A: hitwords 精确命中", terms: kwHits, formula: `100 × ${kwHits.length} = ${score}` };
-      } else if (qTerms.length > 0) {
-        const doc = docEntries[c.id];
-        const shared = qTerms.filter(t => doc.terms.has(t));
-        const nonGeneric = shared.filter(t => !GENERIC_TERMS.has(t));
-        if (nonGeneric.length > 0 && (shared.length >= 2 || shared.some(t => doc.heading.has(t)))) {
-          const hHits = shared.filter(t => doc.heading.has(t));
-          const cov = shared.length / qTerms.length;
-          const headRatio = hHits.length / qTerms.length;
-          score = Number((55 * cov + 20 * headRatio + 5 * Math.min(4, shared.length)).toFixed(2));
-          matchInfo = { method: "通道B: FTS5 + _rank_content 混合评分", terms: shared, formula: `55×(${shared.length}/${qTerms.length}) + 20×(${hHits.length}/${qTerms.length}) + 5×${Math.min(4, shared.length)} = ${score}` };
+        // ---------- 三级星尘 (Level 3) ----------
+        {
+          id: "CHUNK_30_GBK",
+          name: "终端乱码修复笔记",
+          level: 3,
+          val: 9,
+          color: "#2ea043",
+          metaphor: "记录了当时 Windows 中文变问号的真实排障过程，大猫就是靠它记住怎么解决乱码的。",
+          tech: "chunk_0030: 在 hfa_hook.py 中注入 sys.stdin.reconfigure(encoding='utf-8')，解决 Windows GBK 冲突。",
+          file: "chunks/chunk_0030.json"
+        },
+        {
+          id: "CHUNK_N_GRAM",
+          name: "中文字根联想算法",
+          level: 3,
+          val: 8,
+          color: "#2ea043",
+          metaphor: "把长句子切成两字一组的小卡片，就算你说漏了字，也能像拼图一样拼出来。",
+          tech: "N-Gram 分词器：为中文每相邻两个字生成索引词根，解决 SQLite FTS5 对无空格中文无力的缺陷。",
+          file: "scripts/hfa_manager.py: _tokenize_content"
+        },
+        {
+          id: "CHUNK_OLD_PORT",
+          name: "旧配置: 端口8080 (已作废)",
+          level: 3,
+          val: 7,
+          color: "#484f58",
+          deprecated: true,
+          metaphor: "上周商量的旧方案。已经被浅下令推翻，上面被盖了红色的‘已作废’章，平时大猫不再翻它，但留着备查。",
+          tech: "chunk_0012 (DEPRECATED by chunk_0028)。处于替代链底层，路由时自动跳过。",
+          file: "branches/S2_gateway_cache.md"
+        },
+        {
+          id: "CHUNK_NEW_PORT",
+          name: "新配置: 端口9000 (生效中)",
+          level: 3,
+          val: 10,
+          color: "#d29922",
+          metaphor: "今天浅决定采用的新端口方案。大猫在回答浅的问题时，以这条为唯一准则。",
+          tech: "chunk_0028: supersedes=['chunk_0012']。作为当前活跃的新真源。",
+          file: "chunks/chunk_0028.json"
+        },
+        {
+          id: "CHUNK_SNAP_PAPER",
+          name: "动笔前备份快照",
+          level: 3,
+          val: 8,
+          color: "#f85149",
+          metaphor: "写日记前先垫上的一张复写纸。万一写字时断电了，复写纸上的旧内容完好无损。",
+          tech: ".hfa-transaction.json：记录写入前各文件哈希与状态的快照日志，用于崩溃现场自愈。",
+          file: "scripts/hfa_manager.py: _create_snapshot"
+        },
+        {
+          id: "TEST_SECRET",
+          name: "假密码拦截质检",
+          level: 3,
+          val: 8,
+          color: "#bc8cff",
+          metaphor: "故意往日记里塞 ghp_xxxx 假密码，测试系统能不能 100% 自动用星号打码抹掉。",
+          tech: "8 项自动化安全测试：测试正则表达式脱敏，确保 token/secret 绝不落地进入磁盘。",
+          file: "test_secret_redaction_in_hitwords"
+        },
+        {
+          id: "TEST_POWER",
+          name: "拔电源抗灾质检",
+          level: 3,
+          val: 8,
+          color: "#bc8cff",
+          metaphor: "故意在写入文件的瞬间模拟断电、文件锁死，测试系统能不能做到 0 损坏自愈。",
+          tech: "12 项容灾测试：覆盖半截写入中断、锁超时、脏数据清理与自愈恢复。",
+          file: "test_corrupted_json_recovery"
+        },
+        {
+          id: "CHUNK_31_RULE",
+          name: "白话类比+专业术语基线",
+          level: 3,
+          val: 13,
+          color: "#f85149",
+          highlight: true,
+          metaphor: "浅刚刚定下的黄金法则！先用生活大白话建立直观感觉，再附带专业计算机术语学到知识。",
+          tech: "chunk_0031: 结对沟通与教学法基线。彻底消除自嗨式黑话，以浅为中心建立立体直观认知。",
+          file: "chunks/chunk_0031.json (刚刚生效的核心决策)"
+        },
+        {
+          id: "RULE_BOUNDARY",
+          name: "改A只改A与知情权铁律",
+          level: 3,
+          val: 9,
+          color: "#f85149",
+          metaphor: "大猫的纪律手册：用户让你改 A 就只改 A，问进度第一时间大白话汇报，绝不偷摸搞黑盒。",
+          tech: "autonomous.md 核心准则：知情权第一、严禁脑补宏大规矩、严禁未经授权推送到外网公网。",
+          file: "~/.gemini/config/rules/autonomous.md"
         }
+      ],
+
+      links: [
+        { source: "CENTRAL_BRAIN", target: "MOD_SEARCH", strength: 0.95, label: "RETRIEVAL_DISPATCH" },
+        { source: "CENTRAL_BRAIN", target: "MOD_SUPERSEDES", strength: 0.92, label: "VERSION_CONTROL" },
+        { source: "CENTRAL_BRAIN", target: "MOD_ATOMIC", strength: 0.95, label: "TRANSACTION_GUARD" },
+        { source: "CENTRAL_BRAIN", target: "MOD_ALIGNMENT", strength: 0.98, label: "CONTRACT_CORE" },
+        { source: "CENTRAL_BRAIN", target: "LIFECYCLE", strength: 0.96, label: "LIFECYCLE_PULSE" },
+
+        { source: "LIFECYCLE", target: "MOD_TESTS", strength: 0.90, label: "GATE_QUALITY" },
+        { source: "LIFECYCLE", target: "MOD_HEALTH", strength: 0.85, label: "AUDIT_MONITOR" },
+
+        { source: "MOD_SEARCH", target: "CHUNK_30_GBK", strength: 0.85, label: "ENCODING_PATCH" },
+        { source: "MOD_SEARCH", target: "CHUNK_N_GRAM", strength: 0.80, label: "TOKEN_SPLITTER" },
+
+        { source: "MOD_SUPERSEDES", target: "CHUNK_OLD_PORT", strength: 0.70, label: "ARCHIVED" },
+        { source: "MOD_SUPERSEDES", target: "CHUNK_NEW_PORT", strength: 0.88, label: "ACTIVE_RULE" },
+
+        { source: "MOD_ATOMIC", target: "CHUNK_SNAP_PAPER", strength: 0.85, label: "SNAPSHOT_WRITER" },
+
+        { source: "MOD_TESTS", target: "TEST_SECRET", strength: 0.80, label: "SECRET_GUARD" },
+        { source: "MOD_TESTS", target: "TEST_POWER", strength: 0.85, label: "CRASH_RECOVERY" },
+
+        { source: "MOD_ALIGNMENT", target: "CHUNK_31_RULE", strength: 0.95, label: "PEDAGOGICAL_BASELINE" },
+        { source: "MOD_ALIGNMENT", target: "RULE_BOUNDARY", strength: 0.88, label: "DISCIPLINE_RULE" },
+
+        { source: "CHUNK_NEW_PORT", target: "CHUNK_OLD_PORT", strength: 0.90, supersedes: true, label: "SUPERSEDES_VOID" },
+
+        { source: "MOD_SEARCH", target: "CHUNK_31_RULE", strength: 0.55, label: "VOCABULARY_LINK" },
+        { source: "MOD_ATOMIC", target: "MOD_SUPERSEDES", strength: 0.60, label: "TRANSACTION_PROTECT" },
+        { source: "MOD_TESTS", target: "MOD_ATOMIC", strength: 0.75, label: "POWER_SIMULATION" }
+      ]
+    };
+
+    let Graph = null;
+    let selectedNodeId = null;
+
+    // 创建瑞士排印风格的 3D 文字广告牌标签
+    function makeBillboardSprite(text, color, isLevel1 = false) {
+      if (typeof THREE === 'undefined') return null;
+
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 512;
+      canvas.height = 128;
+
+      ctx.fillStyle = 'rgba(7, 9, 14, 0.92)';
+      ctx.fillRect(8, 8, 496, 112);
+
+      ctx.lineWidth = isLevel1 ? 4 : 2;
+      ctx.strokeStyle = color;
+      ctx.strokeRect(8, 8, 496, 112);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = isLevel1 ? 'bold 36px monospace' : 'bold 28px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 256, 64);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.needsUpdate = true;
+      const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+      const sprite = new THREE.Sprite(material);
+      sprite.scale.set(isLevel1 ? 44 : 34, isLevel1 ? 11 : 8.5, 1);
+      return sprite;
+    }
+
+    function initStudio() {
+      const container = document.getElementById('graph3d');
+
+      try {
+        Graph = ForceGraph3D()(container)
+          .graphData(GRAPH_DATA)
+          .backgroundColor('#07090e')
+          .showNavInfo(false)
+          // 3D 节点构建
+          .nodeThreeObject(node => {
+            if (typeof THREE === 'undefined') return null;
+
+            const group = new THREE.Group();
+
+            const geo = new THREE.SphereGeometry(node.val, 24, 24);
+            const mat = new THREE.MeshLambertMaterial({
+              color: node.color,
+              emissive: node.color,
+              emissiveIntensity: node.level === 1 ? 0.75 : (node.level === 2 ? 0.45 : 0.2),
+              transparent: true,
+              opacity: node.deprecated ? 0.35 : 0.95
+            });
+            const mesh = new THREE.Mesh(geo, mat);
+            group.add(mesh);
+
+            // 一级核心星环
+            if (node.level === 1) {
+              const ringGeo = new THREE.RingGeometry(node.val * 1.35, node.val * 1.5, 32);
+              const ringMat = new THREE.MeshBasicMaterial({
+                color: node.color,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.35
+              });
+              const ring = new THREE.Mesh(ringGeo, ringMat);
+              ring.rotation.x = Math.PI / 2;
+              group.add(ring);
+            }
+
+            // 悬浮文字标牌
+            if (node.level <= 2 || node.highlight) {
+              const sprite = makeBillboardSprite(node.name, node.color, node.level === 1);
+              if (sprite) {
+                sprite.position.y = node.val + (node.level === 1 ? 16 : 10);
+                group.add(sprite);
+              }
+            }
+
+            return group;
+          })
+          .linkWidth(link => link.supersedes ? 2.5 : (link.strength * 3.5 + 0.5))
+          .linkColor(link => {
+            if (link.supersedes) return 'rgba(248, 81, 73, 0.9)'; // 作废红线
+            if (link.strength >= 0.9) return 'rgba(255, 255, 255, 0.85)';
+            if (link.strength >= 0.7) return 'rgba(46, 160, 67, 0.75)';
+            return 'rgba(255, 255, 255, 0.12)';
+          })
+          .linkDirectionalParticles(link => {
+            if (link.supersedes) return 2;
+            if (link.strength >= 0.9) return 5;
+            if (link.strength >= 0.7) return 3;
+            return 0;
+          })
+          .linkDirectionalParticleSpeed(link => link.strength * 0.009 + 0.002)
+          .linkDirectionalParticleWidth(link => link.strength * 2.2 + 1)
+          .linkDirectionalParticleColor(link => link.supersedes ? '#f85149' : (link.strength >= 0.9 ? '#ffffff' : '#2ea043'))
+          .onNodeClick(node => {
+            openInspector(node);
+          })
+          .onBackgroundClick(() => {
+            closeInspector();
+          });
+
+        Graph.d3Force('charge').strength(-240);
+        Graph.d3Force('link').distance(link => (1 - link.strength) * 110 + 35);
+
+        // 监听相机位置变动更新坐标 readout
+        const cam = Graph.camera();
+        setInterval(() => {
+          if (cam) {
+            document.getElementById('camReadout').innerText = 
+              `[ ${cam.position.x.toFixed(1)}, ${cam.position.y.toFixed(1)}, ${cam.position.z.toFixed(1)} ]`;
+          }
+        }, 300);
+
+        setTimeout(() => {
+          flyToMacroOverview();
+        }, 300);
+
+      } catch (err) {
+        console.error("Studio Init Error:", err);
       }
-      if (score > 0) {
-        const inMainline = c.project === state.activeMainline;
-        const canSelect = inMainline || Boolean(unlock);
-        candidates.push({
-          item: c,
-          score,
-          status: canSelect ? "SELECTED" : "DEFERRED_LOCK",
-          matchInfo
+    }
+
+    // 视窗布局切换
+    function switchLayout(mode) {
+      document.querySelectorAll('.rail-tab').forEach(b => b.classList.remove('active'));
+
+      if (mode === 'galaxy') {
+        document.getElementById('tabGalaxy').classList.add('active');
+        Graph.dagMode(null);
+      } else if (mode === 'tree') {
+        document.getElementById('tabTree').classList.add('active');
+        Graph.dagMode('td');
+      } else if (mode === 'radial') {
+        document.getElementById('tabRadial').classList.add('active');
+        Graph.dagMode('radiallyout');
+      }
+    }
+
+    function flyToMacroOverview() {
+      document.getElementById('tabOverview').classList.add('active');
+      setTimeout(() => document.getElementById('tabOverview').classList.remove('active'), 500);
+      closeInspector(false);
+
+      Graph.cameraPosition(
+        { x: 0, y: 140, z: 560 },
+        { x: 0, y: 0, z: 0 },
+        1200
+      );
+    }
+
+    function focusM5GoldenNode() {
+      const target = GRAPH_DATA.nodes.find(n => n.id === 'CHUNK_31_RULE');
+      if (target) {
+        openInspector(target);
+      }
+    }
+
+    // 右侧一体化停靠检查器逻辑
+    function openInspector(node) {
+      selectedNodeId = node.id;
+      const inspector = document.getElementById('studioInspector');
+      inspector.classList.add('docked');
+
+      // 相机推进
+      const dist = 120;
+      const ratio = 1 + dist / Math.hypot(node.x || 1, node.y || 1, node.z || 1);
+      Graph.cameraPosition(
+        { x: (node.x || 0) * ratio, y: (node.y || 0) * ratio + 15, z: (node.z || 0) * ratio },
+        node,
+        1100
+      );
+
+      // 标头信息
+      const tierEl = document.getElementById('insTier');
+      if (node.level === 1) {
+        tierEl.innerText = "TIER 1 // CORE SCHEDULER";
+        tierEl.style.color = "#ffffff";
+      } else if (node.level === 2) {
+        tierEl.innerText = "TIER 2 // CAPABILITY PILLAR";
+        tierEl.style.color = "var(--accent-jade)";
+      } else {
+        tierEl.innerText = node.deprecated ? "TIER 3 // DEPRECATED VOID" : "TIER 3 // LEAF CHUNK";
+        tierEl.style.color = node.deprecated ? "var(--accent-rose)" : "var(--accent-purple)";
+      }
+
+      document.getElementById('insTitle').innerText = node.name;
+      document.getElementById('insMetaphor').innerText = node.metaphor || "生活角色解析完备。";
+      document.getElementById('insTech').innerText = node.tech || "工程细节完备。";
+      document.getElementById('insFile').innerText = node.file || "source pointer";
+      document.getElementById('insEvidence').innerText = node.evidence || "[OK] VERIFIED 100%";
+
+      // 拓扑表格
+      const tbody = document.getElementById('insMatrixBody');
+      tbody.innerHTML = '';
+
+      const connected = GRAPH_DATA.links.filter(l => {
+        const s = typeof l.source === 'object' ? l.source.id : l.source;
+        const t = typeof l.target === 'object' ? l.target.id : l.target;
+        return s === node.id || t === node.id;
+      });
+
+      if (connected.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="color:var(--ink-muted);">NO RELATIONS</td></tr>';
+      } else {
+        connected.forEach(l => {
+          const s = typeof l.source === 'object' ? l.source.id : l.source;
+          const t = typeof l.target === 'object' ? l.target.id : l.target;
+          const otherId = s === node.id ? t : s;
+          const otherNode = GRAPH_DATA.nodes.find(n => n.id === otherId);
+          if (!otherNode) return;
+
+          let affinityColor = "var(--ink-sub)";
+          let affinityText = `${Math.round(l.strength * 100)}%`;
+
+          if (l.supersedes) {
+            affinityColor = "var(--accent-rose)";
+            affinityText = "VOID";
+          } else if (l.strength >= 0.9) {
+            affinityColor = "#ffffff";
+            affinityText = `${Math.round(l.strength * 100)}% [FAST]`;
+          } else if (l.strength >= 0.7) {
+            affinityColor = "var(--accent-jade)";
+            affinityText = `${Math.round(l.strength * 100)}% [SYNC]`;
+          }
+
+          const tr = document.createElement('tr');
+          tr.className = 'matrix-row';
+          tr.innerHTML = `
+            <td><b>${otherNode.name}</b></td>
+            <td style="color:var(--ink-muted);">${l.label || 'LINK'}</td>
+            <td style="text-align:right; color:${affinityColor}; font-weight:600;">${affinityText}</td>
+          `;
+          tr.onclick = () => openInspector(otherNode);
+          tbody.appendChild(tr);
         });
       }
-    });
-
-    candidates.sort((a, b) => b.score - a.score || b.item.number - a.item.number);
-
-    // 预算截断计算 (utf8_bytes_upper_bound)
-    let usedBytes = 0;
-    let selectedCount = 0;
-    const enc = new TextEncoder();
-    candidates.forEach(cand => {
-      if (cand.status !== "SELECTED") return;
-      const text = `[${cand.item.id} | Topic#${String(cand.item.number).padStart(2,'0')} | epoch_01 | ${cand.item.project}] ${cand.item.title}\n` + cand.item.summary.join("\n");
-      const bytes = enc.encode(text).length;
-      if (selectedCount < 2 && usedBytes + bytes <= state.recallBudget) {
-        cand.bytes = bytes;
-        usedBytes += bytes;
-        selectedCount++;
-      } else {
-        cand.status = "DEFERRED_BUDGET";
-        cand.bytes = bytes;
-      }
-    });
-
-    const pct = Math.min(100, Math.round((usedBytes / state.recallBudget) * 100));
-    document.getElementById('xrayBudgetLabel').textContent = `${usedBytes} / ${state.recallBudget} bytes (最多召回 2 条)`;
-    document.getElementById('xrayBudgetBar').style.width = pct + '%';
-
-    if (candidates.length === 0) {
-      document.getElementById('xrayResultsList').innerHTML = `
-        <div class="card err-card">
-          <strong>0 条命中（返回空，0 Token 注入）</strong>
-          <div style="font-size:13px; color:var(--muted); margin-top:4px;">
-            没有任何记录的 <code>hitwords</code> 或双字词元与当前正向查询重合。若这是同义换词提问（如“高并发提速”搜“Redis 缓存”），说明触发了<strong>纯词法检索盲区</strong>（详见第 4 个标签页）。
-          </div>
-        </div>`;
-      return;
     }
 
-    document.getElementById('xrayResultsList').innerHTML = candidates.map(cand => {
-      const c = cand.item;
-      if (cand.status === "SUPERSEDED") {
-        return `<div class="card err-card">
-          <div style="display:flex; justify-content:space-between;">
-            <strong>🚫 [${c.id}] ${c.title} (所属: ${c.project})</strong>
-            <span class="badge err">已被 supersedes 淘汰</span>
-          </div>
-          <div style="font-size:12.5px; color:var(--muted); margin-top:4px;">${cand.detail}</div>
-        </div>`;
-      }
-      const isSel = cand.status === "SELECTED";
-      const badgeHtml = isSel
-        ? `<span class="badge ok">✅ 注入正文 (${cand.score}分 · ${cand.bytes}B)</span>`
-        : cand.status === "DEFERRED_LOCK"
-          ? `<span class="badge warn">🔒 专注锁拦截 -> deferred (${cand.score}分)</span>`
-          : `<span class="badge warn">⏳ 超出预算/条数 -> deferred (${cand.score}分)</span>`;
-
-      return `<div class="card ${isSel ? 'active-card' : 'warn-card'}">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
-          <strong>[${c.id}] ${c.title} <span class="pill">Project: ${c.project}</span></strong>
-          ${badgeHtml}
-        </div>
-        <div style="font-size:12.5px; color:var(--cyan); margin:6px 0;">
-          <strong>匹配通道：</strong>${cand.matchInfo.method} ｜ <strong>算分公式：</strong><code>${cand.matchInfo.formula}</code>
-        </div>
-        <div class="pill-list">
-          ${cand.matchInfo.terms.map(t => `<span class="pill hit">命中: ${t}</span>`).join('')}
-        </div>
-        <pre style="margin-top:8px;">${c.summary.join('\n')}</pre>
-      </div>`;
-    }).join('');
-  }
-
-  // =========================================================================
-  // 5. TAB 3: L0 / L1 / 派生层存储架构与原子事务沙盘
-  // =========================================================================
-  function switchActiveMainline(nodeId) {
-    state.activeMainline = nodeId;
-    state.nodes.forEach(n => {
-      if (n.tier === "MAX") {
-        n.status = (n.id === nodeId) ? "ACTIVE" : "STANDBY";
-      }
-    });
-    txStatus = { clean: true, message: `✅ 已执行 \`switch-mainline --id ${nodeId}\`：L0 中 ${nodeId} 设为唯一 ACTIVE，其余 MAX 主线自动转为 STANDBY。` };
-    renderStorageTab();
-    runXray();
-  }
-
-  function toggleTombstone(nodeId) {
-    const node = state.nodes.find(n => n.id === nodeId);
-    if (!node) return;
-    if (node.status === "TOMBSTONED") {
-      node.status = "MEDIUM";
-      node.tier = "MEDIUM";
-      txStatus = { clean: true, message: `✅ 已将支线 [${nodeId}] 恢复为活跃支线 (MEDIUM)。` };
-    } else {
-      node.status = "TOMBSTONED";
-      node.tier = "TOMBSTONED";
-      txStatus = { clean: true, message: `🪦 已执行 \`tombstone --id ${nodeId}\`：写入 tombstones.jsonl，平时 0 Token 消耗。` };
-    }
-    renderStorageTab();
-    runXray();
-  }
-
-  function addChunkSandbox(simulateCrash) {
-    const title = document.getElementById('stNewTitle').value.trim();
-    const words = document.getElementById('stNewWords').value.split(/[,，、]+/).map(s => s.trim()).filter(Boolean);
-    const body = document.getElementById('stNewBody').value.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 3);
-    const project = document.getElementById('stNewProject').value;
-    const sup = document.getElementById('stNewSupersedes').value;
-
-    if (!title || !words.length || !body.length) return;
-
-    const nextNum = state.chunks.reduce((m, c) => Math.max(m, c.number), 0) + 1;
-    const newId = `chunk_${String(nextNum).padStart(4, '0')}`;
-
-    if (simulateCrash) {
-      txStatus = {
-        clean: false,
-        message: `💥 模拟写入 ${newId} 时磁盘 I/O 崩溃！\n1. 进程在更新 index/hitwords.json 时抛出 OSError；\n2. 发现未决事务日志 \`.hfa-transaction.json\`（记录了 created: ["chunks/${newId}.json"] 与变更前备份）；\n3. 自动触发 \`_recover_pending_transaction()\`：删除半写的 ${newId}.json 并 100% 还原索引与摘要，记忆库毫发无损！`
-      };
-      renderStorageTab();
-      return;
+    function closeInspector(adjustCamera = true) {
+      document.getElementById('studioInspector').classList.remove('docked');
+      selectedNodeId = null;
     }
 
-    state.chunks.unshift({
-      id: newId,
-      number: nextNum,
-      epoch: 1,
-      project,
-      title,
-      hitwords: words,
-      summary: body,
-      source: "interactive-sandbox",
-      supersedes: sup ? [sup] : []
+    function zoomInNode() {
+      if (!selectedNodeId) return;
+      const node = GRAPH_DATA.nodes.find(n => n.id === selectedNodeId);
+      if (node) {
+        Graph.cameraPosition(
+          { x: (node.x || 0) + 40, y: (node.y || 0) + 20, z: (node.z || 0) + 50 },
+          node,
+          1000
+        );
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initStudio();
     });
-    txStatus = {
-      clean: true,
-      message: `✅ 原子写入 \`chunks/${newId}.json\` 成功！\n• 已同步更新 \`index/fts.sqlite\`、\`index/search.json\` 与 \`summaries.md\`\n• 新 SHA-256 指纹已写入，\`.hfa-transaction.json\` 已清理。` + (sup ? `\n• 旧记录 ${sup} 已被标记为替代，自动退出有效召回池。` : '')
-    };
-    renderStorageTab();
-    runXray();
-  }
-
-  function renderStorageTab() {
-    document.getElementById('stActiveBadge').textContent = `ACTIVE: ${state.activeMainline}`;
-    document.getElementById('stChunkCountBadge').textContent = `${state.chunks.length} 个 JSON 真源`;
-
-    // 渲染 L0 节点
-    const dirLines = ["# HFA L0 (history/epoch_01/summaries.md | 活跃纪元: `epoch_01`)"];
-    state.nodes.forEach(n => {
-      dirLines.push(`* **[${n.id}]** [\`${n.id}\`](${n.path}) ➔ \`${n.status}\` | ${n.desc} \`[命中词: ${n.hitwords.join(", ")}]\``);
-    });
-    const dirBytes = new TextEncoder().encode(dirLines.join("\n")).length;
-    const rPct = Math.min(100, Math.round((dirBytes / state.routerBudget) * 100));
-    document.getElementById('stRouterBudgetText').textContent = `${dirBytes} / ${state.routerBudget} bytes`;
-    document.getElementById('stRouterBar').style.width = rPct + '%';
-
-    document.getElementById('stNodesList').innerHTML = state.nodes.map(n => {
-      const isAct = n.id === state.activeMainline;
-      const isTomb = n.status === "TOMBSTONED";
-      return `<div class="card ${isAct ? 'active-card' : isTomb ? 'err-card' : ''}">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <strong>[${n.id}] ${n.desc}</strong>
-          <span class="badge ${isAct ? 'ok' : isTomb ? 'err' : ''}">${n.tier} · ${n.status}</span>
-        </div>
-        <div style="font-size:12px; color:var(--muted); margin-top:4px;">路径: <code>${n.path}</code></div>
-        <div class="pill-list">${n.hitwords.map(w => `<span class="pill">${w}</span>`).join('')}</div>
-        <div class="btn-row" style="margin:8px 0 0;">
-          ${n.tier === "MAX" && !isAct ? `<button onclick="switchActiveMainline('${n.id}')">🎯 切换为唯一 ACTIVE 主线</button>` : ''}
-          ${n.tier !== "MAX" && n.tier !== "HIGH" ? `<button class="secondary" onclick="toggleTombstone('${n.id}')">${isTomb ? '♻️ 从墓碑恢复' : '🪦 打入墓碑 (TOMBSTONED)'}</button>` : ''}
-        </div>
-      </div>`;
-    }).join('');
-
-    // 填充下拉框
-    const projSel = document.getElementById('stNewProject');
-    projSel.innerHTML = state.nodes.filter(n => n.tier !== "HIGH").map(n =>
-      `<option value="${n.id}" ${n.id === state.activeMainline ? 'selected' : ''}>${n.id} (${n.desc})</option>`
-    ).join('');
-
-    const supSel = document.getElementById('stNewSupersedes');
-    supSel.innerHTML = `<option value="">（不推翻旧决定）</option>` + state.chunks.map(c =>
-      `<option value="${c.id}">${c.id}: ${c.title} [${c.project}]</option>`
-    ).join('');
-
-    // 找出被替代的 chunk
-    const replacedBy = {};
-    state.chunks.forEach(c => (c.supersedes || []).forEach(oldId => { replacedBy[oldId] = c.id; }));
-
-    document.getElementById('stChunksList').innerHTML = state.chunks.map(c => {
-      const rep = replacedBy[c.id];
-      return `<div class="card ${rep ? 'err-card' : ''}">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <strong>📄 chunks/${c.id}.json — ${c.title}</strong>
-          <span class="badge ${rep ? 'err' : 'ok'}">${rep ? `已被 ${rep} 替代` : `Project: ${c.project}`}</span>
-        </div>
-        <pre>${JSON.stringify(c, null, 2)}</pre>
-      </div>`;
-    }).join('');
-
-    // 渲染事务框与 summaries.md
-    const txBox = document.getElementById('stTxBox');
-    txBox.className = `card ${txStatus.clean ? 'active-card' : 'err-card'}`;
-    txBox.innerHTML = `<pre style="margin:0; border:none; padding:0; background:transparent; color:inherit;">${txStatus.message}</pre>`;
-    document.getElementById('stTxBadge').textContent = txStatus.clean ? "事务状态：CLEAN" : "事务状态：ROLLED BACK";
-
-    const sumLines = ["# HFA epoch_01 — generated from chunks/; edit L1, then run summarize"];
-    [...state.chunks].sort((a, b) => a.number - b.number).forEach(c => {
-      const st = replacedBy[c.id] ? `历史记录；已被 ${replacedBy[c.id]} 替代` : "ACTIVE";
-      sumLines.push(`\n---\n\n### [Topic #${String(c.number).padStart(2,'0')}] ${c.title} \`[命中词: ${c.hitwords.join(", ")}]\``);
-      sumLines.push(`* **ID**: ${c.id} | Project: ${c.project}`);
-      sumLines.push(`* **状态**: ${st}`);
-      c.summary.forEach(ln => sumLines.push(`* **核心结论**：${ln}`));
-    });
-    document.getElementById('stSummariesView').textContent = sumLines.join("\n");
-  }
-
-  // =========================================================================
-  // 6. TAB 4: Token 计量对比实验室
-  // =========================================================================
-  function updateTokenLab() {
-    const text = document.getElementById('labTokenInput').value;
-    const utf8Bytes = new TextEncoder().encode(text).length;
-    // 模拟 o200k_base 的真实中文 + 英文 token 密度（约 1 CJK 字符 ≈ 0.95 token，英文单词 ≈ 1.1 token）
-    const cjkCount = (text.match(/[\u4e00-\u9fff]/g) || []).length;
-    const asciiWords = (text.match(/[A-Za-z0-9_.-]+/g) || []).length;
-    const punctCount = Math.max(0, text.length - cjkCount - (text.match(/[A-Za-z0-9_.-]/g) || []).length);
-    const approxExact = Math.max(1, Math.round(cjkCount * 0.95 + asciiWords * 1.2 + punctCount * 0.6));
-
-    document.getElementById('labByteCount').textContent = `${utf8Bytes} / 600 (${utf8Bytes > 600 ? '❌ 超出预算被截断！' : '✅ 预算内'})`;
-    document.getElementById('labExactCount').textContent = `~${approxExact} / 600 (${approxExact > 600 ? '❌ 超出预算' : '✅ 轻松装下（余量充足）'})`;
-  }
-
-  // 初始化全部视图
-  renderLifecycle();
-  renderStorageTab();
-  runXray();
-  updateTokenLab();
-</script>
+  </script>
 </body>
 </html>
