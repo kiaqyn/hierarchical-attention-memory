@@ -171,7 +171,7 @@ def _detect_phase(explicit_phase: str, payload: dict) -> str:
     ).strip().lower()
     if event.startswith("post") or event in ("after_invocation", "turn_end", "posttooluse"):
         return "post"
-    if event.startswith("stop") or event == "session_end":
+    if event.startswith("stop") or event == "session_end" or payload.get("terminationReason"):
         return "stop"
     if event.startswith("pre") or event in ("before_invocation", "user_prompt_submit", "userpromptsubmit"):
         return "pre"
@@ -248,6 +248,41 @@ def _is_conclusion_candidate(line: str) -> bool:
     )
 
 
+def _read_latest_transcript_response(payload: dict) -> tuple[str, str]:
+    """Read the latest PLANNER_RESPONSE content and step_index from Antigravity transcriptPath."""
+    transcript_raw = payload.get("transcriptPath") or payload.get("transcript_path")
+    if not isinstance(transcript_raw, str) or not transcript_raw.strip():
+        return "", ""
+    try:
+        tpath = pathlib.Path(transcript_raw).expanduser()
+        if not tpath.is_file():
+            return "", ""
+        # Read tail bytes (up to last 128 KB) for speed on large transcripts
+        size = tpath.stat().st_size
+        with open(tpath, "rb") as fh:
+            if size > 131072:
+                fh.seek(size - 131072)
+            tail = fh.read().decode("utf-8", errors="replace")
+        for line in reversed(tail.splitlines()):
+            line = line.strip()
+            if not line or not line.startswith("{"):
+                continue
+            try:
+                obj = json.loads(line)
+            except Exception:
+                continue
+            if not isinstance(obj, dict):
+                continue
+            step_type = str(obj.get("type") or obj.get("role") or "").upper()
+            content = obj.get("content") or obj.get("text") or ""
+            if step_type in ("PLANNER_RESPONSE", "ASSISTANT", "MODEL") and isinstance(content, str) and content.strip():
+                step_idx = str(obj.get("step_index") if obj.get("step_index") is not None else "")
+                return content.strip(), step_idx
+    except Exception:
+        pass
+    return "", ""
+
+
 def _extract_turn_decision(payload: dict, phase: str) -> dict | None:
     conv_id = str(payload.get("conversationId") or payload.get("sessionId") or "local").strip()[:48]
     turn_id = str(payload.get("turnId") or payload.get("requestId") or payload.get("messageId") or "").strip()[:48]
@@ -269,6 +304,12 @@ def _extract_turn_decision(payload: dict, phase: str) -> dict | None:
         if isinstance(val, str) and val.strip():
             response_text = val.strip()
             break
+    if not response_text:
+        transcript_text, transcript_step = _read_latest_transcript_response(payload)
+        if transcript_text:
+            response_text = transcript_text
+            if not turn_id and transcript_step:
+                turn_id = f"step-{transcript_step}"
 
     # 2. Check for fenced ```hfa-memory JSON block inside response_text
     if not isinstance(structured, dict) and response_text:
@@ -443,7 +484,23 @@ def _format_ephemeral_message(result: dict) -> str | None:
     return "\n".join(lines)
 
 
-def _handle_post_or_stop(root: Path, decision: dict) -> int:
+def _is_antigravity_host(payload: dict) -> bool:
+    return bool(
+        payload.get("transcriptPath")
+        or payload.get("artifactDirectoryPath")
+        or payload.get("terminationReason")
+        or payload.get("invocationNum") is not None
+    )
+
+
+def _empty_phase_response(phase: str, payload: dict) -> int:
+    if phase == "stop" and _is_antigravity_host(payload):
+        return _emit({"decision": "allow"})
+    return _emit({})
+
+
+def _handle_post_or_stop(root: Path, decision: dict, phase: str = "post", payload: dict | None = None) -> int:
+    payload = payload or {}
     cmd = [
         sys.executable, "-B", str(CLI), "add-topic", str(root),
         f"--title={decision['title']}",
@@ -460,15 +517,17 @@ def _handle_post_or_stop(root: Path, decision: dict) -> int:
     try:
         proc = subprocess.run(cmd, capture_output=True, encoding="utf-8", timeout=10)
     except Exception:
-        return _emit({})
+        return _empty_phase_response(phase, payload)
     if proc.returncode != 0:
-        return _emit({})
+        return _empty_phase_response(phase, payload)
     try:
         result = json.loads(proc.stdout)
         if not isinstance(result, dict) or "id" not in result:
-            return _emit({})
+            return _empty_phase_response(phase, payload)
     except Exception:
-        return _emit({})
+        return _empty_phase_response(phase, payload)
+    if _is_antigravity_host(payload):
+        return _empty_phase_response(phase, payload)
     return _emit({
         "saved": {
             "id": result["id"],
@@ -566,15 +625,15 @@ def main() -> int:
     if phase in ("post", "stop"):
         decision = _extract_turn_decision(payload, phase)
         if decision is None:
-            return _emit({})
+            return _empty_phase_response(phase, payload)
         root = _resolve_memory_dir(
             args.memory_dir,
             payload,
             allow_auto_init=not args.no_auto_init,
         )
         if root is None:
-            return _emit({})
-        return _handle_post_or_stop(root, decision)
+            return _empty_phase_response(phase, payload)
+        return _handle_post_or_stop(root, decision, phase=phase, payload=payload)
 
     query = payload.get("lastUserInput") or payload.get("userInput") or payload.get("prompt")
     if not isinstance(query, str) or not query.strip():
