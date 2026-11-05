@@ -16,7 +16,7 @@ from pathlib import Path
 
 NAME = "hierarchical-attention-memory"
 DIST_NAME = "hierarchical_attention_memory"
-VERSION = "2.2.0"
+VERSION = "3.0.0"
 ROOT = Path(__file__).resolve().parent.parent
 
 METADATA = f"""Metadata-Version: 2.1

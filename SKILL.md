@@ -1,10 +1,10 @@
 ---
 name: hierarchical-attention-memory
-description: 使用 HFA 2.2 CLI 管理项目范围内的文件记忆：L0 主线约束、L1 JSON 真源、可重建索引、限额片段召回、逻辑归档、事务恢复。适用于需要可审计本地记忆的代理工作流。
-version: 2.2.0
+description: 使用 HFA 3 CLI 管理项目范围内的文件记忆：L0 主线约束、L1 JSON 真源、可重建索引、限额片段召回、逻辑归档、事务恢复。适用于需要可审计本地记忆的代理工作流。
+version: 3.0.0
 ---
 
-# HFA 2.2 执行规约
+# HFA 3 执行规约
 
 ## 真源与边界
 
@@ -18,6 +18,8 @@ version: 2.2.0
 - 记忆内容发生冲突时核对来源与当前用户意图；不得仅因一句临时表达就自动覆盖长期偏好。
 
 ## 初始化与健康检查
+
+用 `hfa --version` 确认正在运行的代码版本。`hfa doctor <记忆目录> --json` 汇总目录健康、当前Python和可选MCP依赖，不返回记忆正文；加 `--require-mcp` 时MCP依赖不兼容也返回失败。它不检查宿主注册，不证明钩子执行或模型使用。已有事务仍按正常机制恢复，过期索引只提示，不自动重建。
 
 ```powershell
 python scripts/hfa_manager.py init ./memory
@@ -119,7 +121,7 @@ python scripts/hfa_manager.py reindex ./memory --verify
 python scripts/hfa_manager.py summarize ./memory --check
 ```
 
-2.1 目录升级到 2.2 后先重建新增的正文检索索引，再使用。CLI 支持的命令只有 `init`、`status`、`add-topic`、`tombstone`、`route`、`recall`、`reindex`、`summarize`。不要虚构 `evidence`、`lock promote`、`lint`、`gc` 或裁决 API 已经存在。
+旧版目录升级到 3.0 后先重建新增的正文检索索引，再使用。CLI 支持的命令只有 `init`、`status`、`add-topic`、`tombstone`、`route`、`recall`、`reindex`、`summarize`。不要虚构 `evidence`、`lock promote`、`lint`、`gc` 或裁决 API 已经存在。
 
 所有 CLI 请求先持锁并恢复未提交事务。恢复失败时停止使用该记忆，保留 `.hfa-transaction.json` 及现有文件供核对，不删除日志或强行宣布成功。
 

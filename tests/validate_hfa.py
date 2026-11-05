@@ -454,10 +454,10 @@ hfa.cmd_add_topic(Path(sys.argv[2]),"Committed","committed-key","fact")
         self.assertEqual(rc, 0)
         self.assertEqual(self.route("branch-only-key")["selected"], [])
         self.assertEqual(self.route("branch-only-key", "inspect S1")["selected"][0]["path"], "chunks/chunk_0002.json")
-        # 2. Missing config.json fallback to index/projects.json keeps version "2.2"
+        # 2. Missing config.json fallback to index/projects.json keeps version "3.0"
         (self.mem / "config.json").unlink()
         invoke(hfa.cmd_reindex, self.mem)
-        self.assertEqual(json.loads(read(self.mem / "config.json"))["version"], "2.2")
+        self.assertEqual(json.loads(read(self.mem / "config.json"))["version"], "3.0")
         # 3. _safe_path accepts Path objects on Windows
         self.assertEqual(hfa._safe_path(self.mem, Path("chunks") / "chunk_0001.json").name, "chunk_0001.json")
         # 4. Epoch rollover preserves user notes in framework.md
@@ -562,7 +562,7 @@ hfa.cmd_add_topic(Path(sys.argv[2]),"Committed","committed-key","fact")
             self.assertIn("scripts/hfa_manager.py", names)
             self.assertIn("scripts/templates/memory/directory.md", names)
             self.assertIn("scripts/templates/memory/index/fts.sqlite", names)
-            ep = zf.read("hierarchical_attention_memory-2.2.0.dist-info/entry_points.txt").decode("utf-8")
+            ep = zf.read("hierarchical_attention_memory-3.0.0.dist-info/entry_points.txt").decode("utf-8")
             self.assertIn("hfa = scripts.hfa_manager:main", ep)
             self.assertIn("hfa-mcp = scripts.hfa_mcp:main", ep)
             self.assertIn("hfa-hook = scripts.hfa_hook:main", ep)
@@ -570,8 +570,8 @@ hfa.cmd_add_topic(Path(sys.argv[2]),"Committed","committed-key","fact")
             self.assertIn("hierarchical_attention_memory.pth", set(zf.namelist()))
         with tarfile.open(wheel_dir / sdist_name, "r:gz") as tf:
             sdist_names = set(tf.getnames())
-            self.assertIn("hierarchical_attention_memory-2.2.0/PKG-INFO", sdist_names)
-            self.assertIn("hierarchical_attention_memory-2.2.0/pyproject.toml", sdist_names)
+            self.assertIn("hierarchical_attention_memory-3.0.0/PKG-INFO", sdist_names)
+            self.assertIn("hierarchical_attention_memory-3.0.0/pyproject.toml", sdist_names)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -5,7 +5,7 @@ backend-path = ["."]
 
 [project]
 name = "hierarchical-attention-memory"
-version = "2.2.0"
+version = "3.0.0"
 description = "Local transactional file memory for AI coding agents: L0 mainline focus lock, L1 JSON source of truth, SQLite FTS5 hybrid search, lifecycle hooks, and stdio MCP server."
 readme = "README.md"
 requires-python = ">=3.10"

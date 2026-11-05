@@ -7,5 +7,5 @@
   "router_token_budget": 600,
   "status_check_interval": 20,
   "summary_token_budget": 800,
-  "version": "2.2"
+  "version": "3.0"
 }

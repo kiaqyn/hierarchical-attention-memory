@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""HFA 2.2: local transactional file memory. No model API is called."""
+"""HFA 3: local transactional file memory. No model API is called."""
 from __future__ import annotations
 import argparse
 import base64
@@ -37,7 +37,7 @@ _ROOT_LOCKS: dict[str, threading.RLock] = {}
 _ROOT_LOCKS_GUARD = threading.Lock()
 JOURNAL = ".hfa-transaction.json"
 SUMMARY_SECTIONS = ("身份和背景", "长期目标", "技术环境", "偏好与习惯", "持续项目和共同语境")
-DEFAULT_CONFIG = {"version": "2.2", "active_mainline": "M1", "router_token_budget": 600,
+DEFAULT_CONFIG = {"version": "3.0", "active_mainline": "M1", "router_token_budget": 600,
                   "recall_token_budget": 600, "summary_token_budget": 800, "context_token_budget": 1600, "status_check_interval": 20,
                   "max_topics_per_epoch": 50, "max_recall_topics": 2}
 
@@ -994,7 +994,7 @@ def cmd_init(target_dir, force=False, quiet=False):
         print(f"[OK] Initialized memory at {target_dir}")
     return 0
 
-def cmd_status(root, as_json=False):
+def cmd_status(root, as_json=False, *, return_result=False):
     with _hfa_lock(root):
         state = parse_directory_nodes(root / "directory.md")
         chunks = _chunks(root, state)
@@ -1018,6 +1018,8 @@ def cmd_status(root, as_json=False):
         if state["missing_summary_sections"]:
             problems.append("summary.md missing required sections: " + ", ".join(state["missing_summary_sections"]))
         state["problems"] = problems
+    if return_result:
+        return state
     if as_json:
         print(_json(state), end="")
     else:
@@ -1641,8 +1643,23 @@ def _ensure_memory_dir(explicit: Path | None, auto_init: bool = False) -> Path:
     return target
 
 def main():
-    parser = argparse.ArgumentParser(description="HFA local file-memory manager (2.2)")
+    parser = argparse.ArgumentParser(description="HFA local file-memory manager (3.0)")
+    def doctor_module():
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("hfa_doctor", Path(__file__).with_name("hfa_doctor.py"))
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+    class VersionAction(argparse.Action):
+        def __call__(self, parser, namespace, values, option_string=None):
+            parser._print_message("HFA " + doctor_module().package_version() + "\n", sys.stdout)
+            parser.exit()
+    parser.add_argument("--version", action=VersionAction, nargs=0, help="Show the installed package version")
     subs = parser.add_subparsers(dest="command", required=True)
+    doctor = subs.add_parser("doctor", help="Check local memory, dependencies and readiness without exposing memory text")
+    doctor.add_argument("memory_dir", nargs="?", type=Path, default=None)
+    doctor.add_argument("--json", action="store_true")
+    doctor.add_argument("--require-mcp", action="store_true", help="Fail unless local CLI and the pinned MCP SDK are ready")
     init = subs.add_parser("init", help="Initialize; --force preserves existing files and fills gaps")
     init.add_argument("memory_dir", nargs="?", type=Path, default=None, help="Target memory directory (defaults to HFA_MEMORY_DIR or ./memory)")
     init.add_argument("--force", action="store_true")
@@ -1698,6 +1715,9 @@ def main():
     try:
         if args.command == "init":
             return cmd_init(resolve_default_memory_dir(args.memory_dir), args.force)
+        if args.command == "doctor":
+            return doctor_module().run(resolve_default_memory_dir(args.memory_dir), cmd_status,
+                                     args.json, args.require_mcp)
         target_dir = _ensure_memory_dir(args.memory_dir, getattr(args, "auto_init", False))
         if args.command == "status":
             return cmd_status(target_dir, args.json)

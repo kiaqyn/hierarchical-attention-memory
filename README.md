@@ -1,4 +1,6 @@
-# Hierarchical Attention Memory · HFA 2.2
+# Hierarchical Attention Memory · HFA 3
+
+第一次使用请看 [五分钟上手](docs/quickstart.md)。已安装可运行 `hfa --version` 查看代码版本，或 `hfa doctor <记忆目录>` 检查本地查存与MCP依赖状态；本地就绪不等于宿主已接入。
 
 > **本地事务型 AI 代理分层记忆系统**：以 `L0 (directory.md)` 主线专注锁隔离跨分支噪声，以 `L1 (chunks/*.json)` 作为 Git 可审计唯一真源，通过 Python 标准库内置 `sqlite3 (FTS5)` 提供零外部依赖的混合检索加速，并配备 `PreInvocation / PostInvocation / Stop` 全生命周期钩子与 `MCP` 服务端。
 >
@@ -24,7 +26,7 @@
 
 ### 同类方案实事求是对比
 
-| 维度 | 单文件 `MEMORY.md` / Memory Bank | 纯 SQLite / 向量 MCP 竞品 (如 Engram / claude-mem) | **HFA 2.2 (本项目)** |
+| 维度 | 单文件 `MEMORY.md` / Memory Bank | 纯 SQLite / 向量 MCP 竞品 (如 Engram / claude-mem) | **HFA 3 (本项目)** |
 | :--- | :--- | :--- | :--- |
 | **持久化真源与 Git 可审计性** | Markdown 单文件（易冲突、难追溯替代关系） | 二进制 `.db` / 向量库（无法直接 `git diff` 审查） | **`chunks/chunk_XXXX.json` 原子 JSON 真源**（天然支持 `git diff`）+ 自动生成可读 Markdown 摘要 |
 | **未命中回合 Token 开销** | 全文件常驻上下文（随历史线性增长） | 工具 Schema 常驻开销 | 核心摘要仍会注入并计量，未命中不再宣称零开销 |

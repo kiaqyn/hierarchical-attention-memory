@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""HFA 2.2 lifecycle hook adapter: PreInvocation recall + PostInvocation/Stop auto-persist.
+"""HFA 3 lifecycle hook adapter: PreInvocation recall + PostInvocation/Stop auto-persist.
 
 - PreInvocation (`--phase pre` or auto-detected user prompt):
   Reads `lastUserInput`, runs `hfa_manager.py recall`, and emits an `ephemeralMessage`
@@ -655,7 +655,7 @@ def _handle_post_or_stop(root: Path, decision: dict, phase: str = "post", payloa
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="HFA 2.2 lifecycle hook: PreInvocation recall + PostInvocation/Stop auto-persist"
+        description="HFA 3 lifecycle hook: PreInvocation recall + PostInvocation/Stop auto-persist"
     )
     parser.add_argument(
         "--memory-dir",
