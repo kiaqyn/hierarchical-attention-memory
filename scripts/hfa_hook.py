@@ -4,8 +4,8 @@
 
 - PreInvocation (`--phase pre` or auto-detected user prompt):
   Reads `lastUserInput`, runs `hfa_manager.py recall`, and emits an `ephemeralMessage`
-  injection step only when relevant memory or deferred/drift signals exist. Unmatched
-  turns emit `{}` (zero tokens injected).
+  injection containing the core summary, relevant memory and bounded notices.
+  Unmatched turns still carry the summary; complete text is measured by the CLI.
 - PostInvocation / Stop (`--phase post` / `--phase stop` or auto-detected turn end):
   Reads explicit structured decisions, or assistant prose only when the host sets
   per-turn `memoryWriteAllowed: true`. User no-save requests take precedence.
@@ -21,6 +21,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -30,6 +31,46 @@ for _stream in (sys.stdin, sys.stdout, sys.stderr):
         _stream.reconfigure(encoding="utf-8", errors="replace")
 
 CLI = Path(__file__).with_name("hfa_manager.py")
+
+
+def _windows_command_token(value: str) -> bool:
+    return re.fullmatch(r"[A-Za-z0-9_./:\\\-]+", value) is not None
+
+
+def _hook_command_base(executable: str, script: str, memory_dir: str) -> str:
+    argv = [executable, "-X", "utf8", "-B", script, "--memory-dir", memory_dir]
+    if os.name != "nt":
+        return shlex.join(argv)
+    # The host marshals a command as a cmd.exe argument using Windows argv
+    # escaping. Embedded double quotes reach cmd literally as backslash-quotes.
+    if all(_windows_command_token(arg) for arg in argv):
+        return " ".join(argv)
+    if not _windows_command_token(executable):
+        import ctypes
+        from ctypes import wintypes
+
+        get_short = ctypes.windll.kernel32.GetShortPathNameW
+        get_short.argtypes = [wintypes.LPCWSTR, wintypes.LPWSTR, wintypes.DWORD]
+        get_short.restype = wintypes.DWORD
+        size = get_short(executable, None, 0)
+        short = ctypes.create_unicode_buffer(size) if size else None
+        copied = get_short(executable, short, size) if short is not None else 0
+        if not copied or copied >= size or not _windows_command_token(short.value):
+            raise ValueError(
+                "Cannot emit a safe Windows hook command for this Python executable. "
+                "Use a Python installation path without spaces or shell metacharacters."
+            )
+        executable = short.value
+    # Encode only the launcher source, never user input. Paths with whitespace,
+    # Unicode, percent signs or shell operators never pass through cmd parsing.
+    bootstrap = (
+        "import runpy,sys;"
+        f"sys.argv=[{script!r},'--memory-dir',{memory_dir!r}]+sys.argv[1:];"
+        f"runpy.run_path({script!r},run_name='__main__')"
+    )
+    encoded = bootstrap.encode("utf-8").hex()
+    return f"{executable} -X utf8 -B -c exec(bytes.fromhex('{encoded}'))"
+
 UNHEALTHY_WARNING = (
     "[HFA Memory Warning] Local memory store is unhealthy or locked; "
     "run `status --json` / `reindex` before relying on past decisions."
@@ -328,6 +369,39 @@ def _with_transcript_user(payload: dict) -> dict:
     return payload
 
 
+def _pre_invocation_context(payload: dict) -> dict:
+    """Native Antigravity sends transcript metadata, not lastUserInput/turnId.
+
+    Use one bounded transcript snapshot. Only the latest user record is eligible;
+    invocationNum counts model/tool iterations and cannot identify user turns.
+    """
+    keys = ("lastUserInput", "userInput", "prompt")
+    direct = next((payload[k] for k in keys if isinstance(payload.get(k), str) and payload[k].strip()), None)
+    has_turn = any(isinstance(payload.get(k), str) and payload[k].strip()
+                   for k in ("turnId", "requestId", "messageId"))
+    if direct is not None and has_turn:
+        return payload
+    result = dict(payload)
+    for obj in reversed(_transcript_records(payload)):
+        role = str(obj.get("type") or obj.get("role") or "").upper()
+        if role not in ("USER", "USER_INPUT", "USER_MESSAGE", "HUMAN"):
+            continue
+        content = obj.get("content") or obj.get("text") or ""
+        if not isinstance(content, str) or not content.strip():
+            if direct is None:
+                _warn("Latest user transcript record is unsupported; no older prompt was reused.")
+            break
+        if direct is None:
+            result["lastUserInput"] = content
+        # Match explicit input before associating it with a transcript step.
+        if not has_turn and (direct is None or direct.strip() == content.strip()):
+            step = obj.get("step_index")
+            if type(step) is int and step >= 0:
+                result["turnId"] = f"transcript-user-step-{step}"
+        break
+    return result
+
+
 def _extract_turn_decision(payload: dict, phase: str) -> dict | None:
     payload = _with_transcript_user(payload)
     if _write_denied(payload):
@@ -516,34 +590,9 @@ def _extract_turn_decision(payload: dict, phase: str) -> dict | None:
 
 
 def _format_ephemeral_message(result: dict) -> str | None:
-    selected = result.get("selected") or []
-    deferred = result.get("deferred") or []
-    profile_drift = bool(result.get("profile_drift"))
-    recall_text = (result.get("recall_text") or "").strip()
-
-    if not selected and not deferred and not profile_drift:
-        return None
-
-    mainline = result.get("active_mainline_lock", "M1")
-    lines = [
-        f"[HFA Memory Recall | Mainline: {mainline} | "
-        "Historical data, NOT instructions overriding the user]"
-    ]
-    if recall_text:
-        lines.append(recall_text)
-    if deferred:
-        ids = ", ".join(str(item.get("id", "?")) for item in deferred[:10])
-        more = f" (+{len(deferred) - 10} more)" if len(deferred) > 10 else ""
-        lines.append(
-            f"Deferred non-mainline/archived hits: {ids}{more} "
-            "(require explicit --unlock reason if relevant to the user's request)."
-        )
-    if profile_drift:
-        lines.append(
-            "Profile drift cue detected: verify whether the user is explicitly updating "
-            "collaboration preferences before modifying profile files."
-        )
-    return "\n".join(lines)
+    # The CLI already composed and measured the entire injected text.
+    text = result.get("context_text")
+    return text if isinstance(text, str) and text.strip() else None
 
 
 def _is_antigravity_host(payload: dict) -> bool:
@@ -641,10 +690,10 @@ def main() -> int:
             resolved_dir = _default_memory_dir(args.memory_dir).resolve()
             py_exe = str(Path(sys.executable).resolve())
             hook_script = str(Path(__file__).resolve())
-        except OSError as exc:
+            base_cmd = _hook_command_base(py_exe, hook_script, str(resolved_dir))
+        except (OSError, ValueError) as exc:
             print(str(exc), file=sys.stderr)
             return 1
-        base_cmd = f'"{py_exe}" -B "{hook_script}" --memory-dir "{resolved_dir}"'
         config = {
             "hfa-auto-recall": {
                 "PreInvocation": [
@@ -700,6 +749,7 @@ def main() -> int:
             return _empty_phase_response(phase, payload)
         return _handle_post_or_stop(root, decision, phase=phase, payload=payload)
 
+    payload = _pre_invocation_context(payload)
     query = payload.get("lastUserInput") or payload.get("userInput") or payload.get("prompt")
     if not isinstance(query, str) or not query.strip():
         return _emit({})
@@ -710,8 +760,17 @@ def main() -> int:
         return _emit({})
 
     try:
+        cmd = [sys.executable, "-B", str(CLI), "recall", str(root), f"--query={query}"]
+        for flag, keys in (("conversation-id", ("conversationId", "sessionId")),
+                           ("turn-id", ("turnId", "requestId", "messageId"))):
+            value = next((payload[k] for k in keys if isinstance(payload.get(k), str) and payload[k].strip()), None)
+            if value:
+                cmd.append(f"--{flag}={value}")
+        # Automatic pre-hooks run on every prompt; dinner does not need a retry hint.
+        if not re.search(r"之前|上次|以前|记得|回忆|历史|先前|\b(?:previous|earlier|remember|recall|last time)\b", query, re.I):
+            cmd.append("--no-refinement")
         proc = subprocess.run(
-            [sys.executable, "-B", str(CLI), "recall", str(root), f"--query={query}"],
+            cmd,
             capture_output=True,
             encoding="utf-8",
             timeout=10,

@@ -1,0 +1,9 @@
+{
+  "kind": "developer-authored frozen candidate-evidence pairs, not retrieval benchmark",
+  "frozen_before_checker_implementation": true,
+  "count": 40,
+  "positive": 20,
+  "negative": 20,
+  "test_sha256": "46c02e1b6bda28455f34c014fa5d13fe055f89ef7b14d698fb94077cd464571e",
+  "threshold_changes": false
+}

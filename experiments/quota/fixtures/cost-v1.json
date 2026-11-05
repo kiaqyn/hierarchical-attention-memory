@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "encoding": "o200k_base",
+  "core_summary": "# 核心记忆摘要\n\n## 身份和背景\n- 全部记录为合成测试。\n## 长期目标\n- CORE_SAFE_RULE：只使用有来源的当前事实。\n## 技术环境\n- 本地文件与SQLite。\n## 偏好与习惯\n- 信息不足时说明未知。\n## 持续项目和共同语境\n- 成本与证据完整性回归。\n",
+  "records": [
+    {"key":"export_old","title":"旧导出规则","words":"export-record","marker":"OLD_EXPORT_RULE","conclusion":"OLD_EXPORT_RULE：旧版报表采用普通UTF8；这条决定已由后续记录明确替代，不应用于当前导出。"},
+    {"key":"export_current","title":"当前导出规则","words":"export-record","marker":"EXPORT_BOM_RULE","supersedes":["export_old"],"conclusion":"EXPORT_BOM_RULE：当前报表导出使用UTF8加BOM，让目标表格软件正确识别中文。\n修改后核对表头、金额列和空值，保留生成文件的合成测试来源。\n这条决定只覆盖当前导出流程，没有验证其他软件或其他版本。"},
+    {"key":"startup","title":"启动等待处理","words":"startup-record","marker":"BOOT_ONCE_RULE","conclusion":"BOOT_ONCE_RULE：启动卡住源于重复初始化，改为只初始化一次并在退出时释放。\n等待指示与相机旋转是不同问题，先确认现象；本条仅记录启动等待。\n合成回放重复进入主页三次，只创建一个实例；未验证其他平台。"},
+    {"key":"quota","title":"回合预算规则","words":"quota-record","marker":"QUOTA_TWO_RULE","conclusion":"QUOTA_TWO_RULE：同一真实用户回合最多成功提交两份召回载荷，达到上限后复用现有依据。\n重试沿用会话与回合ID；缺少宿主身份时不推算或伪造轮数。\n此限制不是账户费用上限，模型思考与其他工具调用仍有成本。"},
+    {"key":"font","title":"字体方框修复","words":"方框,字体,font-record","marker":"FONT_RESTORE_RULE","conclusion":"FONT_RESTORE_RULE：中文字符显示为方框时，安装缺失的字体包后恢复显示。\n合成验证检查标题与正文，确认不是把字符编码问题当成字体缺失。\n尚未证明所有字体、所有改写或隐含现象都能自动识别。"},
+    {"key":"branch","title":"支线记录","words":"branch-record","project":"S1","marker":"BRANCH_PRIVATE_RULE","conclusion":"BRANCH_PRIVATE_RULE：这是假支线内容；默认主线召回不得传出本段正文。"},
+    {"key":"archived","title":"已归档记录","words":"archived-record","status":"ARCHIVED","marker":"ARCHIVED_PRIVATE_RULE","conclusion":"ARCHIVED_PRIVATE_RULE：这是假归档内容；默认召回不得把它当作当前决定。"},
+    {"key":"approval","title":"发布确认","words":"release-note,release-approval","marker":"RELEASE_CONFIRM_RULE","conclusion":"RELEASE_CONFIRM_RULE：合成项目发布前需要完成验收并取得明确确认，再由授权者执行发布。\n本条是带来源的历史决定，不是授权模型自行发送消息或发布的命令。\n查询只写发布记录时可能同时匹配配色，必要时继续核对具体发布条件。"},
+    {"key":"color","title":"发布配色","words":"release-note,release-colors","marker":"RELEASE_COLOR_RULE","conclusion":"RELEASE_COLOR_RULE：合成演示的发布配色采用蓝色，并保留文字与背景之间的对比度。\n此记录只涉及展示样式，不描述是否获准发布，也不能回答发布确认条件。\n它用于检查过宽查询只取一条时，是否需要额外补查才能找齐依据。"}
+  ],
+  "cases": [
+    {"id":"single_export","query":"export-record","required":["export_current"],"max_topics":1},
+    {"id":"two_decisions","query":"startup-record quota-record","required":["startup","quota"],"max_topics":2,"followups":{"startup":"startup-record","quota":"quota-record"}},
+    {"id":"font_paraphrase","query":"中文字显示方框怎么处理","required":["font"],"max_topics":1,"followups":{"font":"font-record"}},
+    {"id":"no_answer","query":"nebulaxylophonezebra","required":[],"max_topics":1,"expect_miss":true},
+    {"id":"branch_boundary","query":"branch-record","required":[],"max_topics":1},
+    {"id":"archived_boundary","query":"archived-record","required":[],"max_topics":1},
+    {"id":"narrowing_counterexample","query":"release-note","required":["approval"],"max_topics":1,"followups":{"approval":"release-approval"},"note":"Deliberately broad first query: blindly taking one record can add a follow-up. This is a counterexample, not an automatic policy recommendation."}
+  ]
+}

@@ -2,7 +2,15 @@
 
 > **本地事务型 AI 代理分层记忆系统**：以 `L0 (directory.md)` 主线专注锁隔离跨分支噪声，以 `L1 (chunks/*.json)` 作为 Git 可审计唯一真源，通过 Python 标准库内置 `sqlite3 (FTS5)` 提供零外部依赖的混合检索加速，并配备 `PreInvocation / PostInvocation / Stop` 全生命周期钩子与 `MCP` 服务端。
 >
-> *严守诚实工程原则：本项目不自行调用大模型 API、不上传任何对话数据，所有检索与提炼均为本地确定性逻辑。*
+> *本项目不自行调用生成式大模型 API、不上传对话数据。默认检索与提炼使用本地规则；可显式启用本地 embedding 候选补位。相似度不等于事实充分性。*
+
+可选预览：[本地语义后端](docs/local-semantic.md) 已接入 CLI/MCP 与安装包，支持增量向量缓存、有效记录过滤、并发快照复核，以及 MCP 常驻编码器复用和超时恢复。默认关闭；不改变标准库核心依赖。需要 Python 3.12+ 及单独的 `semantic` 依赖，模型必须显式下载/指定。实验目录里的重排和数值绑定尚未默认接入此后端。
+
+代理输出可显式精简：CLI `recall --output compact` / MCP 启动 `--compact`，完整记忆正文与来源保留，去掉重复正文和诊断数据。见[接入与成本边界](docs/ai-integration.md#减少代理工具输出开销)；工具体积减少不等于已测得净额度节省。 项目配置还可显式启用 `max_recalls_per_turn`，按真实会话/回合限制成功召回份数；默认关闭，需要宿主提供一致身份，详见接入说明。
+
+换种说法或证据分散时，宿主模型可在一次补查中传入至多3个短查询方向：MCP `refinement_queries`，或 CLI 重复使用 `--refine-query`。各方向独立词法检索、去重合并，共用原范围、条数和完整正文预算；不把多个事实的词硬拼成一个弱匹配查询，不自动生成或保存新词。未传时保持现有单查询行为。见[补查示例与验证边界](docs/query-refinement.md)。
+
+读取 JSON 文本的 MCP 客户端还可启用 `--recall-text-only`：召回结果只返回一个文本块，避免 SDK 再附一份相同正文的 `structuredContent`。可与 `--compact` 组合；依赖结构化结果的客户端保持现有启动方式。`experiments/quota/evaluate_transport.py --output transport-check.json` 可用纯合成记忆复查真实 SDK 结果；宿主本来只读文本时，这项传递优化不产生额外节省。
 
 ---
 
@@ -19,8 +27,8 @@
 | 维度 | 单文件 `MEMORY.md` / Memory Bank | 纯 SQLite / 向量 MCP 竞品 (如 Engram / claude-mem) | **HFA 2.2 (本项目)** |
 | :--- | :--- | :--- | :--- |
 | **持久化真源与 Git 可审计性** | Markdown 单文件（易冲突、难追溯替代关系） | 二进制 `.db` / 向量库（无法直接 `git diff` 审查） | **`chunks/chunk_XXXX.json` 原子 JSON 真源**（天然支持 `git diff`）+ 自动生成可读 Markdown 摘要 |
-| **未命中回合 Token 开销** | 全文件常驻上下文（随历史线性增长） | 工具 Schema 常驻开销 | **`0 Token`**（`PreInvocation` 钩子未命中时输出 `{}`，不注入任何提示词） |
-| **命中回合 Token 预算控制** | 无硬性上限（容易撑爆窗口） | Top-K 条目拼接（通常无精确 Token 截断） | **双重硬性预算锁**（默认路由 `R ≤ 600`、召回 `C ≤ 600` Tokens，最多 2 条片段，超额自动延后至 `deferred`） |
+| **未命中回合 Token 开销** | 全文件常驻上下文（随历史线性增长） | 工具 Schema 常驻开销 | 核心摘要仍会注入并计量，未命中不再宣称零开销 |
+| **命中回合 Token 预算控制** | 无硬性上限（容易撑爆窗口） | Top-K 条目拼接（通常无精确 Token 截断） | 默认路由 600、召回片段 600、摘要 800；摘要、片段和提示组成的完整正文共受 1600 上限约束 |
 | **跨分支与废弃方案隔离** | 无隔离，全量混读 | 按项目或 Tag 简单过滤 | **L0 主线专注锁 (`ACTIVE M<n>`)**：支线与墓碑 (`TOMBSTONED`) 默认拦截，须显式 `--unlock` 说明用途并记入 `access.jsonl` 审计 |
 | **旧决定推翻与历史演进** | 直接删改覆盖（丢失历史原因） | 追加新记录（旧错误结论仍可能被同分召回） | **显式 `supersedes` 替代链**：旧 `chunk_XXXX.json` 字节原样保留供审计，但永久退出当前有效召回池 |
 | **回合自动读写闭环** | 依赖人工或模型自觉编辑文件 | `SessionStart` + `PostToolUse` / `Stop` 钩子 | **`PreInvocation` 自动检索注入 + `PostInvocation` / `Stop` 受控提炼结论/路径/关键词并按 `request_id` 幂等落盘 + `stdio MCP`** |
@@ -69,7 +77,7 @@ python scripts/hfa_manager.py add-topic ./my_memory --title "编码修复" --hit
 python scripts/hfa_manager.py recall ./my_memory --query "之前 GBK 乱码 怎么修的"
 ```
 
-打开 `visualizer/index.html` 可在浏览器中体验交互式沙盘（沙盘数据仅存在于页面内存中，不连接本地磁盘或模型服务）。
+打开 `visualizer/index.html` 可体验教学仿真：预设条件匹配与单步动画不连接本地磁盘、SQLite 或模型服务，不提供实测得分/耗时，也不证明宿主已接收上下文。没有对应示例的输入会显示未命中。
 
 ---
 
@@ -79,7 +87,8 @@ python scripts/hfa_manager.py recall ./my_memory --query "之前 GBK 乱码 怎�
 
 `scripts/hfa_hook.py`（或 `hfa-hook` 命令）配合根目录 `hooks.json` / `plugin.json`，在支持生命周期钩子的宿主中提供自动召回与受控保存：
 
-- **`PreInvocation`（回合前自动按需召回）**：自动读取 `lastUserInput` 并执行混合检索。无命中时输出 `{}`（**0 额外 Token**）；命中主线记忆或发现支线 `deferred` / 偏好变更 `profile_drift` 线索时，通过单轮 `ephemeralMessage` 注入，并明确标注为历史参考数据而非覆盖用户的指令。
+- **`PreInvocation`（回合前召回）**：自动读取 `lastUserInput`，把 `summary.md` 正文、相关 L1 片段与必要提示组成同一条计量后的 `ephemeralMessage`，并标注为历史参考数据。未命中仍携带核心摘要，避免漏掉长期约束，因此不再宣称零额外 Token。摘要修改后下一次召回立即读取新内容。
+- **真实回合与有限重查**：宿主提供 `conversationId`/`sessionId` 和 `turnId`/`requestId`/`messageId` 时，按会话内的不同回合计数；同一回合重复检索不增加轮数，每 20 个不同回合提醒一次。缺失身份时返回 `turn_count: null`、`turn_count_exact: false`，只统计调用次数。已知回合首次未命中可提示一次换词重查，后续不重复提示；自动钩子仅对询问历史的输入提供此提示。
 - **`PostInvocation` / `Stop`（回合后受控提炼与幂等落盘）**：接受显式结构化结论（`decision` 字段或 ```` ```hfa-memory ```` 代码块）；普通助手回复仅在宿主本轮提供布尔值 `memoryWriteAllowed: true` 时尝试提炼。`false` 或非布尔值拒绝保存，命中的用户“不要保存”指令优先于上述所有入口。
   - **防污染过滤**：忽略闲聊、没有明确结论的文本，以及命中假设/示例/未验证规则的内容。先对正文和元数据脱敏，再提取、截断标题与关键词，防止凭据从关键词绕回索引。支持常见 API 密钥、密码赋值、Bearer 与完整 PEM 私钥格式；这不是通用秘密检测器，也不能自动证明结论属实。
   - **结构化提炼**：自动提取标题、关联文件名/代码标识符/技术命中词（1–8 个）及核心结论（1–3 行），通过确定性 `request_id` 幂等写入 `chunks/chunk_XXXX.json`（同一回合重复触发 `PostInvocation` 与 `Stop` 不会重复生成文件）。
@@ -114,6 +123,7 @@ memory/
   directory.md                  # L0：节点、路径、状态、命中词（主线专注锁路由表）
   chunks/chunk_0001.json        # L1：唯一可持久化记忆真源（Git 友好，全局递增 ID）
   index/fts.sqlite              # 派生：Python 标准库 sqlite3 FTS5 全文索引与词频表（含 source_digest）
+  index/fts-integrity.json      # 派生：SQLite 文件 SHA-256 与真源指纹，随索引事务提交
   index/search.json             # 派生：标题、正文与同义词的检索特征 JSON（含 source_digest）
   index/hitwords.json           # 派生：L0/L1 精确命中词倒排表（含 source_digest）
   index/projects.json           # 派生：L0 节点状态表（含 source_digest）
@@ -121,6 +131,7 @@ memory/
   history/epoch_01/framework.md # 纪元 ACTIVE / SEALED 状态与架构说明
   history/stream.md             # 可选里程碑事件流日志
   history/access.jsonl          # 召回与 --unlock 侧向读取审计日志
+  history/session-state.json    # 会话/回合哈希与去重计数，同访问事件一起事务提交
   history/legacy-backups/       # 重建前自动备份的旧版非生成 Markdown 原文
   tombstones.jsonl              # 支线逻辑归档（墓碑化）审计记录
   main/ profile/ branches/      # L0 指向的主线、用户画像与支线说明文档
@@ -134,6 +145,8 @@ memory/
 ## 混合检索（SQLite FTS5 + 词法守卫）与主线专注锁
 
 `route` 和 `recall` 是同一个命令。每次召回先校验主线文件、L0/L1 SHA-256 指纹 (`source_digest`) 与索引一致性，再从 L1 返回受预算约束的片段；篡改生成的 Markdown 摘要不会改变召回结果。
+
+查询还会核对磁盘 SQLite 的内容 SHA-256。损坏或缺少完整性记录会报错要求 `reindex`，不会当作正常未命中。校验用于发现损坏/过期，不防御有权限同时改写真源和所有校验文件的攻击者。查询不会重建 SQLite，但仍有真源校验与文件读取成本。
 
 - **主线专注锁**：L0 必须恰好有一个 `ACTIVE` 的 `M<n>` 主线。同主线 L1 片段可直接返回；非主线、支线和 `TOMBSTONED` 节点命中时仅进入 `deferred` 提示，必须显式传入 `--unlock "原因"` 才会展开正文并记录到 `history/access.jsonl`。
 - **SQLite FTS5 + 词法混合检索**：
@@ -173,12 +186,17 @@ python scripts/hfa_manager.py add-topic ./my_memory \
   - 安装 `requirements-optional.txt` (`tiktoken==0.14.0`) 后使用 `o200k_base` 精确计量（`exact: true`）；
   - 未安装时按 UTF-8 字节数计量（`method: "utf8_bytes_upper_bound"`, `exact: false`），作为 `o200k_base` 的保守上界；不再用可能低估罕见汉字的字符启发式。相同预算下可容纳的内容会更少，可缩短结论或安装可选分词器；不是精确模型账单，也不承诺其他分词器的上界。
   - `router_token_budget`（默认 600）与 `recall_token_budget`（默认 600）分别约束 `router_text` 与 `recall_text` 正文载荷，不包含外层 JSON 字段名或宿主工具封装开销。
+  - `summary_token_budget` 默认 800；`context_token_budget` 默认 1600，约束实际传给 Hook/MCP 的完整正文 `context_text`，包含摘要、片段与提示。超限优先延后片段，再省略可选提示；核心摘要本身放不下时明确报错。工具外层 JSON 元数据与宿主封装仍不在正文预算内。
+
+升级已有记忆目录后先运行 `reindex`，再检查 `status --json`，以生成新增的索引完整性记录。旧访问日志没有可靠回合身份，不倒推出真实对话轮数。
+
+`delivery.payload_prepared: true` 只证明正文已生成；`host_accepted` 与 `model_used` 为 null，需要由宿主接收记录和真实对话评估另行验证。动画播放结束或 SDK 返回成功都不能证明模型已遵守记忆。
 
 ---
 
 ## 诚实能力边界声明（Scope & Limitations）
 
-1. **非通用向量语义理解**：HFA 的混合检索基于精确命中词、`sqlite3` FTS5 倒排索引、中文双字切分与可配置同义词表。它具有确定性和可解释的匹配词（`selected[].match`），但不是 Embedding 向量模型，对于完全无词汇重叠且未配置同义词的跨领域隐喻不会强行召回。查询时在校验 `source_digest` 与表完整性后直接以只读方式查询磁盘 `index/fts.sqlite`（不重建 SQLite FTS5 表），但新 CLI 进程仍会读取并校验 L0/L1 JSON 真源，不能据此宣称零冷启动延迟或大规模性能已验证。
+1. **默认词法与可选语义的边界**：HFA 的默认混合检索基于精确命中词、`sqlite3` FTS5 倒排索引、中文双字切分与可配置同义词表。它具有确定性和可解释的匹配词（`selected[].match`），但默认路径不是 Embedding 向量模型，对于完全无词汇重叠且未配置同义词的跨领域隐喻不会强行召回。可选本地语义模式另见 [后端说明](docs/local-semantic.md)，其相似度不保证事实正确，也不涵盖任意隐喻。查询时在校验 `source_digest` 与表完整性后直接以只读方式查询磁盘 `index/fts.sqlite`（不重建 SQLite FTS5 表），但新 CLI 进程仍会读取并校验 L0/L1 JSON 真源，不能据此宣称零冷启动延迟或大规模性能已验证。
 2. **评估集性质透明**：`tests/evaluate_memory.py` 包含 32 个公开可见的人工构造检索案例（混合模式正向召回 `23/23`，负向拒识 `9/9`，零误报）与 1,000 次工具读写/重试/替代操作回放。它是确定性工程回归基准，不代表独立盲测或千轮真实大模型对话的认知表现证明。
 3. **进程级崩溃恢复而非断电级存储引擎**：`.hfa-transaction.json` 保障进程异常退出或普通 I/O 错误时的多文件回滚一致性；直接绕过 CLI 手动乱改文件不参与事务保护。
 
@@ -191,8 +209,19 @@ python -B tests/validate_hfa.py
 python -B tests/test_memory_quality.py
 python -B tests/test_hook.py
 python -B tests/test_review_regressions.py
+python -B tests/test_context_delivery.py
 python -B tests/test_mcp.py
 python -B tests/evaluate_memory.py
 ```
+
+可重复的工具成本回归（仓库源码或源码包，需要可选分词器）：
+
+```powershell
+python -m pip install ".[tokenizer]"
+python -c "import tiktoken; tiktoken.get_encoding('o200k_base')"
+python experiments/quota/cost_gate.py
+```
+
+普通检查不会更新参考值；`--output` 可保存完整证据。它同时检查完整依据、范围与成本，采用7个开发者合成场景、4种HFA配置，保留单条查询反而增加补查的反例；不代表独立竞品排名或实际账户节省。细节见[接入与成本边界](docs/ai-integration.md#减少代理工具输出开销)。
 
 MIT License · 实事求是构建可审计、受预算约束的本地 AI 工程记忆。

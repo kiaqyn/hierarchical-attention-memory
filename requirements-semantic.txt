@@ -1,0 +1,5 @@
+# Optional, local CPU-only semantic backfill. Requires Python 3.12+.
+# Core CLI does not import these packages unless semantic mode is requested.
+numpy==2.5.4
+onnxruntime==1.31.1
+tokenizers==0.23.3

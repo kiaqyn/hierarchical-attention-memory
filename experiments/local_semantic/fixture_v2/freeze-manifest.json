@@ -1,0 +1,18 @@
+{
+  "kind": "developer-authored synthetic V2; old viewed questions reused only for dev",
+  "test_frozen_before_v2_scoring": true,
+  "files": {
+    "corpus": {
+      "sha256": "563f9b98c176bef05b305fd47a7c2c4bb2f8882d517725a29a2e9ec5a786e3eb",
+      "count": 24
+    },
+    "dev": {
+      "sha256": "9fa839f2c47e68acde2009c76dd89e4fc600b3405a0035314fef03113a46fdf9",
+      "count": 66
+    },
+    "test": {
+      "sha256": "6801912068899aad986dcf92170f4a45d1769e348fb8cb9b78e853315d5d4427",
+      "count": 60
+    }
+  }
+}

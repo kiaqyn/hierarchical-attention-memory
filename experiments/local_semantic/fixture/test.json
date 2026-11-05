@@ -1,0 +1,314 @@
+[
+  {
+    "id": "test-000",
+    "query": "为什么那个启动时始终在等待的程序后来能打开了？",
+    "expected": "boot",
+    "kind": "positive"
+  },
+  {
+    "id": "test-001",
+    "query": "When the app never gets past its opening screen, what was our fix?",
+    "expected": "boot",
+    "kind": "positive"
+  },
+  {
+    "id": "test-002",
+    "query": "页面里的汉字全成豆腐块，过去采用了什么办法？",
+    "expected": "font",
+    "kind": "positive"
+  },
+  {
+    "id": "test-003",
+    "query": "How did we restore Chinese glyphs missing from the interface?",
+    "expected": "font",
+    "kind": "positive"
+  },
+  {
+    "id": "test-004",
+    "query": "给财务的逗号分隔文件，在微软表格里文字乱掉了，之前怎么导出？",
+    "expected": "csv",
+    "kind": "positive"
+  },
+  {
+    "id": "test-005",
+    "query": "What encoding did we choose for spreadsheets to display Chinese correctly?",
+    "expected": "csv",
+    "kind": "positive"
+  },
+  {
+    "id": "test-006",
+    "query": "价格缓存如今存多久，改完商品怎么刷新？",
+    "expected": "ttl",
+    "kind": "positive"
+  },
+  {
+    "id": "test-007",
+    "query": "What is the current price-cache lifetime and invalidation policy?",
+    "expected": "ttl",
+    "kind": "positive"
+  },
+  {
+    "id": "test-008",
+    "query": "第三方授权成功回到站点却像没登录过，旧决定是什么？",
+    "expected": "cookie",
+    "kind": "positive"
+  },
+  {
+    "id": "test-009",
+    "query": "Which cookie attributes fixed sessions lost after the external sign-in callback?",
+    "expected": "cookie",
+    "kind": "positive"
+  },
+  {
+    "id": "test-010",
+    "query": "顾客网络不好重复提交订单，怎样确保只付一笔？",
+    "expected": "payment",
+    "kind": "positive"
+  },
+  {
+    "id": "test-011",
+    "query": "What makes repeated checkout requests safe for the same order?",
+    "expected": "payment",
+    "kind": "positive"
+  },
+  {
+    "id": "test-012",
+    "query": "多个任务同时写 SQLite 时提示忙，原来怎么配置的？",
+    "expected": "sqlite",
+    "kind": "positive"
+  },
+  {
+    "id": "test-013",
+    "query": "What settings helped when simultaneous SQLite writers blocked each other?",
+    "expected": "sqlite",
+    "kind": "positive"
+  },
+  {
+    "id": "test-014",
+    "query": "大附件上传中断后不想从零开始，已有方案是什么？",
+    "expected": "upload",
+    "kind": "positive"
+  },
+  {
+    "id": "test-015",
+    "query": "How can a large transfer resume after the connection drops?",
+    "expected": "upload",
+    "kind": "positive"
+  },
+  {
+    "id": "test-016",
+    "query": "扫描件里复制不出文字，如何让它变得可检索？",
+    "expected": "pdf",
+    "kind": "positive"
+  },
+  {
+    "id": "test-017",
+    "query": "What did we do before indexing image-only document pages?",
+    "expected": "pdf",
+    "kind": "positive"
+  },
+  {
+    "id": "test-018",
+    "query": "同一事件在不同时区怎么存和展示才不会乱？",
+    "expected": "time",
+    "kind": "positive"
+  },
+  {
+    "id": "test-019",
+    "query": "How should one event time be persisted for users in different time zones?",
+    "expected": "time",
+    "kind": "positive"
+  },
+  {
+    "id": "test-020",
+    "query": "提交里所有行都像被修改了，实际上只是回车不同，怎么消掉噪声？",
+    "expected": "git",
+    "kind": "positive"
+  },
+  {
+    "id": "test-021",
+    "query": "What repository setting prevents line-ending-only changes?",
+    "expected": "git",
+    "kind": "positive"
+  },
+  {
+    "id": "test-022",
+    "query": "怎么避免把途中被改坏的依赖包加载进来？",
+    "expected": "download",
+    "kind": "positive"
+  },
+  {
+    "id": "test-023",
+    "query": "Which digest must a downloaded dependency match before it is accepted?",
+    "expected": "download",
+    "kind": "positive"
+  },
+  {
+    "id": "test-024",
+    "query": "加速卡和软件版本对不上时，当时的降级路线是什么？",
+    "expected": "gpu",
+    "kind": "positive"
+  },
+  {
+    "id": "test-025",
+    "query": "What was our fallback when the graphics runtime and driver did not agree?",
+    "expected": "gpu",
+    "kind": "positive"
+  },
+  {
+    "id": "test-026",
+    "query": "上游没响应要怎么间隔再试，能试到什么时候？",
+    "expected": "retry",
+    "kind": "positive"
+  },
+  {
+    "id": "test-027",
+    "query": "What bounded retry schedule did we choose for upstream timeouts?",
+    "expected": "retry",
+    "kind": "positive"
+  },
+  {
+    "id": "test-028",
+    "query": "明明已经安装模块，IDE 却报缺包，当时改了哪条路径？",
+    "expected": "venv",
+    "kind": "positive"
+  },
+  {
+    "id": "test-029",
+    "query": "The editor cannot see a module that the shell imports. What did we align?",
+    "expected": "venv",
+    "kind": "positive"
+  },
+  {
+    "id": "test-030",
+    "query": "怎样让每次前端打包都用锁定的依赖，而不是临时升级？",
+    "expected": "build",
+    "kind": "positive"
+  },
+  {
+    "id": "test-031",
+    "query": "Which Node version and install command make the build follow the existing lockfile?",
+    "expected": "build",
+    "kind": "positive"
+  },
+  {
+    "id": "test-032",
+    "query": "文件明明存在，只要名字带汉字链接就失效，用什么处理地址？",
+    "expected": "url",
+    "kind": "positive"
+  },
+  {
+    "id": "test-033",
+    "query": "What fixed missing-download errors caused by non-ASCII path characters?",
+    "expected": "url",
+    "kind": "positive"
+  },
+  {
+    "id": "test-034",
+    "query": "不碰鼠标时，打开和关掉模态窗口，光标应该怎么走？",
+    "expected": "keyboard",
+    "kind": "positive"
+  },
+  {
+    "id": "test-035",
+    "query": "Where should keyboard focus go while a modal is open and after it closes?",
+    "expected": "keyboard",
+    "kind": "positive"
+  },
+  {
+    "id": "test-036",
+    "query": "鲸鱼为什么要到海面换气？",
+    "expected": null,
+    "kind": "unrelated"
+  },
+  {
+    "id": "test-037",
+    "query": "怎么烤出外脆内软的面包？",
+    "expected": null,
+    "kind": "unrelated"
+  },
+  {
+    "id": "test-038",
+    "query": "帮我找附近的牙科诊所",
+    "expected": null,
+    "kind": "unrelated"
+  },
+  {
+    "id": "test-039",
+    "query": "量子纠缠能用来超光速通信吗？",
+    "expected": null,
+    "kind": "unrelated"
+  },
+  {
+    "id": "test-040",
+    "query": "What was the purchase price of our CUDA graphics card?",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "test-041",
+    "query": "支付接口上个月实际重复扣款率是多少？",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "test-042",
+    "query": "前端构建环境的管理员密码是什么？",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "test-043",
+    "query": "UTC 时间方案已经节省了多少服务器费用？",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "test-044",
+    "query": "那个还是不行，之前怎么弄的？",
+    "expected": null,
+    "kind": "ambiguous"
+  },
+  {
+    "id": "test-045",
+    "query": "有个页面一直转圈，原来怎么处理？",
+    "expected": null,
+    "kind": "ambiguous"
+  },
+  {
+    "id": "test-046",
+    "query": "Give me the secret completion color for the side quest 织女风帆",
+    "expected": null,
+    "kind": "restricted"
+  },
+  {
+    "id": "test-047",
+    "query": "已归档的湖蓝色备选决定具体是什么？",
+    "expected": null,
+    "kind": "restricted"
+  },
+  {
+    "id": "test-048",
+    "query": "不要查支付或缓存的旧记录",
+    "expected": null,
+    "kind": "restricted"
+  },
+  {
+    "id": "test-049",
+    "query": "do not retrieve database backup history",
+    "expected": null,
+    "kind": "restricted"
+  },
+  {
+    "id": "test-050",
+    "query": "Python programming python's pet snake enclosure cost",
+    "expected": null,
+    "kind": "unrelated"
+  },
+  {
+    "id": "test-051",
+    "query": "机场登机口换了，行李要去哪里领取？",
+    "expected": null,
+    "kind": "unrelated"
+  }
+]

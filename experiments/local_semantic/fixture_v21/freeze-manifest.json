@@ -1,0 +1,18 @@
+{
+  "kind": "developer-authored fresh V2.1 holdout; prior V2 test is known regression",
+  "test_frozen_before_v21_scoring": true,
+  "files": {
+    "corpus": {
+      "sha256": "563f9b98c176bef05b305fd47a7c2c4bb2f8882d517725a29a2e9ec5a786e3eb",
+      "count": 24
+    },
+    "dev": {
+      "sha256": "9fa839f2c47e68acde2009c76dd89e4fc600b3405a0035314fef03113a46fdf9",
+      "count": 66
+    },
+    "test": {
+      "sha256": "be2567e5aa220405baed6a6b7964a34d56c298f087d00e12965dcaf547e6a71c",
+      "count": 40
+    }
+  }
+}

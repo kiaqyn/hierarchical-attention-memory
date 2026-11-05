@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HFA 空间认知工作台 · 带先后顺序与定向箭头的时序召回仿真</title>
+  <title>HFA 理解实验室 · 原理、召回、写入与改进</title>
   
   <!-- 离线核心：先载入 Three.js，再载入 3d-force-graph -->
   <script src="libs/three.min.js"></script>
@@ -89,6 +89,7 @@
     }
     .brand-id {
       color: #fff;
+      white-space: nowrap;
       font-weight: 700;
       letter-spacing: 0.5px;
     }
@@ -530,16 +531,143 @@
       color: #fff;
       border-color: var(--line-bright);
     }
+
+    #studioApp { height: 100dvh; width: 100%; position: relative; }
+    /* Learning surface: explanations and synthetic experiments, independent of WebGL. */
+    [hidden] { display: none !important; }
+    body { user-select: text; }
+    button, input, select, textarea { font: inherit; }
+    button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible,
+    textarea:focus-visible, summary:focus-visible { outline: 2px solid var(--accent-blue); outline-offset: 3px; }
+    .learn-app { height: 100dvh; display: flex; flex-direction: column; background: #0c1017; font-size: 14px; }
+    .learn-head { min-height: 68px; padding: 16px 28px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--line-bright); }
+    .learn-logo { font: 700 15px var(--font-mono); letter-spacing: .5px; }
+    .learn-tag { color: #a7b3c5; font-size: 12px; margin-left: 12px; }
+    .learn-shell { display: grid; grid-template-columns: 208px minmax(0, 1fr); min-height: 0; flex: 1; }
+    .learn-nav { padding: 26px 16px; border-right: 1px solid var(--line); overflow-y: auto; }
+    .learn-nav-label, .learn-eyebrow { color: #9aabc3; font: 11px var(--font-mono); letter-spacing: 1.4px; }
+    .learn-nav-label { margin: 0 12px 16px; }
+    .learn-nav button { display: flex; gap: 12px; align-items: center; width: 100%; padding: 12px; margin-bottom: 6px; border: 0; border-radius: 5px; background: transparent; color: #b5c0d0; text-align: left; cursor: pointer; white-space: nowrap; }
+    .learn-nav button[aria-current="page"] { background: #182638; color: #dcecff; }
+    .learn-nav button:hover { background: #171f2b; color: #fff; }
+    .learn-nav small { font: 11px var(--font-mono); opacity: .7; }
+    .learn-nav-note { padding: 22px 12px; color: #9aabc3; font-size: 12px; line-height: 1.8; }
+    .learn-main { overflow-y: auto; padding: 30px clamp(20px, 4vw, 64px) 64px; scroll-behavior: smooth; }
+    .learn-content { max-width: 1150px; margin: 0 auto; }
+    .learn-notice { border-left: 2px solid #7695bc; padding: 8px 12px; background: #121a26; color: #b8c8dc; font-size: 12px; line-height: 1.7; margin-bottom: 28px; }
+    .learn-panel h1 { font-size: clamp(26px, 3vw, 38px); font-weight: 650; line-height: 1.35; letter-spacing: -.6px; margin: 10px 0 14px; max-width: 820px; }
+    .learn-panel h2 { font-size: 19px; font-weight: 600; margin: 28px 0 12px; }
+    .learn-panel h3 { font-size: 15px; margin-bottom: 8px; }
+    .learn-lead { max-width: 850px; font-size: 15px; color: #b6c2d3; line-height: 1.9; margin-bottom: 24px; }
+    .learn-panel p { line-height: 1.85; }
+    .learn-muted { color: #a3b1c4; line-height: 1.85; }
+    .learn-small { font-size: 12px; line-height: 1.8; color: #a3b1c4; }
+    .learn-rule { border-top: 1px solid var(--line-bright); padding-top: 20px; margin-top: 26px; }
+    .learn-btn { border: 1px solid #35445a; color: #d6e1ef; background: #182231; border-radius: 5px; padding: 9px 14px; cursor: pointer; line-height: 1.4; }
+    .learn-btn:hover { background: #233147; }
+    .learn-btn.primary { border-color: #79afe9; background: #8ebcf0; color: #0a1728; font-weight: 650; }
+    .learn-btn:disabled { opacity: .45; cursor: default; }
+    .learn-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 16px; }
+    .learn-flow { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 0; margin: 24px 0 16px; border: 1px solid #2e3e54; border-radius: 6px; overflow: hidden; }
+    .learn-flow button { border: 0; border-right: 1px solid #2e3e54; background: #111925; color: #a3b1c4; padding: 16px 12px; cursor: pointer; text-align: left; line-height: 1.6; }
+    .learn-flow button:last-child { border-right: 0; }
+    .learn-flow button[aria-pressed="true"] { background: #20354f; color: #f0f6ff; }
+    .learn-flow small { display: block; font: 11px var(--font-mono); margin-bottom: 8px; }
+    .learn-explain { min-height: 150px; border-left: 2px solid var(--accent-blue); padding: 4px 0 4px 18px; }
+    .learn-explain code, .learn-panel code { font-family: var(--font-mono); color: #bdd9f8; font-size: 12px; overflow-wrap: anywhere; }
+    .learn-evidence { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); border-top: 1px solid #2e3e54; border-bottom: 1px solid #2e3e54; margin: 22px 0; }
+    .learn-evidence > div { padding: 16px 12px 16px 0; }
+    .learn-evidence strong { display: block; font-size: 13px; margin-bottom: 5px; }
+    .learn-evidence span { font-size: 12px; color: #a3b1c4; }
+    .learn-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 28px; }
+    .learn-grid > * { min-width: 0; }
+    .learn-list { padding-left: 20px; color: #b7c5d6; line-height: 1.95; }
+    .learn-form { display: grid; gap: 15px; background: #101823; border: 1px solid #29384b; padding: 20px; border-radius: 6px; }
+    .learn-form label { display: grid; gap: 7px; color: #d3ddeb; font-size: 13px; }
+    .learn-form input:not([type="checkbox"]), .learn-form select, .learn-form textarea { width: 100%; min-width: 0; color: #e5edf7; background: #0b111b; border: 1px solid #35445a; border-radius: 4px; padding: 10px; }
+    .learn-form textarea { min-height: 90px; resize: vertical; line-height: 1.7; }
+    .learn-form .learn-check { display: flex; align-items: flex-start; gap: 9px; line-height: 1.7; }
+    .learn-check input { margin-top: 4px; accent-color: #8ebcf0; }
+    .learn-table-wrap { overflow-x: auto; border: 1px solid #29384b; border-radius: 5px; margin-top: 16px; }
+    .learn-table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; }
+    .learn-table caption { padding: 12px; text-align: left; color: #bbcbe0; background: #111925; }
+    .learn-table th { font-weight: 500; color: #9eafc5; background: #111925; }
+    .learn-table th, .learn-table td { padding: 11px 12px; border-bottom: 1px solid #233044; line-height: 1.75; vertical-align: top; overflow-wrap: anywhere; }
+    .learn-table tr:last-child td { border-bottom: 0; }
+    .learn-pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 320px; overflow: auto; background: #0a111a; border: 1px solid #29384b; padding: 16px; border-radius: 5px; color: #bfcee0; font: 12px/1.9 var(--font-mono); }
+    .learn-result { padding: 13px 15px; border-left: 2px solid #8ebcf0; background: #142030; line-height: 1.8; margin-top: 16px; font-size: 13px; overflow-wrap: anywhere; }
+    .learn-result[data-tone="warning"] { border-color: #dfb568; background: #241f16; color: #e4d0aa; }
+    .learn-steps { padding-left: 20px; line-height: 2; color: #b5c4d8; font-size: 13px; }
+    .learn-log { padding-left: 20px; color: #a9bad0; font-size: 12px; line-height: 1.9; }
+    .learn-panel details { border-top: 1px solid #29384b; padding: 15px 0; }
+    .learn-panel summary { cursor: pointer; font-weight: 500; line-height: 1.7; }
+    .learn-panel details p { margin-top: 10px; color: #aebed2; font-size: 13px; }
+    .learn-path { color: #b9d6f5; font: 12px/1.7 var(--font-mono); overflow-wrap: anywhere; }
+    .learn-map-row { padding: 18px 0; border-bottom: 1px solid #29384b; display: grid; grid-template-columns: 210px minmax(0,1fr); gap: 20px; }
+    .learn-map-row p { color: #afbed0; font-size: 13px; }
+    .learn-status { display: inline-block; margin-bottom: 7px; font-size: 11px; color: #b8cfe9; border: 1px solid #3a4b61; padding: 2px 7px; border-radius: 3px; }
+    #graphFallback { position: absolute; top: 125px; left: 20px; right: 20px; z-index: 30; padding: 20px; background: #151d29; border: 1px solid #526985; line-height: 1.8; }
+    @media (max-width: 1000px) {
+      .rail-telemetry, .brand-meta { display: none; }
+      .rail-menu { overflow-x: auto; min-width: 0; }
+      .rail-brand { flex-shrink: 0; }
+      .sequence-rail { height: 78px; display: grid; align-content: center; gap: 8px; }
+      .pipeline-chain { overflow-x: auto; white-space: nowrap; }
+      .stepper-controls { justify-content: flex-start; }
+      #graph3d { top: 120px; height: calc(100dvh - 218px); }
+      .studio-inspector { top: 120px; height: calc(100dvh - 218px); width: min(440px, 100vw); }
+      .studio-console-bar { height: 98px; flex-wrap: wrap; gap: 7px; padding: 9px 12px; }
+      .preset-pills { order: 3; width: 100%; }
+      .console-input-wrap { min-width: 100px; }
+      .console-prompt-label, .reticle-mark, .telemetry-legend { display: none; }
+      .step-hud-banner { max-width: calc(100vw - 32px); top: 135px; }
+      .learn-shell { grid-template-columns: 170px minmax(0,1fr); }
+      .learn-nav { padding: 20px 8px; }
+      .learn-tag { display: block; margin: 4px 0 0; }
+      .learn-grid { grid-template-columns: 1fr; gap: 20px; }
+    }
+    @media (max-width: 680px) {
+      .learn-head { padding: 12px 16px; gap: 10px; }
+      .learn-head .learn-btn { font-size: 12px; padding: 8px 10px; flex-shrink: 0; }
+      .learn-shell { display: flex; flex-direction: column; }
+      .learn-nav { border-right: 0; border-bottom: 1px solid #29384b; display: flex; gap: 4px; overflow-x: auto; flex-shrink: 0; padding: 8px; }
+      .learn-nav-label, .learn-nav-note { display: none; }
+      .learn-nav button { width: auto; margin: 0; padding: 10px; font-size: 12px; }
+      .learn-nav small { display: none; }
+      .learn-main { flex: 1; padding: 20px 16px 40px; min-height: 0; }
+      .learn-flow { grid-template-columns: 1fr; }
+      .learn-flow button { padding: 10px 12px; border-right: 0; border-bottom: 1px solid #2e3e54; display: flex; align-items: center; gap: 12px; }
+      .learn-flow small { margin: 0; }
+      .learn-flow button:last-child { border-bottom: 0; }
+      .learn-evidence { grid-template-columns: 1fr; }
+      .learn-evidence > div { padding: 10px 0; }
+      .learn-map-row { grid-template-columns: 1fr; gap: 8px; }
+      .learn-form { padding: 16px; }
+      .learn-table th, .learn-table td { padding: 9px 8px; }
+      .learn-logo { font-size: 13px; }
+      .rail-brand .brand-id { font-size: 10px; }
+      .studio-rail { padding: 0 8px; gap: 6px; }
+      .rail-tab { padding: 0 9px; white-space: nowrap; }
+      .studio-rail .learn-btn { padding: 6px; font-size: 11px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .learn-main { scroll-behavior: auto; }
+      *, *::before, *::after { transition-duration: .01ms !important; }
+    }
+
   </style>
 </head>
 <body>
+  <div id="studioApp" hidden>
+  <div id="graphFallback" hidden>当前环境无法显示 3D 图。你仍可回到「原理讲解」，使用完整的文字流程和教学实验。</div>
 
   <!-- ==================== 1. 顶部贯通式专业导轨 ==================== -->
   <header class="studio-rail">
     <div class="rail-brand">
+      <button class="learn-btn" id="returnLearning">← 原理讲解</button>
       <span class="status-beacon"></span>
-      <span class="brand-id">HFA OBSERVER</span>
-      <span class="brand-meta">// STEP-BY-STEP PHOTON RUNTIME</span>
+      <span class="brand-id">HFA 教学仿真</span>
+      <span class="brand-meta">// 不连接 CLI / 模型</span>
     </div>
 
     <!-- 平整功能标签页 -->
@@ -573,13 +701,13 @@
     <div class="pipeline-chain">
       <div class="pipe-step" id="pStep1"><span>① 接收口语</span></div>
       <span class="pipe-arrow" id="pArr1">──▶</span>
-      <div class="pipe-step" id="pStep2"><span>② 大脑分词拆解</span></div>
+      <div class="pipe-step" id="pStep2"><span>② 教学拆词展示</span></div>
       <span class="pipe-arrow" id="pArr2">──▶</span>
-      <div class="pipe-step" id="pStep3"><span>③ 图书员全网打分</span></div>
+      <div class="pipe-step" id="pStep3"><span>③ 预设案例匹配</span></div>
       <span class="pipe-arrow" id="pArr3">──▶</span>
       <div class="pipe-step" id="pStep4"><span>④ 锁定目标日记</span></div>
       <span class="pipe-arrow" id="pArr4">──▶</span>
-      <div class="pipe-step" id="pStep5"><span>⑤ 注入大猫上下文</span></div>
+      <div class="pipe-step" id="pStep5"><span>⑤ 模拟载荷状态</span></div>
     </div>
 
     <!-- 步进控制：支持自动播放与单步调试 -->
@@ -605,7 +733,7 @@
 
   <!-- 左下角平铺式拓扑参数区 -->
   <div class="telemetry-legend">
-    <div class="legend-title">Sequence Flow & Arrow Legend</div>
+    <div class="legend-title">讲解拓扑 · 非 L0/L1 文件层级</div>
     <div class="legend-item">
       <span style="color:#ffffff;">──▶ 3D 定向箭头：信号流淌严格先后顺序</span>
     </div>
@@ -633,7 +761,7 @@
     <div class="preset-pills">
       <button class="preset-btn" onclick="setQueryAndPlay('中文全变成问号怎么解决？')">[ 01: 中文变问号乱码 ]</button>
       <button class="preset-btn" onclick="setQueryAndPlay('我们今天定下的白话教学法新规矩')">[ 02: 白话教学法规矩 ]</button>
-      <button class="preset-btn" onclick="setQueryAndPlay('刚才做的70项防灾质检全绿了吗')">[ 03: 70项防灾质检 ]</button>
+      <button class="preset-btn" onclick="setQueryAndPlay('刚才做的回归质检全绿了吗')">[ 03: 回归质检 ]</button>
       <button class="preset-btn" onclick="setQueryAndPlay('动态对话标题系统 M4 架构')">[ 04: 动态标题 M4 ]</button>
       <button class="preset-btn" onclick="setQueryAndPlay('初识大猫与签约成为搭档')">[ 05: 初识签约伙伴 ]</button>
     </div>
@@ -662,7 +790,7 @@
     <div class="inspector-scroll">
       <!-- 步骤足迹跟踪 -->
       <section class="arch-section">
-        <div class="arch-label">// SEQUENCE TRACE // 真实先后执行足迹</div>
+        <div class="arch-label">// SEQUENCE TRACE // 演示步骤 · 不代表真实运行记录</div>
         <div class="step-trail-box">
           <div class="step-trail-item" id="traceStep1">
             <span>①</span>
@@ -670,11 +798,11 @@
           </div>
           <div class="step-trail-item" id="traceStep2">
             <span>②</span>
-            <div><b>大脑中枢分词</b>：拆解关键词与 N-Gram 切片</div>
+            <div><b>教学拆词展示</b>：拆解关键词与 N-Gram 切片</div>
           </div>
           <div class="step-trail-item" id="traceStep3">
             <span>③</span>
-            <div><b>沿箭头下发检索指令</b>：图书管理员毫秒级计算得分</div>
+            <div><b>演示匹配过程</b>：按预设条件选取讲解节点</div>
           </div>
           <div class="step-trail-item" id="traceStep4">
             <span>④</span>
@@ -682,7 +810,7 @@
           </div>
           <div class="step-trail-item" id="traceStep5">
             <span>⑤</span>
-            <div><b>反向回传上下文</b>：记忆注入大猫视野准备回答</div>
+            <div><b>模拟载荷状态</b>：生成演示片段，不发送给模型</div>
           </div>
         </div>
       </section>
@@ -708,9 +836,9 @@
 
       <!-- 3. 现场实物验证或测试沙盘 -->
       <section class="arch-section">
-        <div class="arch-label">// 03 VERIFIED DATA // 现场实证</div>
+        <div class="arch-label">// 03 DEMO STATE // 演示状态</div>
         <div style="font-family:var(--font-mono); font-size:11px; color:var(--accent-jade);" id="insEvidence">
-          [OK] READY TO TRACE
+          [DEMO] 预设案例匹配；无实测分数；未连接宿主
         </div>
       </section>
     </div>
@@ -720,6 +848,169 @@
       <button class="action-flat-btn" onclick="zoomInNode()">[ LOCK FOCUS / 贴身聚焦 ]</button>
     </div>
   </aside>
+  </div>
+
+  <main id="learnApp" class="learn-app">
+    <header class="learn-head">
+      <div><span class="learn-logo">HFA / 理解实验室</span><span class="learn-tag">先看懂，再决定怎么改</span></div>
+      <button class="learn-btn" id="showStudio">进入 3D 演示 →</button>
+    </header>
+    <div class="learn-shell">
+      <nav class="learn-nav" aria-label="讲解章节">
+        <p class="learn-nav-label">LEARN THE SYSTEM</p>
+        <button data-panel="overview" aria-current="page"><small>01</small>先看全貌</button>
+        <button data-panel="recall"><small>02</small>动手看召回</button>
+        <button data-panel="write"><small>03</small>写入与失败</button>
+        <button data-panel="files"><small>04</small>文件放在哪</button>
+        <button data-panel="improve"><small>05</small>下一步怎么改</button>
+        <button data-panel="terms"><small>06</small>术语翻译</button>
+        <p class="learn-nav-note">全部使用合成示例。<br>本页不读写真实记忆，不调用模型。刷新即清空实验状态。</p>
+      </nav>
+      <div class="learn-main" id="learnMain">
+        <div class="learn-content">
+          <div class="learn-notice">教学演示 · 不是实时监控。本页的匹配、片段数量和事务步骤都是简化示意，不执行 Python、SQLite BM25 或真实 token 计数。</div>
+          <section class="learn-panel" data-learn-panel="overview" aria-labelledby="overviewTitle">
+            <p class="learn-eyebrow">THE BIG PICTURE</p>
+            <h1 id="overviewTitle">记忆系统怎样帮 AI<br>找到这一次该参考的过去？</h1>
+            <p class="learn-lead">把 HFA 想成一本有目录、版本和借阅限制的项目笔记。它把相关内容放进模型当前能看到的上下文。模型是否正确使用，还要另外验证。</p>
+            <div class="learn-flow" aria-label="点击查看五步流程">
+              <button data-flow="0" aria-pressed="true"><small>01 / INPUT</small><span>你提出问题</span></button>
+              <button data-flow="1" aria-pressed="false"><small>02 / ENTRY</small><span>宿主递交查询</span></button>
+              <button data-flow="2" aria-pressed="false"><small>03 / RETRIEVE</small><span>找相关记忆</span></button>
+              <button data-flow="3" aria-pressed="false"><small>04 / COMPOSE</small><span>筛选并限额</span></button>
+              <button data-flow="4" aria-pressed="false"><small>05 / DELIVERY</small><span>交给模型使用</span></button>
+            </div>
+            <div class="learn-explain" id="flowExplanation" aria-live="polite"></div>
+            <div class="learn-actions"><button class="learn-btn" id="flowNext">下一步 →</button><button class="learn-btn primary" data-go="recall">用一个例子试试</button></div>
+            <div class="learn-evidence">
+              <div><strong>正文已准备</strong><span>处理器确实生成了要注入的文字</span></div>
+              <div><strong>宿主已接收</strong><span>需要宿主事件或接收记录证明</span></div>
+              <div><strong>模型已使用</strong><span>需要受控任务的实际回答证明</span></div>
+            </div>
+            <p class="learn-small">三种证据不能互相代替。本页只能展示示意文字，不能证明后两步成功。</p>
+            <div class="learn-grid learn-rule">
+              <div><h3>当前 HFA 负责什么</h3><ul class="learn-list"><li>按词项查找过去的项目决定。</li><li>保护主线，延后非主线与历史材料。</li><li>保存原始记录，维护索引与恢复信息。</li><li>控制记忆正文预算，明确替代关系。</li></ul></div>
+              <div><h3>这些事情不能自动保证</h3><ul class="learn-list"><li>找得到所有同义改写或隐含含义。</li><li>知道一条经验在新环境是否仍正确。</li><li>证明来源内容真实，或替你验证代码。</li><li>让模型绝对遵守，或彻底抹去备份。</li></ul></div>
+            </div>
+          </section>
+
+          <section class="learn-panel" data-learn-panel="recall" hidden aria-labelledby="recallTitle">
+            <p class="learn-eyebrow">EXPERIMENT 01 / RETRIEVAL</p>
+            <h1 id="recallTitle">同一句问题，为什么有时找不到？</h1>
+            <p class="learn-lead">先选择案例，再看每条候选为什么被纳入、排除或延后。这里用简单词项匹配讲解过滤顺序，排序不代表真实 HFA 检索结果。</p>
+            <div class="learn-form">
+              <label>选择合成案例<select id="recallPreset"><option value="normal">正常召回：终端乱码</option><option value="update">旧决定替代：缓存 TTL</option><option value="insufficient">命中了，但不够回答：为什么调整 TTL？</option><option value="deferred">非主线：界面布局</option><option value="paraphrase">未命中 → 模型提词再查（手动演示）</option><option value="budget">容量取舍：多个相关主题</option></select></label>
+              <label>当前问题<input id="recallQuery" value="终端 编码 乱码" maxlength="500"></label>
+              <div class="learn-grid">
+                <label>最多加入几段（教学简化）<select id="recallLimit"><option value="1">1 段</option><option value="2" selected>2 段</option><option value="3">3 段</option></select><span class="learn-small">真实系统按正文 token 测量，不能用这里的段数代替。</span></label>
+                <div><label class="learn-check"><input type="checkbox" id="recallUnlock">展开非主线示例</label><label>展开目的<input id="recallReason" placeholder="例如：这次专门复查界面设计" maxlength="120"></label></div>
+              </div>
+              <button class="learn-btn primary" id="runRecall" type="button">运行教学检索</button>
+            </div>
+            <div class="learn-result" id="recallResult" role="status"></div>
+            <div class="learn-table-wrap"><table class="learn-table"><caption>合成候选与取舍原因 · 非后端检索记录</caption><thead><tr><th scope="col">示例记忆</th><th scope="col">命中词项</th><th scope="col">处理原因</th></tr></thead><tbody id="recallRows"></tbody></table></div>
+            <h2>模型将看到的文字，大致长这样</h2>
+            <pre class="learn-pre" id="recallPayload"></pre>
+            <p class="learn-small">即使没有命中片段，核心摘要仍可能单独进入正文。真实默认值：摘要预算 800、整份记忆正文预算 1600（以配置与计数方法为准）；不包含宿主包装和工具 schema。</p>
+            <div class="learn-evidence"><div><strong id="payloadState">合成正文已组成</strong><span>仅本页预览</span></div><div><strong>宿主：未连接</strong><span>没有发送记录</span></div><div><strong>模型：未调用</strong><span>没有使用证据</span></div></div>
+
+            <section class="learn-rule" aria-labelledby="adequacyTitle">
+              <p class="learn-eyebrow">AFTER RETRIEVAL / EVIDENCE SUFFICIENCY</p>
+              <h2 id="adequacyTitle">命中了，但这些资料够回答吗？</h2>
+              <p class="learn-muted">把“模型满不满意”具体化为：资料是否覆盖当前问题、是否缺少关键依据、是否存在冲突。不能为了得到想要的结论反复搜到满意为止。</p>
+              <p class="learn-small">这里由你手动扮演模型，不会调用模型。真实 HFA 的技能与工具提示已加入一次提词补查约定，自动遵守仍需宿主验收。页面使用预设文字讲解，不能代替真实模型执行。</p>
+              <div class="learn-form" style="margin-top:16px">
+                <p class="learn-small" id="adequacyAttempt" aria-live="polite">第 1 / 2 次教学检索</p>
+                <label>模型对资料的判断（本页手动选择）
+                  <select id="adequacyVerdict">
+                    <option value="pending">尚未判断</option>
+                    <option value="sufficient">资料够用，可以回答</option>
+                    <option value="missing">有命中，但缺少关键信息</option><option value="ambiguous">问题有歧义，先确认在说什么</option>
+                    <option value="conflict">资料冲突或可能过期，需要核实</option>
+                    <option value="irrelevant">命中了词，但没有回答当前问题</option>
+                  </select>
+                </label>
+                <label>具体缺口或冲突是什么？
+                  <input id="adequacyReason" maxlength="240" placeholder="例如：知道 TTL 是 300 秒，但不知道为什么调整、如何验证">
+                </label>
+                <button class="learn-btn" id="judgeAdequacy" type="button">按这个判断决定下一步</button>
+                <div class="learn-result" id="adequacyResult" role="status">先阅读上面的合成正文，再判断它能否回答当前问题。</div>
+                <label>模型提议的查询（本页手动输入，最多补查一次）
+                  <input id="adequacyQuery" maxlength="500" value="缓存 TTL 变更记录 验证依据">
+                </label>
+                <button class="learn-btn primary" id="runAdequacyRetry" type="button" disabled>带着缺口，换词重查一次</button>
+                <p class="learn-small">若问题有会改变查找方向的歧义，先用当前上下文确认，仍不清楚才问一句。未命中只是本次没找到，不证明记录不存在。先由宿主模型提出 3–5 个相关词，合成一次查询；本页的词是预设演示，不是实时生成。首轮 + 补查合计最多两次。重查沿用当前主线、展开范围和容量设置，不增加权限；仍不足则说明未知、核验来源或询问用户。重新运行首轮只重置这个页内实验，不是在改变真实回合身份。</p>
+              </div>
+            </section>
+
+            <details><summary>“只显示主线”是不是项目权限隔离？</summary><p>不是。主线限制用于减少注意力漂移；当前日常部署仍绑定共享记忆根。目录绑定、正确项目选择和用户权限是不同问题，这个实验不模拟已经实现的安全隔离。</p></details>
+          </section>
+
+          <section class="learn-panel" data-learn-panel="write" hidden aria-labelledby="writeTitle">
+            <p class="learn-eyebrow">EXPERIMENT 02 / WRITE & RECOVERY</p>
+            <h1 id="writeTitle">说过、允许保存、确实写入，是三件事。</h1>
+            <p class="learn-lead">切换保存条件和故障开关，观察回执、同事件重试和教学记录数。全部变化只在当前页面内存里，刷新即清空。</p>
+            <div class="learn-grid">
+              <div class="learn-form">
+                <label>写入方式<select id="writeMode"><option value="structured">结构化决定 / 显式保存工具</option><option value="prose">普通散文自动捕获</option></select></label>
+                <label>决定标题<input id="writeTitleInput" value="缓存超时改为 300 秒" maxlength="120"></label>
+                <label>决定内容<textarea id="writeConclusion" maxlength="500">合成工程的缓存 TTL 使用 300 秒，替代之前的 60 秒配置。</textarea></label>
+                <label>示例来源指针<input id="writeSource" value="demo:test/cache-ttl" maxlength="160"></label>
+                <label class="learn-check"><input type="checkbox" id="writeConsent" checked>用户明确允许保存这条示例</label>
+                <label class="learn-check"><input type="checkbox" id="writeVerified" checked>示例中假设结果已经核实</label>
+                <label class="learn-check"><input type="checkbox" id="writeHostAllowed">宿主提供 memoryWriteAllowed=true（散文路径需要）</label>
+                <label class="learn-check"><input type="checkbox" id="writeFail">模拟派生索引写入失败</label>
+                <div class="learn-actions"><button class="learn-btn primary" id="runWrite">提交这个事件</button><button class="learn-btn" id="retryWrite">同事件重试</button><button class="learn-btn" id="newWrite">换一个事件</button></div>
+                <p class="learn-small">事件 ID：<code id="writeEventId">DEMO-E001</code>。重试必须复用同一 ID 与相同内容；“换一个事件”不会清除已保存的教学记录。</p>
+              </div>
+              <div>
+                <div class="learn-result" id="writeResult" role="status">尚未提交。先试正常写入，再点“同事件重试”。</div>
+                <h2>事务过程示意</h2><ol class="learn-steps" id="writeStages"><li>检查保存条件与事件 ID</li><li>获取锁，准备恢复记录</li><li>准备原始决定与派生索引</li><li>完成一致写入，或故障后恢复</li><li>返回可核实结果</li></ol>
+                <p class="learn-muted">已保存的教学事件：<strong id="writeCount">0</strong></p>
+                <h2>最近的教学操作</h2><ol class="learn-log" id="writeLog"><li>还没有操作；不会读取真实会话日志。</li></ol>
+                <div class="learn-actions"><button class="learn-btn" id="resetWrite">清空本页实验</button></div>
+              </div>
+            </div>
+            <details><summary>勾上“已核实”，系统就知道事实是真的吗？</summary><p>不知道。这里是情景假设。真实代码检查输入结构、规则和来源指针，并不能认证来源或代替运行测试；保存授权也必须由可信的宿主或工作流保证，不能由模型自己声称。</p></details>
+            <details><summary>为什么写入失败了，聊天还能继续？</summary><p>记忆辅助能力出错时，不一定要阻断整个工作。但必须暴露失败，避免误以为已经保存。当前 Hook 部分写入错误只写 stderr；召回失败的部分路径会注入警告。这个实验展示的是清晰回执应有的区别，不代表真实宿主已经显示这些回执。</p></details>
+            <details><summary>进程崩溃恢复，是否等于拔电源也安全？</summary><p>不等于。恢复日志、锁和原子替换保护特定故障下的一致性；断电、文件系统持久化及外部手动修改仍有额外边界。本页不执行任何真实故障或磁盘写入。</p></details>
+          </section>
+
+          <section class="learn-panel" data-learn-panel="files" hidden aria-labelledby="filesTitle">
+            <p class="learn-eyebrow">THE FILE MAP</p><h1 id="filesTitle">哪些是原件，哪些可以重建？</h1>
+            <p class="learn-lead">3D 图的“中枢—能力—日记”是讲解角色，不等于磁盘上的 L0 / L1 层级。下面才是文件职责；这些路径是说明，不会读取你的文件。</p>
+            <div class="learn-map-row"><div><span class="learn-status">L0 / 主线与核心摘要</span><div class="learn-path">directory.md<br>summary.md</div></div><p>目录规定主线、分支和路由；核心摘要放最需要持续记住的约束。它们不是所有原始记忆的替身。历史安装可能没有根 summary.md，不能据此认定丢失数据。</p></div>
+            <div class="learn-map-row"><div><span class="learn-status">L1 / 原始记录</span><div class="learn-path">chunks/*.json</div></div><p>每条决定的结构化原件：标题、命中词、正文、来源、项目与替代关系。索引损坏可以重建；原件丢失则不能靠索引保证完整恢复。</p></div>
+            <div class="learn-map-row"><div><span class="learn-status">派生 / 可以重建</span><div class="learn-path">index/fts.sqlite<br>index/*.json<br>history/epoch_*/…</div></div><p>检索索引和历史汇总帮助快速查找、阅读。它们从真源生成。重建只能修复派生内容，不能让不正确的原始事实变正确。</p></div>
+            <div class="learn-map-row"><div><span class="learn-status">恢复与运行状态</span><div class="learn-path">.hfa.lock<br>.hfa-transaction.json<br>history/session-state.json<br>history/access.jsonl</div></div><p>锁协调并发，事务日志支持恢复，会话账本负责去重和计数，访问记录帮助审查。它们并非都能随意删除；清理回合账本可能改变重试识别和提醒语义。</p></div>
+            <h2>三个常见误解</h2><div class="learn-grid"><div><h3>归档 ≠ 删除</h3><p class="learn-muted">旧记录保留以便追溯，默认不再使用。墓碑与 supersedes 不能保证原文、日志、导出或备份已经清除。</p></div><div><h3>来源指针 ≠ 事实证明</h3><p class="learn-muted">写了某个文件路径，只说明记录声称来自那里。文件内容、测试结果和适用条件还需要核验。</p></div></div>
+          </section>
+
+          <section class="learn-panel" data-learn-panel="improve" hidden aria-labelledby="improveTitle">
+            <p class="learn-eyebrow">FROM MAINTENANCE TO RESEARCH</p><h1 id="improveTitle">下一步改哪里，才有实际收益？</h1>
+            <p class="learn-lead">把工程维护、运行可靠性和记忆效果分开。更多模块、更多动画、更多版本号，都不能替代独立任务上的结果。</p>
+            <div class="learn-map-row"><div><span class="learn-status">当前源码可见的问题</span><h3>先让失败可见</h3></div><p>部分写入故障的提示不够明显；访问日志与回合账本持续增长。先明确失败回执和保留策略。验收看“失败能否被发现、重复写是否避免、长期资源是否有界”。</p></div>
+            <div class="learn-map-row"><div><span class="learn-status">工程改进 / 需量测</span><h3>模块与进程内 API</h3></div><p>按职责拆分可以改善维护；常驻 API 可能减少进程启动开销。必须保留锁、恢复和并发隔离，量测延迟后再决定。文件拆开不等于模型更聪明。</p></div>
+            <div class="learn-map-row"><div><span class="learn-status">候选研究 / 尚未实现</span><h3>经验什么时候适用？</h3></div><p>例如“Windows 上的终端修复经验”，换到 Linux、换版本后是否仍适用？可研究保存条件与验证结果、识别失效、按需复查。当前 HFA 不会自动证明这些条件，这也还不是已确认的独创方法。</p></div>
+            <h2>用什么证明改进有效？</h2><ul class="learn-list"><li>同一模型、相近上下文预算，对比无记忆、固定摘要与成熟工具。</li><li>既测召回，也测实际任务成功、过期经验误用和跨项目污染。</li><li>保留不参与调试的独立题目，同时记录时间与模型调用成本。</li><li>测试通过只覆盖测过的输入；一次真实 canary 只证明那次链路。</li></ul>
+            <details><summary>这个页面能替我测出 HFA 比竞品强吗？</summary><p>不能。所有实验使用少量固定合成记录，没有执行真实后端或竞品。它帮助理解问题和设计反例，成绩要由独立、可复现的评测产生。</p></details>
+          </section>
+
+          <section class="learn-panel" data-learn-panel="terms" hidden aria-labelledby="termsTitle">
+            <p class="learn-eyebrow">PLAIN LANGUAGE FIRST</p><h1 id="termsTitle">把术语翻译成人话。</h1>
+            <details open><summary>Hook / MCP：一个自动触发，一个主动调用</summary><p>Hook 是宿主在特定时机运行的脚本，比如回答前召回。MCP 提供模型可以调用的工具。安装了工具，不代表每轮自动调用；脚本能手工运行，也不代表宿主实际启动了它。</p></details>
+            <details><summary>词法检索 / 语义检索：看词，还是看意思？</summary><p>词法检索依赖词项与文本匹配；BM25 是其中一种排序方法。语义检索通常用向量寻找含义接近的表达，也会误召回、需要额外资源。HFA 当前没有向量后端；本页只做更简单的词项示意。</p></details>
+            <details><summary>Token 预算：给记忆正文规定篇幅</summary><p>token 是模型处理文本的单位，不等于汉字数。计数方法可能是 tokenizer，也可能是保守上界；还要区分记忆正文和整个宿主请求。这里的“最多几段”只帮助看取舍。</p></details>
+            <details><summary>Supersedes：新决定明确替代哪一条旧决定</summary><p>它需要显式关联旧记录 ID，不能仅凭“这条更新”就把所有相似内容判错。旧记录仍保留；默认召回排除它不代表物理删除。</p></details>
+            <details><summary>幂等 / request_id：同一次重试不要保存两份</summary><p>相同事件重复提交，复用同一个 ID 和相同内容；系统识别为重复。同一个 ID 换了内容应当报冲突。换 ID 会被当成新事件。</p></details>
+            <details><summary>事务 / 锁 / 恢复：防止读到写了一半的笔记</summary><p>锁协调同时访问，事务记录把关联文件更新作为一组处理；失败后按恢复规则回到一致状态。它们保护存储过程，不负责判断记忆内容是否正确。</p></details>
+            <details><summary>Fail-open：辅助能力失败时继续主任务</summary><p>这不应该等于悄悄假装成功。理想行为是允许工作继续，同时明确标记“本轮记忆未保存/不可用”，保留可重试的事件身份。</p></details>
+          </section>
+        </div>
+      </div>
+    </div>
+  </main>
+
 
   <!-- =========================================================================
        时序推进引擎与 3D 箭头动力学
@@ -729,14 +1020,14 @@
       nodes: [
         {
           id: "CENTRAL_BRAIN",
-          name: "① 大猫大脑中枢",
+          name: "① 查询解析入口",
           level: 1,
           val: 28,
           color: "#ffffff",
           hitwords: ["中枢", "调度", "路由", "大猫"],
-          metaphor: "【第 1 站】浅说的每一句话，首先传到这里！大猫负责听懂你的意图，并把句子拆成关键词，派发给图书管理员。",
+          metaphor: "【讲解入口】将问题作为查询，按词项查找。动画不代表系统理解了意图，也不会保存每句话。",
           tech: "查询解析入口 (Query Parser & Dispatcher)。提取输入关键词并分发检索指令。",
-          file: "scripts/hfa_hook.py ➔ scripts/hfa_manager.py: central_router"
+          file: "scripts/hfa_hook.py ➔ scripts/hfa_manager.py: cmd_route"
         },
         {
           id: "LIFECYCLE",
@@ -756,9 +1047,9 @@
           val: 18,
           color: "#2ea043", // Jade
           hitwords: ["搜索", "检索", "fts5", "bm25", "打分", "找书", "模糊匹配"],
-          metaphor: "【第 2 站】接到大猫的调度指令后，他在几万字旧日记里做模糊比对，计算谁的分数最高，然后向目标日记发射光流！",
-          tech: "混合检索打分引擎 (BM25 & SQLite FTS5 Engine)。计算各节点的相似度权重。",
-          file: "scripts/hfa_manager.py: _search_fts5"
+          metaphor: "【讲解检索】真实引擎用词项和全文索引寻找候选；本图仅按预设条件点亮节点，不计算真实得分。",
+          tech: "词法检索：命中词 + SQLite FTS5/BM25；图上连线强度为绘图常量，不是实测分数。",
+          file: "scripts/hfa_manager.py: _fts_search"
         },
         {
           id: "MOD_SUPERSEDES",
@@ -773,25 +1064,25 @@
         },
         {
           id: "MOD_ATOMIC",
-          name: "防断电急救箱",
+          name: "进程崩溃恢复",
           level: 2,
           val: 18,
           color: "#f85149", // Rose
           hitwords: ["断电", "急救", "事务", "崩溃", "回滚", "拔插头"],
-          metaphor: "写日记防停电的复写纸与一键还原急救箱。写东西时突然关机，一秒钟撕掉坏草稿。",
+          metaphor: "为进程异常退出保留恢复记录；断电级恢复仍需要另外验证。",
           tech: "原子事务锁与崩溃自愈 (Atomic Transaction & Rollback Recovery)。",
-          file: "scripts/hfa_manager.py: AtomicTransaction"
+          file: "scripts/hfa_manager.py: _commit / _recover"
         },
         {
           id: "MOD_TESTS",
-          name: "70次破坏质检",
+          name: "回归测试讲解",
           level: 2,
           val: 18,
           color: "#bc8cff", // Purple
           hitwords: ["测试", "质检", "全绿", "70", "回归"],
-          metaphor: "新车出厂前，70 次故意挑刺的破坏质检，确保代码安全无暗病。",
-          tech: "全覆盖自动化回归测试套件 (70/70 Regression Test Suite)。",
-          file: "tests/validate_hfa.py (70 tests)"
+          metaphor: "新车出厂前，回归测试覆盖已有反例，仍需要独立反例与真实使用验证。",
+          tech: "回归测试案例展示。实际测试数量和通过结果以最近运行报告为准。",
+          file: "tests/validate_hfa.py（数量以实际报告为准）"
         },
         {
           id: "MOD_ALIGNMENT",
@@ -805,7 +1096,7 @@
           file: "~/.gemini/config/rules/autonomous.md"
         },
 
-        // 真实历史日记节点
+        // 用于讲解的静态示例节点
         {
           id: "CHUNK_0001",
           name: "chunk_0001: 初识与签约大猫",
@@ -1027,7 +1318,10 @@
         }, 300);
 
       } catch (err) {
-        console.error("Studio Init Error:", err);
+        Graph = null;
+        document.getElementById("graphFallback").hidden = false;
+        document.querySelectorAll("#studioApp button:not(#returnLearning), #studioApp input").forEach(el => { el.disabled = true; });
+        console.warn("3D unavailable; the learning view remains usable:", err.message);
       }
     }
 
@@ -1040,6 +1334,7 @@
     }
 
     function autoPlaySequence() {
+      if (!Graph) return;
       resetSequence();
       activeQueryText = document.getElementById('busQueryInput').value.trim() || "中文全变成问号怎么解决？";
       resolveWinnerNode(activeQueryText);
@@ -1059,16 +1354,15 @@
     }
 
     function nextSingleStep() {
+      if (!Graph) return;
       if (autoPlayTimer) {
         clearInterval(autoPlayTimer);
         autoPlayTimer = null;
       }
-      activeQueryText = document.getElementById('busQueryInput').value.trim() || "中文全变成问号怎么解决？";
-      if (!activeWinnerNode) resolveWinnerNode(activeQueryText);
-
-      if (currentSequenceStep >= 5) {
-        resetSequence();
-      }
+      const nextQuery = document.getElementById('busQueryInput').value.trim() || "中文全变成问号怎么解决？";
+      if (currentSequenceStep >= 5 || nextQuery !== activeQueryText) resetSequence();
+      activeQueryText = nextQuery;
+      resolveWinnerNode(activeQueryText);
       stepForward();
     }
 
@@ -1082,14 +1376,17 @@
         activeWinnerNode = GRAPH_DATA.nodes.find(n => n.id === 'CHUNK_0032');
       } else if (q.includes("质检") || q.includes("测试") || q.includes("70")) {
         activeWinnerNode = GRAPH_DATA.nodes.find(n => n.id === 'MOD_TESTS');
+      } else if (q.includes("标题") || q.includes("m4") || q.includes("title")) {
+        activeWinnerNode = GRAPH_DATA.nodes.find(n => n.id === "CHUNK_0023");
       } else if (q.includes("伙伴") || q.includes("初识") || q.includes("签约")) {
         activeWinnerNode = GRAPH_DATA.nodes.find(n => n.id === 'CHUNK_0001');
       } else {
-        activeWinnerNode = GRAPH_DATA.nodes.find(n => n.id === 'CHUNK_0030');
+        activeWinnerNode = null; // Unknown examples must remain unmatched.
       }
     }
 
     function stepForward() {
+      if (!Graph) return;
       currentSequenceStep++;
       document.getElementById('stepReadout').innerText = `STEP_0${currentSequenceStep} / 05`;
       const banner = document.getElementById('stepBanner');
@@ -1143,19 +1440,21 @@
       // ---------- 步骤 2：大脑分词与意图拆解 ----------
       else if (currentSequenceStep === 2) {
         badge.innerText = "第 ② 步：分词拆解";
-        text.innerText = `大猫大脑正在进行意图拆解 ➔ 提取关键词：[中文, 问号, 乱码, 终端]`;
+        const words = activeQueryText.match(/[A-Za-z0-9_]+|[\u4e00-\u9fff]{2}/g) || [];
+        const shown = words.slice(0, 10).join(', ') || '无可展示词项';
+        text.innerText = `教学拆词示例：[${shown}]（不是后端分词结果）`;
 
         const brain = GRAPH_DATA.nodes.find(n => n.id === 'CENTRAL_BRAIN');
         brain.stepBadge = "第②步:分词";
 
-        document.getElementById('insMetaphor').innerText = `【第 ② 步：大脑拆词】大猫不会傻傻地死板匹配整句话，而是迅速剔除语气词，拆出核心关键词：[中文, 问号, 乱码, 终端]。`;
-        document.getElementById('insTech').innerText = `中文分词器 (Tokenizer & N-Gram)：生成 2-gram 候选特征，准备派发给检索中台。`;
+        document.getElementById('insMetaphor').innerText = `【第 ② 步：教学拆词】根据当前输入展示词项：[${shown}]。实际后端另行执行自己的分词与检索逻辑。`;
+        document.getElementById('insTech').innerText = '本页只做简化拆词展示；没有调用 Python、SQLite 或模型。';
       }
 
       // ---------- 步骤 3：沿定向箭头下发指令给图书检索员 ----------
       else if (currentSequenceStep === 3) {
         badge.innerText = "第 ③ 步：派遣图书管理员";
-        text.innerText = `大猫沿着箭头 ──▶ 派遣【图书检索员】去几万字旧书架中算分！`;
+        text.innerText = `沿箭头查看预设匹配过程；本页没有读取真实笔记或计算相关度。`;
 
         // 激活 3D 箭头：从大脑指向图书检索员！
         GRAPH_DATA.links.forEach(l => {
@@ -1177,44 +1476,40 @@
         );
 
         openInspector(searchNode);
-        document.getElementById('insMetaphor').innerText = `【第 ③ 步：定向派单】大猫沿着屏幕上的箭头 ──▶ 派遣图书管理员！图书管理员接到指令，在 3.8 毫秒内计算所有旧日记的相似度！`;
-        document.getElementById('insTech').innerText = `BM25 / IDF 评分引擎：遍历 SQLite FTS5 倒排索引，计算逆文档频率与词频乘积。`;
+        document.getElementById('insMetaphor').innerText = '【第 ③ 步：预设匹配】按页面内的示例条件选择讲解节点；没有进行耗时实测。';
+        document.getElementById('insTech').innerText = '后端使用 FTS5 与词法排序；本页用预设条件演示流程，未执行 BM25 打分。';
       }
 
       // ---------- 步骤 4：光子流沿着箭头直击终点旧日记 ----------
       else if (currentSequenceStep === 4) {
-        badge.innerText = "第 ④ 步：锁定目标旧日记";
-        text.innerText = `光子流沿着定向箭头 ──▶ 直击命中：【${activeWinnerNode.name}】！`;
-
-        // 激活 3D 箭头：从图书检索员/契约指向目标日记！
-        GRAPH_DATA.links.forEach(l => {
-          const s = typeof l.source === 'object' ? l.source.id : l.source;
-          const t = typeof l.target === 'object' ? l.target.id : l.target;
-          if ((s === 'MOD_SEARCH' || s === 'MOD_ALIGNMENT') && t === activeWinnerNode.id) {
-            l.isArrowActive = true;
-          }
-        });
-
-        activeWinnerNode.stepBadge = "第④步:命中!";
-
-        Graph.cameraPosition(
-          { x: activeWinnerNode.x || 0, y: (activeWinnerNode.y || 0) + 30, z: (activeWinnerNode.z || 0) + 140 },
-          activeWinnerNode,
-          800
-        );
-
-        openInspector(activeWinnerNode);
-        document.getElementById('insMetaphor').innerText = `【第 ④ 步：命中真理】图书管理员大喊找到了！光子流沿着箭头 ──▶ 直击命中【${activeWinnerNode.name}】！日记爆发脉冲发光！`;
-        document.getElementById('insTech').innerText = `胜出节点：${activeWinnerNode.id}。计算得出最高相关度得分：175.0 分，召回率 100%。`;
+        badge.innerText = "第 ④ 步：演示匹配结果";
+        if (!activeWinnerNode) {
+          text.innerText = "未命中：当前输入没有对应的教学示例。";
+          document.getElementById('studioInspector').classList.add('docked');
+          document.getElementById('insTitle').innerText = '未命中教学示例';
+          document.getElementById('insMetaphor').innerText = '没有相关示例，保持未命中；不会默认拿乱码修复来回答其他问题。';
+          document.getElementById('insTech').innerText = '无模拟载荷。真实查询结果需要连接后端才能判断。';
+          document.getElementById('insEvidence').innerText = '[DEMO] 未命中；无实测得分、耗时或召回率';
+        } else {
+          text.innerText = `演示条件命中：【${activeWinnerNode.name}】`;
+          GRAPH_DATA.links.forEach(l => {
+            const source = typeof l.source === 'object' ? l.source.id : l.source;
+            const target = typeof l.target === 'object' ? l.target.id : l.target;
+            if ((source === 'MOD_SEARCH' || source === 'MOD_ALIGNMENT') && target === activeWinnerNode.id) l.isArrowActive = true;
+          });
+          activeWinnerNode.stepBadge = '第④步:示例匹配';
+          Graph.cameraPosition({ x: activeWinnerNode.x || 0, y: (activeWinnerNode.y || 0) + 30, z: (activeWinnerNode.z || 0) + 140 }, activeWinnerNode, 800);
+          openInspector(activeWinnerNode);
+          document.getElementById('insMetaphor').innerText = '预设案例触发了对应节点，光流仅用于讲解召回方向。';
+          document.getElementById('insTech').innerText = `演示节点：${activeWinnerNode.id}。本页没有计算真实相关度或召回率。`;
+          document.getElementById('insEvidence').innerText = '[DEMO] 预设案例匹配；无实测分数；未连接宿主';
+        }
       }
-
-      // ---------- 步骤 5：记忆包裹回传，贴在便签上递给大猫 ----------
       else if (currentSequenceStep === 5) {
-        badge.innerText = "第 ⑤ 步：注入大猫视野";
-        text.innerText = `旧日记已被打包，贴在大猫视野便签上！大猫心中有数，准备好回答浅！`;
-
-        document.getElementById('insMetaphor').innerText = `【第 ⑤ 步：大功告成】记忆手稿被完整翻出并递回大猫手中！大猫回复你之前已经看全了背景，绝不会装傻充愣！`;
-        document.getElementById('insTech').innerText = `上下文注入 (Context Injection)：将 ${activeWinnerNode.id} 的结构化真源插入 Antigravity 运行会话，完成端到端闭环。`;
+        badge.innerText = '第 ⑤ 步：模拟载荷状态';
+        text.innerText = activeWinnerNode ? '已生成模拟片段；未发送给宿主或模型。' : '未命中，无模拟片段可发送。';
+        document.getElementById('insMetaphor').innerText = activeWinnerNode ? '这一步演示将来如何递交记忆。当前动画没有向聊天软件发送任何内容。' : '没有相关示例就不生成载荷。';
+        document.getElementById('insTech').innerText = '实际系统须区分：内容已准备、宿主已接收、模型已使用。后两项在本页均未验证。';
       }
 
       // 刷新 3D 图谱以展示箭头和标牌
@@ -1225,6 +1520,7 @@
     }
 
     function resetSequence() {
+      if (!Graph) return;
       if (autoPlayTimer) {
         clearInterval(autoPlayTimer);
         autoPlayTimer = null;
@@ -1258,11 +1554,17 @@
       Graph.linkDirectionalParticles(Graph.linkDirectionalParticles());
       Graph.linkColor(Graph.linkColor());
 
+      document.getElementById("insTitle").innerText = "教学仿真已复位";
+      document.getElementById("insMetaphor").innerText = "选择一个示例，或逐步查看召回方向。";
+      document.getElementById("insTech").innerText = "页面预设匹配，不调用 Python、SQLite 或模型。";
+      document.getElementById("insFile").innerText = "示意路径，不会读取真实文件";
+      document.getElementById("insEvidence").innerText = "[DEMO] 未连接宿主，未调用模型";
       flyToMacroOverview();
     }
 
     // 视窗布局切换
     function switchLayout(mode) {
+      if (!Graph) return;
       document.querySelectorAll('.rail-tab').forEach(b => b.classList.remove('active'));
 
       if (mode === 'galaxy') {
@@ -1278,6 +1580,7 @@
     }
 
     function flyToMacroOverview() {
+      if (!Graph) return;
       document.getElementById('tabOverview').classList.add('active');
       setTimeout(() => document.getElementById('tabOverview').classList.remove('active'), 500);
       closeInspector(false);
@@ -1290,6 +1593,7 @@
     }
 
     function focusM5GoldenNode() {
+      if (!Graph) return;
       const target = GRAPH_DATA.nodes.find(n => n.id === 'CHUNK_0031');
       if (target) {
         openInspector(target);
@@ -1298,18 +1602,19 @@
 
     function openInspector(node) {
       selectedNodeId = node.id;
+      document.getElementById("insEvidence").innerText = "[DEMO] 静态讲解节点；不是文件读取结果或当前运行证据";
       const inspector = document.getElementById('studioInspector');
       inspector.classList.add('docked');
 
       const tierEl = document.getElementById('insTier');
       if (node.level === 1) {
-        tierEl.innerText = "TIER 1 // CORE SCHEDULER";
+        tierEl.innerText = "ROLE 1 // 查询入口（非存储层级）";
         tierEl.style.color = "#ffffff";
       } else if (node.level === 2) {
-        tierEl.innerText = "TIER 2 // CAPABILITY PILLAR";
+        tierEl.innerText = "ROLE 2 // 能力讲解（非存储层级）";
         tierEl.style.color = "var(--accent-jade)";
       } else {
-        tierEl.innerText = node.deprecated ? "TIER 3 // DEPRECATED VOID" : "TIER 3 // REAL MEMORY CHUNK";
+        tierEl.innerText = node.deprecated ? "ROLE 3 // 已停用的教学示例" : "ROLE 3 // 静态记忆示例";
         tierEl.style.color = node.deprecated ? "var(--accent-rose)" : "var(--accent-purple)";
       }
 
@@ -1325,6 +1630,7 @@
     }
 
     function zoomInNode() {
+      if (!Graph) return;
       if (!selectedNodeId) return;
       const node = GRAPH_DATA.nodes.find(n => n.id === selectedNodeId);
       if (node) {
@@ -1336,8 +1642,286 @@
       }
     }
 
+
+    // This entire learning model is synthetic and in-memory; no persistence or backend calls.
+    const LEARN_FLOW = [
+      {title:'先明确这轮要做什么',plain:'你问“终端为什么乱码”。这句话是本轮查询，不会因为你说过就自动成为永久记忆。',tech:'当前用户输入 → 查询字符串。保存与召回是两条不同的流程。',file:'hfa_hook.py / _pre_invocation_context'},
+      {title:'宿主负责真正触发入口',plain:'Hook 可以在回答前自动运行；MCP 工具则需要被调用。工具绿色、脚本手工能跑，都不证明这一轮注入成功。',tech:'PreInvocation Hook / recall_memory；宿主事件契约因环境而异。',file:'hfa_hook.py / main · hfa_mcp.py / recall_memory'},
+      {title:'从词项与索引找候选',plain:'像查项目笔记：先找与问题词项相关的记录。换一种说法可能漏掉；命中也不代表经验仍然正确。',tech:'HFA 使用 hitwords、SQLite FTS5/BM25 和词法规则；不是向量检索。',file:'hfa_manager.py / cmd_route'},
+      {title:'旧决定、主线与正文预算一起取舍',plain:'被新决定明确替代的旧内容默认不再使用；非主线材料延后。把核心摘要和选中片段组成一份有限长度的正文。',tech:'supersedes / focus lock / context_token_budget；找得到 ≠ 允许纳入。',file:'hfa_manager.py / _context_payload'},
+      {title:'内容准备好以后，还差两次证明',plain:'宿主需要真的接收文字；模型还要在回答中正确使用它。返回了正文或播放了动画，都不能替代这两种证据。',tech:'payload prepared → host accepted → model used；本页未连接后两者。',file:'hfa_hook.py / injectSteps · hfa_mcp.py / delivery'}
+    ];
+    const DEMO_MEMORIES = [
+      {id:'DEMO-01',title:'终端输出编码',words:['终端','编码','乱码','utf-8'],text:'合成示例：Python 终端读写明确使用 UTF-8。适用环境仍需核验。',state:'active'},
+      {id:'DEMO-02',title:'缓存 TTL 旧决定',words:['缓存','ttl'],text:'合成示例：缓存有效期 60 秒。',state:'superseded',by:'DEMO-03'},
+      {id:'DEMO-03',title:'缓存 TTL 新决定',words:['缓存','ttl'],text:'合成示例：缓存有效期改成 300 秒，显式替代 DEMO-02。',state:'active'},
+      {id:'DEMO-04',title:'界面布局分支',words:['界面','布局','卡片'],text:'合成示例：设置页使用两列布局。',state:'deferred'},
+      {id:'DEMO-05',title:'回归测试命令',words:['测试','pytest'],text:'合成示例：修改完成后运行指定回归测试，不把历史通过当当前结果。',state:'active'},
+      {id:'DEMO-06',title:'TTL 调整的验证依据',words:['变更记录','验证依据'],text:'合成示例：TTL 调整是为了降低重复请求；记录了 300 秒配置下的回归验证。此为预设教学依据，不是真实运行结果。',state:'active'}
+    ];
+    const RECALL_PRESETS = {normal:'终端 编码 乱码',update:'缓存 TTL',insufficient:'缓存 TTL 调整理由',deferred:'界面 布局',paraphrase:'屏幕文字都成了小方块',budget:'终端 编码 缓存 TTL 测试'};
+    let learnFlowStep = 0;
+    let studioInitialized = false;
+    let demoEventNumber = 1;
+    const demoWrites = new Map();
+    const demoOperations = [];
+    const byId = id => document.getElementById(id);
+    const safeText = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+    function showLearnPanel(name) {
+      if (!document.querySelector('[data-learn-panel="'+name+'"]')) return;
+      document.querySelectorAll('[data-learn-panel]').forEach(el => { el.hidden = el.dataset.learnPanel !== name; });
+      document.querySelectorAll('.learn-nav [data-panel]').forEach(el => {
+        if (el.dataset.panel === name) el.setAttribute('aria-current','page'); else el.removeAttribute('aria-current');
+      });
+      byId('learnMain').scrollTop = 0;
+    }
+
+    function renderLearnFlow(index) {
+      learnFlowStep = index;
+      const step = LEARN_FLOW[index];
+      document.querySelectorAll('[data-flow]').forEach(el => el.setAttribute('aria-pressed',String(Number(el.dataset.flow) === index)));
+      byId('flowExplanation').innerHTML = '<h3>'+safeText(step.title)+'</h3><p>'+safeText(step.plain)+'</p><p class="learn-small">'+safeText(step.tech)+'</p><code>'+safeText(step.file)+'</code>';
+      byId('flowNext').textContent = index === 4 ? '回到第一步 ↺' : '下一步 →';
+    }
+
+    function runTeachingRecall(queryOverride, followUp = false) {
+      const query = (typeof queryOverride === 'string' ? queryOverride : byId('recallQuery').value).trim().toLowerCase();
+      const unlock = byId('recallUnlock').checked;
+      const purpose = byId('recallReason').value.trim();
+      const limit = Number(byId('recallLimit').value);
+      if (!query || (unlock && !purpose)) {
+        teachingRecallState = null;
+        invalidateTeachingAssessment();
+        byId('recallResult').textContent = !query ? '先输入问题，再运行教学检索。' : '展开非主线前，请填写这次展开的目的。';
+        byId('recallResult').dataset.tone = 'warning';
+        byId('payloadState').textContent = '尚未重新组成正文';
+        byId('recallRows').replaceChildren();
+        byId('recallPayload').textContent = '当前输入未通过检查；不展示上一次查询的旧结果。';
+        return;
+      }
+      let selected = [];
+      const rows = DEMO_MEMORIES.map(memory => {
+        const words = memory.words.filter(word => query.includes(word));
+        let reason = '无词项命中';
+        if (words.length) {
+          if (memory.state === 'superseded') reason = '被 '+memory.by+' 显式替代；只保留历史';
+          else if (memory.state === 'deferred' && !unlock) reason = '非主线：默认延后';
+          else if (selected.length >= limit) reason = '达到教学片段数量上限，暂不纳入';
+          else { selected.push(memory); reason = memory.state === 'deferred' ? '已明确目的，展开这条分支' : '纳入合成正文'; }
+        }
+        return '<tr><td><code>'+safeText(memory.id)+'</code><br>'+safeText(memory.title)+'</td><td>'+safeText(words.join('、') || '—')+'</td><td>'+safeText(reason)+'</td></tr>';
+      });
+      byId('recallRows').innerHTML = rows.join('');
+      byId('recallResult').dataset.tone = selected.length ? '' : 'warning';
+      byId('recallResult').textContent = selected.length
+        ? '本次纳入 '+selected.length+' 段合成记录。词项匹配不验证适用条件；本例也没有计算 BM25 或实际 token。'
+        : '没有纳入相关片段。可试另一个词项或检查主线限制；不要把未知补成一个看似相关的答案。核心摘要仍可单独保留。';
+      const summary = '[教学核心摘要]\n只讨论合成工程。历史材料不能覆盖当前用户要求。\n';
+      byId('recallPayload').textContent = summary + (selected.length ? '\n[教学检索片段]\n' + selected.map(m=>m.id+': '+m.text).join('\n') : '\n[教学检索片段]\n未纳入任何片段。') + '\n\n[交付状态]\n仅组成页内预览；未发送给宿主，未调用模型。';
+      byId('payloadState').textContent = '合成正文已组成';
+      resetTeachingAssessment(query, selected.length, followUp);
+    }
+
+    function currentDemoEventId() { return 'DEMO-E'+String(demoEventNumber).padStart(3,'0'); }
+    function teachingWriteNotice(message, warning, stages) {
+      byId('writeResult').textContent = message;
+      byId('writeResult').dataset.tone = warning ? 'warning' : '';
+      byId('writeCount').textContent = String(demoWrites.size);
+      if (stages) byId('writeStages').innerHTML = stages.map(s=>'<li>'+safeText(s)+'</li>').join('');
+      demoOperations.unshift(currentDemoEventId()+': '+message);
+      if (demoOperations.length > 6) demoOperations.pop();
+      byId('writeLog').innerHTML = demoOperations.map(s=>'<li>'+safeText(s)+'</li>').join('');
+    }
+
+    function runTeachingWrite() {
+      const id = currentDemoEventId();
+      const title = byId('writeTitleInput').value.trim();
+      const conclusion = byId('writeConclusion').value.trim();
+      const source = byId('writeSource').value.trim();
+      const mode = byId('writeMode').value;
+      const content = JSON.stringify({title,conclusion,source,mode});
+      if (!byId('writeConsent').checked) return teachingWriteNotice('禁存生效：没有保存授权，教学记录未增加。',true,['保存授权未通过','后续写入阶段未执行']);
+      if (!byId('writeVerified').checked) return teachingWriteNotice('结果尚未核实：本例不保存；真实系统也不能替你证明结论。',true,['示例核实条件未满足','后续写入阶段未执行']);
+      if (mode === 'prose' && !byId('writeHostAllowed').checked) return teachingWriteNotice('散文路径缺少宿主 memoryWriteAllowed=true；本例不保存。',true,['宿主写入门控未通过','结构化决定与普通散文的入口条件不同']);
+      if (!title || !conclusion || !source) return teachingWriteNotice('标题、结论与来源指针必须填写；没有执行写入。',true,['输入不完整','后续写入阶段未执行']);
+      if (demoWrites.has(id)) {
+        if (demoWrites.get(id) !== content) return teachingWriteNotice('事件冲突：同一 ID 换了内容。记录未覆盖；不同事件请换 ID。',true,['命中已有事件 ID','内容不同，拒绝覆盖']);
+        return teachingWriteNotice('识别为同事件重试：教学记录不重复增加。',false,['命中相同 ID 与相同内容','返回已有结果，不重复写入']);
+      }
+      if (byId('writeFail').checked) return teachingWriteNotice('模拟索引写入失败 → 示意回滚完成。教学记录数未改变；可以关闭故障后用同一 ID 重试。',true,['条件检查通过','示意获取锁、准备恢复记录','模拟派生索引失败','示意恢复到写入前状态','返回失败，不声称保存成功']);
+      demoWrites.set(id,content);
+      teachingWriteNotice('教学写入完成：仅保存到页面内存，不是真实记忆，也不证明宿主收到保存回执。',false,['条件检查通过','示意获取锁、准备恢复记录','示意更新原始决定与派生索引','示意完成一致写入','返回本页教学回执']);
+    }
+
+    function showExperience(mode) {
+      const studio = mode === 'studio';
+      byId('learnApp').hidden = studio;
+      byId('studioApp').hidden = !studio;
+      if (studio) {
+        if (!studioInitialized) { studioInitialized = true; initStudio(); }
+        if (Graph && typeof Graph.resumeAnimation === 'function') Graph.resumeAnimation();
+        resizeStudio();
+        byId('returnLearning').focus();
+      } else {
+        if (autoPlayTimer) { clearInterval(autoPlayTimer); autoPlayTimer = null; }
+        if (Graph && typeof Graph.pauseAnimation === 'function') Graph.pauseAnimation();
+        byId('showStudio').focus();
+      }
+    }
+
+    function resizeStudio() {
+      if (!Graph || byId('studioApp').hidden) return;
+      const box = byId('graph3d').getBoundingClientRect();
+      Graph.width(box.width).height(box.height);
+    }
+
+    function initLearning() {
+      document.querySelectorAll('.learn-nav [data-panel]').forEach(b=>b.addEventListener('click',()=>showLearnPanel(b.dataset.panel)));
+      document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>showLearnPanel(b.dataset.go)));
+      document.querySelectorAll('[data-flow]').forEach(b=>b.addEventListener('click',()=>renderLearnFlow(Number(b.dataset.flow))));
+      byId('flowNext').addEventListener('click',()=>renderLearnFlow((learnFlowStep+1)%5));
+      byId('showStudio').addEventListener('click',()=>showExperience('studio'));
+      byId('returnLearning').addEventListener('click',()=>showExperience('learn'));
+      byId('recallPreset').addEventListener('change',()=>{
+        byId('recallQuery').value = RECALL_PRESETS[byId('recallPreset').value];
+        byId('recallUnlock').checked = false;
+        byId('recallReason').value = '';
+        runTeachingRecall();
+        byId('adequacyQuery').value = byId('recallPreset').value === 'paraphrase' ? '乱码 字体缺失 字符编码' : '缓存 TTL 变更记录 验证依据';
+        if(byId('recallPreset').value === 'paraphrase') {
+          byId('adequacyVerdict').value='missing';
+          byId('adequacyReason').value='首轮没有词项命中，需要把现象换成可能出现的技术词';
+          byId('adequacyResult').textContent='本例预填三个候选词：乱码、字体缺失、字符编码。它们只是检索假设；请核对缺口，再点击决定下一步。';
+        }
+      });
+      byId('runRecall').addEventListener('click',()=>runTeachingRecall());
+      byId('judgeAdequacy').addEventListener('click',judgeTeachingAdequacy);
+      byId('runAdequacyRetry').addEventListener('click',retryTeachingForAdequacy);
+      byId('recallQuery').addEventListener('input',invalidateTeachingAssessment);
+      byId('recallUnlock').addEventListener('change',invalidateTeachingAssessment);
+      byId('recallReason').addEventListener('input',invalidateTeachingAssessment);
+      for (const id of ['adequacyVerdict','adequacyReason']) {
+        byId(id).addEventListener(id === 'adequacyVerdict' ? 'change' : 'input',()=>{
+          if(teachingRecallState)teachingRecallState.retryApproved=false;
+          byId('runAdequacyRetry').disabled=true;
+          byId('adequacyResult').textContent='评价已变化，请按新的判断重新决定下一步。';
+        });
+      }
+      byId('recallQuery').addEventListener('keydown',e=>{if(e.key==='Enter')runTeachingRecall();});
+      byId('recallLimit').addEventListener('change',()=>runTeachingRecall());
+      byId('runWrite').addEventListener('click',runTeachingWrite);
+      byId('retryWrite').addEventListener('click',runTeachingWrite);
+      byId('newWrite').addEventListener('click',()=>{
+        demoEventNumber++;
+        byId('writeEventId').textContent = currentDemoEventId();
+        byId('writeResult').textContent = '已换新事件；尚未提交。此前教学记录保留。';
+        byId('writeResult').dataset.tone = '';
+      });
+      byId('resetWrite').addEventListener('click',()=>{
+        demoWrites.clear(); demoOperations.length = 0; demoEventNumber = 1;
+        byId('writeEventId').textContent = currentDemoEventId();
+        byId('writeCount').textContent = '0';
+        byId('writeResult').textContent = '本页教学记录已清空；真实记忆未被访问。';
+        byId('writeResult').dataset.tone = '';
+        byId('writeLog').innerHTML = '<li>教学状态已清空。</li>';
+        byId('writeStages').innerHTML = '<li>等待下一个教学事件</li>';
+        byId('writeFail').checked = false;
+      });
+      document.addEventListener('keydown',e=>{
+        if(e.key==='Escape' && !byId('studioApp').hidden)closeInspector();
+      });
+      window.addEventListener('resize',resizeStudio);
+      renderLearnFlow(0);
+      runTeachingRecall();
+    }
+
+
+    let teachingRecallState = null;
+    function teachingRecallContext() {
+      return JSON.stringify({
+        question: byId('recallQuery').value.trim().toLowerCase(),
+        limit: byId('recallLimit').value,
+        unlock: byId('recallUnlock').checked,
+        purpose: byId('recallReason').value.trim()
+      });
+    }
+    function teachingAssessmentIsCurrent() {
+      return teachingRecallState && teachingRecallState.context === teachingRecallContext();
+    }
+    function resetTeachingAssessment(query, selectedCount, followUp) {
+      if (!followUp) {
+        teachingRecallState = { context: teachingRecallContext(), question: byId('recallQuery').value.trim(), attempts: 1, lastQuery: query, retryApproved: false };
+        byId('adequacyReason').value = '';
+      } else {
+        teachingRecallState.attempts = 2;
+        teachingRecallState.lastQuery = query;
+        teachingRecallState.retryApproved = false;
+      }
+      byId('adequacyVerdict').value = 'pending';
+      byId('runAdequacyRetry').disabled = true;
+      byId('adequacyAttempt').textContent = '第 '+teachingRecallState.attempts+' / 2 次教学检索 · 当前纳入 '+selectedCount+' 段 · 检索词：'+query;
+      byId('adequacyResult').dataset.tone = '';
+      byId('adequacyResult').textContent = followUp
+        ? '补查已完成。请根据新正文重新判断；本例已到检索上限，仍不足就说明未知或请用户补充。'
+        : '先阅读合成正文，再判断是否足以回答：“'+teachingRecallState.question+'”。命中数量不是充分性的证明。';
+    }
+    function invalidateTeachingAssessment() {
+      if (teachingRecallState) teachingRecallState.retryApproved = false;
+      byId('runAdequacyRetry').disabled = true;
+      byId('adequacyResult').dataset.tone = 'warning';
+      byId('adequacyResult').textContent = '问题或范围设置已变化。先运行新的首轮检索，再判断；不能沿用上一次的评价。';
+    }
+    function judgeTeachingAdequacy() {
+      byId('runAdequacyRetry').disabled = true;
+      if (teachingRecallState) teachingRecallState.retryApproved = false;
+      byId('adequacyResult').dataset.tone = '';
+      if (!teachingAssessmentIsCurrent()) return invalidateTeachingAssessment();
+      const verdict = byId('adequacyVerdict').value;
+      const reason = byId('adequacyReason').value.trim();
+      if (verdict === 'pending') {
+        byId('adequacyResult').textContent = '先选择一个资料判断。这里没有真实模型替你评价。';
+        return;
+      }
+      if (verdict === 'ambiguous') {
+        byId('adequacyResult').dataset.tone='warning';
+        byId('adequacyResult').textContent='先利用当前上下文确认现象；仍分不清时，只问一句：你指等待的小圆圈，还是画面本身在旋转？暂停补查，不消耗剩余查询机会。描述清楚时无需重复问。';
+        return;
+      }
+      if (verdict === 'sufficient') {
+        byId('adequacyResult').textContent = '选择直接回答，并引用合成来源；不再重查。这是本页手动判断，不证明资料真实或回答正确。';
+        return;
+      }
+      byId('adequacyResult').dataset.tone = 'warning';
+      if (!reason) {
+        byId('adequacyResult').textContent = '先说清缺哪条信息、哪处冲突或哪里不相关；不能仅凭“不满意”发起重查。';
+        return;
+      }
+      if (teachingRecallState.attempts >= 2) {
+        byId('adequacyResult').textContent = '已完成一次补查，停止继续检索。保留缺口：“'+reason+'”。应说明未知、核验来源或向用户询问；不自动覆盖旧决定。';
+        return;
+      }
+      teachingRecallState.retryApproved = true;
+      byId('runAdequacyRetry').disabled = false;
+      byId('adequacyResult').textContent = '可围绕这个明确缺口换词补查一次：“'+reason+'”。保持相同读取范围，不追求符合预期的答案。';
+    }
+    function retryTeachingForAdequacy() {
+      if (!teachingAssessmentIsCurrent()) return invalidateTeachingAssessment();
+      if (!teachingRecallState.retryApproved || teachingRecallState.attempts >= 2) {
+        byId('runAdequacyRetry').disabled = true;
+        byId('adequacyResult').textContent = '这次补查尚未获准，或已达到一次补查上限。';
+        return;
+      }
+      const query = byId('adequacyQuery').value.trim().toLowerCase();
+      if (!query || query === teachingRecallState.lastQuery) {
+        byId('adequacyResult').textContent = '请提供不同且针对缺口的检索词；空查询或原样重发不消耗补查机会。';
+        return;
+      }
+      runTeachingRecall(query, true);
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
-      initStudio();
+      initLearning();
     });
   </script>
 </body>

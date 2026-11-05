@@ -1,0 +1,398 @@
+[
+  {
+    "id": "v2-dev-000",
+    "query": "软件进不了首页，当时最后怎么修好的？",
+    "expected": "boot",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-001",
+    "query": "字变成一个个小框框，以前怎么解决？",
+    "expected": "font",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-002",
+    "query": "Excel 读出来的中文不对，用哪种编码？",
+    "expected": "csv",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-003",
+    "query": "商品改价后怎么防止一直显示旧价格？",
+    "expected": "ttl",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-004",
+    "query": "授权返回后又要重新登录，怎么改 Cookie？",
+    "expected": "cookie",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-005",
+    "query": "付款按钮多点几次也不能扣两笔，用了什么？",
+    "expected": "payment",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-006",
+    "query": "数据库说被锁住了，后来怎么设置？",
+    "expected": "sqlite",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-007",
+    "query": "传到一半掉网，怎样接着传大文件？",
+    "expected": "upload",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-008",
+    "query": "只有图片的 PDF 怎样搜里面的字？",
+    "expected": "pdf",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-009",
+    "query": "跨国用户看到的时间怎么统一保存？",
+    "expected": "time",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-010",
+    "query": "代码看着没改但 diff 满屏红绿，怎么处理？",
+    "expected": "git",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-011",
+    "query": "下载的安装依赖怎样确认没有损坏？",
+    "expected": "download",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-012",
+    "query": "显卡跑不起来时的兼容方案是什么？",
+    "expected": "gpu",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-013",
+    "query": "网络请求等不到响应，最多再试几次？",
+    "expected": "retry",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-014",
+    "query": "终端能 import 但编辑器不能，是哪里的设置？",
+    "expected": "venv",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-015",
+    "query": "打包前 npm 用什么命令安装已有版本？",
+    "expected": "build",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-016",
+    "query": "带汉字的地址下载找不到文件怎么办？",
+    "expected": "url",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-017",
+    "query": "对话框怎样让只用键盘的人正常操作？",
+    "expected": "keyboard",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-018",
+    "query": "火星的空气主要是什么成分？",
+    "expected": null,
+    "kind": "unrelated"
+  },
+  {
+    "id": "v2-dev-019",
+    "query": "今晚推荐吃哪道菜？",
+    "expected": null,
+    "kind": "unrelated"
+  },
+  {
+    "id": "v2-dev-020",
+    "query": "橙色夜莺每月养育预算是多少？",
+    "expected": null,
+    "kind": "unrelated"
+  },
+  {
+    "id": "v2-dev-021",
+    "query": "Renderer 固定版本花了多少钱？",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v2-dev-022",
+    "query": "扫描 PDF 的识别准确率实测是多少？",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v2-dev-023",
+    "query": "Noto 字体的品牌配色十六进制是什么？",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v2-dev-024",
+    "query": "它又坏了，之前怎么办的？",
+    "expected": null,
+    "kind": "ambiguous"
+  },
+  {
+    "id": "v2-dev-025",
+    "query": "之前那个画面一直原地打转的问题怎么修？",
+    "expected": null,
+    "kind": "ambiguous"
+  },
+  {
+    "id": "v2-dev-026",
+    "query": "支线织女风帆的通关颜色是什么？",
+    "expected": null,
+    "kind": "restricted"
+  },
+  {
+    "id": "v2-dev-027",
+    "query": "湖蓝色备选通关口令是什么？",
+    "expected": null,
+    "kind": "restricted"
+  },
+  {
+    "id": "v2-dev-028",
+    "query": "backup singer audition",
+    "expected": null,
+    "kind": "unrelated"
+  },
+  {
+    "id": "v2-dev-029",
+    "query": "我家汽车钥匙丢了怎么处理？",
+    "expected": null,
+    "kind": "unrelated"
+  },
+  {
+    "id": "v2-dev-030",
+    "query": "When the app never gets past its opening screen, what was our fix?",
+    "expected": "boot",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-031",
+    "query": "How did we restore Chinese glyphs missing from the interface?",
+    "expected": "font",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-032",
+    "query": "What encoding did we choose for spreadsheets to display Chinese correctly?",
+    "expected": "csv",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-033",
+    "query": "What is the current price-cache lifetime and invalidation policy?",
+    "expected": "ttl",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-034",
+    "query": "Which cookie attributes fixed sessions lost after the external sign-in callback?",
+    "expected": "cookie",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-035",
+    "query": "What makes repeated checkout requests safe for the same order?",
+    "expected": "payment",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-036",
+    "query": "What settings helped when simultaneous SQLite writers blocked each other?",
+    "expected": "sqlite",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-037",
+    "query": "How can a large transfer resume after the connection drops?",
+    "expected": "upload",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-038",
+    "query": "What did we do before indexing image-only document pages?",
+    "expected": "pdf",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-039",
+    "query": "How should one event time be persisted for users in different time zones?",
+    "expected": "time",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-040",
+    "query": "What repository setting prevents line-ending-only changes?",
+    "expected": "git",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-041",
+    "query": "Which digest must a downloaded dependency match before it is accepted?",
+    "expected": "download",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-042",
+    "query": "What was our fallback when the graphics runtime and driver did not agree?",
+    "expected": "gpu",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-043",
+    "query": "What bounded retry schedule did we choose for upstream timeouts?",
+    "expected": "retry",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-044",
+    "query": "The editor cannot see a module that the shell imports. What did we align?",
+    "expected": "venv",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-045",
+    "query": "Which Node version and install command make the build follow the existing lockfile?",
+    "expected": "build",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-046",
+    "query": "What fixed missing-download errors caused by non-ASCII path characters?",
+    "expected": "url",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-047",
+    "query": "Where should keyboard focus go while a modal is open and after it closes?",
+    "expected": "keyboard",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-048",
+    "query": "OCR 任务每个月预算是多少元？",
+    "expected": "budget",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-049",
+    "query": "What is the monthly OCR spending budget?",
+    "expected": "budget",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-050",
+    "query": "2026年10月合成订单请求重试率实测是多少？",
+    "expected": "metric",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-051",
+    "query": "What retry percentage did the October synthetic order run measure?",
+    "expected": "metric",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-052",
+    "query": "访问审计日志保存几天？",
+    "expected": "logs",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-053",
+    "query": "How long are access audit logs retained?",
+    "expected": "logs",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-dev-054",
+    "query": "How much did the fixed Renderer dependency cost?",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v2-dev-055",
+    "query": "What accuracy percentage did our scanned-PDF OCR actually achieve?",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v2-dev-056",
+    "query": "What is the administrator password for the build machine?",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v2-dev-057",
+    "query": "数据库忙等待方案实际减少了多少元账单？",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v2-dev-058",
+    "query": "访问日志的实际SHA256校验值是什么？",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v2-dev-059",
+    "query": "去年生产订单重复扣款率是多少？",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v2-dev-060",
+    "query": "What did we decide about it?",
+    "expected": null,
+    "kind": "ambiguous"
+  },
+  {
+    "id": "v2-dev-061",
+    "query": "Give me the archived lake-blue completion phrase",
+    "expected": null,
+    "kind": "restricted"
+  },
+  {
+    "id": "v2-dev-062",
+    "query": "What shade is used by the side quest 织女风帆?",
+    "expected": null,
+    "kind": "restricted"
+  },
+  {
+    "id": "v2-dev-063",
+    "query": "How do penguins keep their eggs warm?",
+    "expected": null,
+    "kind": "unrelated"
+  },
+  {
+    "id": "v2-dev-064",
+    "query": "What did the access log retention policy cost in dollars?",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v2-dev-065",
+    "query": "Is entropy the same thing as temperature?",
+    "expected": null,
+    "kind": "unrelated"
+  }
+]

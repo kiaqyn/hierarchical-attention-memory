@@ -66,17 +66,24 @@ class HookIntegrationTests(unittest.TestCase):
         printed = json.loads(proc.stdout)
         for event_name in ("PreInvocation", "PostInvocation", "Stop"):
             cmd = printed["hfa-auto-recall"][event_name][0]["command"]
-            self.assertIn(str(uncreated.resolve()), cmd)
+            if os.name != "nt":
+                self.assertIn(str(uncreated.resolve()), cmd)
+        # Windows launch paths may be encoded; test_hook_launch.py executes the
+        # emitted commands and verifies the actual target summary instead.
+        self.assertFalse(uncreated.exists())
 
-    def test_unmatched_query_emits_empty_json_with_zero_tokens(self):
+    def test_unmatched_query_emits_zero_hit_feedback_for_model_semantic_search(self):
         payload = json.dumps({
             "conversationId": "conv-1",
+            "turnId": "turn-1",
             "workspacePaths": [str(self.workspace)],
-            "lastUserInput": "今天晚饭吃什么",
+            "lastUserInput": "查询之前关于分布式锁的讨论",
         })
         proc = self.run_hook(payload)
         self.assertEqual(proc.returncode, 0, proc.stderr)
-        self.assertEqual(json.loads(proc.stdout), {})
+        out = json.loads(proc.stdout)
+        msg = out["injectSteps"][0]["ephemeralMessage"]
+        self.assertIn("Round-1 SQLite BM25 + token-split search returned 0 direct hits", msg)
 
     def test_matched_mainline_query_injects_ephemeral_message(self):
         added = subprocess.run(

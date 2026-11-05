@@ -1,0 +1,182 @@
+[
+  {
+    "id": "dev-000",
+    "query": "软件进不了首页，当时最后怎么修好的？",
+    "expected": "boot",
+    "kind": "positive"
+  },
+  {
+    "id": "dev-001",
+    "query": "字变成一个个小框框，以前怎么解决？",
+    "expected": "font",
+    "kind": "positive"
+  },
+  {
+    "id": "dev-002",
+    "query": "Excel 读出来的中文不对，用哪种编码？",
+    "expected": "csv",
+    "kind": "positive"
+  },
+  {
+    "id": "dev-003",
+    "query": "商品改价后怎么防止一直显示旧价格？",
+    "expected": "ttl",
+    "kind": "positive"
+  },
+  {
+    "id": "dev-004",
+    "query": "授权返回后又要重新登录，怎么改 Cookie？",
+    "expected": "cookie",
+    "kind": "positive"
+  },
+  {
+    "id": "dev-005",
+    "query": "付款按钮多点几次也不能扣两笔，用了什么？",
+    "expected": "payment",
+    "kind": "positive"
+  },
+  {
+    "id": "dev-006",
+    "query": "数据库说被锁住了，后来怎么设置？",
+    "expected": "sqlite",
+    "kind": "positive"
+  },
+  {
+    "id": "dev-007",
+    "query": "传到一半掉网，怎样接着传大文件？",
+    "expected": "upload",
+    "kind": "positive"
+  },
+  {
+    "id": "dev-008",
+    "query": "只有图片的 PDF 怎样搜里面的字？",
+    "expected": "pdf",
+    "kind": "positive"
+  },
+  {
+    "id": "dev-009",
+    "query": "跨国用户看到的时间怎么统一保存？",
+    "expected": "time",
+    "kind": "positive"
+  },
+  {
+    "id": "dev-010",
+    "query": "代码看着没改但 diff 满屏红绿，怎么处理？",
+    "expected": "git",
+    "kind": "positive"
+  },
+  {
+    "id": "dev-011",
+    "query": "下载的安装依赖怎样确认没有损坏？",
+    "expected": "download",
+    "kind": "positive"
+  },
+  {
+    "id": "dev-012",
+    "query": "显卡跑不起来时的兼容方案是什么？",
+    "expected": "gpu",
+    "kind": "positive"
+  },
+  {
+    "id": "dev-013",
+    "query": "网络请求等不到响应，最多再试几次？",
+    "expected": "retry",
+    "kind": "positive"
+  },
+  {
+    "id": "dev-014",
+    "query": "终端能 import 但编辑器不能，是哪里的设置？",
+    "expected": "venv",
+    "kind": "positive"
+  },
+  {
+    "id": "dev-015",
+    "query": "打包前 npm 用什么命令安装已有版本？",
+    "expected": "build",
+    "kind": "positive"
+  },
+  {
+    "id": "dev-016",
+    "query": "带汉字的地址下载找不到文件怎么办？",
+    "expected": "url",
+    "kind": "positive"
+  },
+  {
+    "id": "dev-017",
+    "query": "对话框怎样让只用键盘的人正常操作？",
+    "expected": "keyboard",
+    "kind": "positive"
+  },
+  {
+    "id": "dev-018",
+    "query": "火星的空气主要是什么成分？",
+    "expected": null,
+    "kind": "unrelated"
+  },
+  {
+    "id": "dev-019",
+    "query": "今晚推荐吃哪道菜？",
+    "expected": null,
+    "kind": "unrelated"
+  },
+  {
+    "id": "dev-020",
+    "query": "橙色夜莺每月养育预算是多少？",
+    "expected": null,
+    "kind": "unrelated"
+  },
+  {
+    "id": "dev-021",
+    "query": "Renderer 固定版本花了多少钱？",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "dev-022",
+    "query": "扫描 PDF 的识别准确率实测是多少？",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "dev-023",
+    "query": "Noto 字体的品牌配色十六进制是什么？",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "dev-024",
+    "query": "它又坏了，之前怎么办的？",
+    "expected": null,
+    "kind": "ambiguous"
+  },
+  {
+    "id": "dev-025",
+    "query": "之前那个画面一直原地打转的问题怎么修？",
+    "expected": null,
+    "kind": "ambiguous"
+  },
+  {
+    "id": "dev-026",
+    "query": "支线织女风帆的通关颜色是什么？",
+    "expected": null,
+    "kind": "restricted"
+  },
+  {
+    "id": "dev-027",
+    "query": "湖蓝色备选通关口令是什么？",
+    "expected": null,
+    "kind": "restricted"
+  },
+  {
+    "id": "dev-028",
+    "query": "backup singer audition",
+    "expected": null,
+    "kind": "unrelated"
+  },
+  {
+    "id": "dev-029",
+    "query": "我家汽车钥匙丢了怎么处理？",
+    "expected": null,
+    "kind": "unrelated"
+  }
+]

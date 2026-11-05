@@ -1,0 +1,282 @@
+[
+  {
+    "id": "bind-pos-00",
+    "query": "Vega 月度预算是多少元？",
+    "body": "Vega 月度预算为 210 元。",
+    "expected_allowed": true,
+    "expected_value": "210 元"
+  },
+  {
+    "id": "bind-pos-01",
+    "query": "What is the Nova purchase price in USD?",
+    "body": "Nova purchase price is $42.",
+    "expected_allowed": true,
+    "expected_value": "$42"
+  },
+  {
+    "id": "bind-pos-02",
+    "query": "“青禾”的预算多少元？",
+    "body": "“青禾”预算 700 元；“星桥”预算 900 元。",
+    "expected_allowed": true,
+    "expected_value": "700 元"
+  },
+  {
+    "id": "bind-pos-03",
+    "query": "What percentage is the Atlas success rate?",
+    "body": "Atlas success rate: 97.4%.",
+    "expected_allowed": true,
+    "expected_value": "97.4%"
+  },
+  {
+    "id": "bind-pos-04",
+    "query": "Lyra 的实测重试率是多少？",
+    "body": "Lyra 实测重试率为 2.3%。",
+    "expected_allowed": true,
+    "expected_value": "2.3%"
+  },
+  {
+    "id": "bind-pos-05",
+    "query": "What was the measured Vega failure rate in 2025?",
+    "body": "In 2025 Vega measured failure rate: 1.6%.",
+    "expected_allowed": true,
+    "expected_value": "1.6%"
+  },
+  {
+    "id": "bind-pos-06",
+    "query": "2026年 Nova 成功率是多少？",
+    "body": "2025年 Nova 成功率 91%；2026年 Nova 成功率 96%。",
+    "expected_allowed": true,
+    "expected_value": "96%"
+  },
+  {
+    "id": "bind-pos-07",
+    "query": "Atlas 在3月实测重试率是多少？",
+    "body": "Atlas 在3月实测重试率 4.1%；Atlas 在4月实测重试率 3.2%。",
+    "expected_allowed": true,
+    "expected_value": "4.1%"
+  },
+  {
+    "id": "bind-pos-08",
+    "query": "How long is the Quartz audit retention period?",
+    "body": "Quartz audit retention period is 21 days.",
+    "expected_allowed": true,
+    "expected_value": "21 days"
+  },
+  {
+    "id": "bind-pos-09",
+    "query": "Polaris 超时设置是多久？",
+    "body": "Polaris 超时为 8 秒。",
+    "expected_allowed": true,
+    "expected_value": "8 秒"
+  },
+  {
+    "id": "bind-pos-10",
+    "query": "2024年“星桥”的预算多少元？",
+    "body": "2024年“星桥”预算 540 元。2025年“星桥”预算 610 元。",
+    "expected_allowed": true,
+    "expected_value": "540 元"
+  },
+  {
+    "id": "bind-pos-11",
+    "query": "What is the Lyra refund rate in October?",
+    "body": "Lyra refund rate in October: 0.6%.",
+    "expected_allowed": true,
+    "expected_value": "0.6%"
+  },
+  {
+    "id": "bind-pos-12",
+    "query": "Atlas 的预算多少元？",
+    "body": "Atlas 预算 430 元，Nova 预算 260 元。",
+    "expected_allowed": true,
+    "expected_value": "430 元"
+  },
+  {
+    "id": "bind-pos-13",
+    "query": "How much is the Vega monthly budget?",
+    "body": "Vega monthly budget is 75 dollars; Nova monthly budget is 90 dollars.",
+    "expected_allowed": true,
+    "expected_value": "75 dollars"
+  },
+  {
+    "id": "bind-pos-14",
+    "query": "What percentage was the measured Atlas success rate?",
+    "body": "Atlas planned success rate: 99%. Atlas measured success rate: 94%.",
+    "expected_allowed": true,
+    "expected_value": "94%"
+  },
+  {
+    "id": "bind-pos-15",
+    "query": "Quartz 的实际重试率是多少？",
+    "body": "Quartz 实测重试率 1.4%；Quartz 计划重试率 0.5%。",
+    "expected_allowed": true,
+    "expected_value": "1.4%"
+  },
+  {
+    "id": "bind-pos-16",
+    "query": "What is the Nova retry rate in 2024?",
+    "body": "In 2024 Nova retry rate was 3.8%, in 2025 Nova retry rate was 2.7%.",
+    "expected_allowed": true,
+    "expected_value": "3.8%"
+  },
+  {
+    "id": "bind-pos-17",
+    "query": "“青禾”成功率的百分比是多少？",
+    "body": "“青禾”成功率为百分之九十六。",
+    "expected_allowed": true,
+    "expected_value": "百分之九十六"
+  },
+  {
+    "id": "bind-pos-18",
+    "query": "Atlas 日志保留多久？",
+    "body": "Atlas 日志保留 28 天。",
+    "expected_allowed": true,
+    "expected_value": "28 天"
+  },
+  {
+    "id": "bind-pos-19",
+    "query": "What is the Polaris success rate in April 2026?",
+    "body": "Polaris success rate in April 2026: 98.2%.",
+    "expected_allowed": true,
+    "expected_value": "98.2%"
+  },
+  {
+    "id": "bind-neg-00",
+    "query": "Vega 月度预算是多少元？",
+    "body": "Nova 月度预算为 210 元。",
+    "expected_allowed": false,
+    "expected_value": null
+  },
+  {
+    "id": "bind-neg-01",
+    "query": "What is the Nova purchase price in USD?",
+    "body": "Nova budget is $42.",
+    "expected_allowed": false,
+    "expected_value": null
+  },
+  {
+    "id": "bind-neg-02",
+    "query": "“青禾”的预算多少元？",
+    "body": "“青禾”使用新字体；“星桥”预算 900 元。",
+    "expected_allowed": false,
+    "expected_value": null
+  },
+  {
+    "id": "bind-neg-03",
+    "query": "What percentage is the Atlas success rate?",
+    "body": "Atlas retry rate: 2.6%.",
+    "expected_allowed": false,
+    "expected_value": null
+  },
+  {
+    "id": "bind-neg-04",
+    "query": "Lyra 的实测重试率是多少？",
+    "body": "Lyra 实测成功率为 97.7%。",
+    "expected_allowed": false,
+    "expected_value": null
+  },
+  {
+    "id": "bind-neg-05",
+    "query": "What was the measured Vega failure rate in 2025?",
+    "body": "In 2026 Vega measured failure rate: 1.6%.",
+    "expected_allowed": false,
+    "expected_value": null
+  },
+  {
+    "id": "bind-neg-06",
+    "query": "2026年 Nova 成功率是多少？",
+    "body": "2025年 Nova 成功率 91%；2026年 Nova 重试率 4%。",
+    "expected_allowed": false,
+    "expected_value": null
+  },
+  {
+    "id": "bind-neg-07",
+    "query": "Atlas 在3月实测重试率是多少？",
+    "body": "Atlas 在3月实测成功率 95%；Atlas 在4月实测重试率 3.2%。",
+    "expected_allowed": false,
+    "expected_value": null
+  },
+  {
+    "id": "bind-neg-08",
+    "query": "How long is the Quartz audit retention period?",
+    "body": "Quartz timeout is 21 days.",
+    "expected_allowed": false,
+    "expected_value": null
+  },
+  {
+    "id": "bind-neg-09",
+    "query": "Polaris 超时设置是多久？",
+    "body": "Polaris 日志保留 8 天。",
+    "expected_allowed": false,
+    "expected_value": null
+  },
+  {
+    "id": "bind-neg-10",
+    "query": "2024年“星桥”的预算多少元？",
+    "body": "2024年“青禾”预算 540 元。2025年“星桥”预算 610 元。",
+    "expected_allowed": false,
+    "expected_value": null
+  },
+  {
+    "id": "bind-neg-11",
+    "query": "What is the Lyra refund rate in October?",
+    "body": "Lyra refund rate in November: 0.6%.",
+    "expected_allowed": false,
+    "expected_value": null
+  },
+  {
+    "id": "bind-neg-12",
+    "query": "Atlas 的预算多少元？",
+    "body": "Atlas 价格 430 元，Nova 预算 260 元。",
+    "expected_allowed": false,
+    "expected_value": null
+  },
+  {
+    "id": "bind-neg-13",
+    "query": "How much is the Vega monthly budget?",
+    "body": "Vega has a budget entry; Nova monthly budget is 90 dollars.",
+    "expected_allowed": false,
+    "expected_value": null
+  },
+  {
+    "id": "bind-neg-14",
+    "query": "What percentage was the measured Atlas success rate?",
+    "body": "Atlas planned success rate: 99%. Atlas measured retry rate: 6%.",
+    "expected_allowed": false,
+    "expected_value": null
+  },
+  {
+    "id": "bind-neg-15",
+    "query": "Quartz 的实际重试率是多少？",
+    "body": "Quartz 未记录实测重试率；Quartz 计划重试率 0.5%。",
+    "expected_allowed": false,
+    "expected_value": null
+  },
+  {
+    "id": "bind-neg-16",
+    "query": "What is the Nova retry rate in 2024?",
+    "body": "In 2024 Nova failure rate was 3.8%, in 2025 Nova retry rate was 2.7%.",
+    "expected_allowed": false,
+    "expected_value": null
+  },
+  {
+    "id": "bind-neg-17",
+    "query": "“青禾”成功率的百分比是多少？",
+    "body": "“青禾”没有记录成功率；“青禾”重试率为百分之四。",
+    "expected_allowed": false,
+    "expected_value": null
+  },
+  {
+    "id": "bind-neg-18",
+    "query": "Atlas 日志保留多久？",
+    "body": "Atlas 讨论了日志保留策略；Nova 日志保留 28 天。",
+    "expected_allowed": false,
+    "expected_value": null
+  },
+  {
+    "id": "bind-neg-19",
+    "query": "What is the Polaris success rate in April 2026?",
+    "body": "Polaris success rate in April 2025: 98.2%. Polaris retry rate in April 2026: 1.8%.",
+    "expected_allowed": false,
+    "expected_value": null
+  }
+]

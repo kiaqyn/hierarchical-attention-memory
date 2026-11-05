@@ -36,8 +36,10 @@ TEMPLATE_MEMORY_DIR = (
 _ROOT_LOCKS: dict[str, threading.RLock] = {}
 _ROOT_LOCKS_GUARD = threading.Lock()
 JOURNAL = ".hfa-transaction.json"
+SUMMARY_SECTIONS = ("身份和背景", "长期目标", "技术环境", "偏好与习惯", "持续项目和共同语境")
 DEFAULT_CONFIG = {"version": "2.2", "active_mainline": "M1", "router_token_budget": 600,
-                  "recall_token_budget": 600, "max_topics_per_epoch": 50, "max_recall_topics": 2}
+                  "recall_token_budget": 600, "summary_token_budget": 800, "context_token_budget": 1600, "status_check_interval": 20,
+                  "max_topics_per_epoch": 50, "max_recall_topics": 2}
 
 
 def resolve_default_memory_dir(explicit: Path | None = None, cwd: Path | None = None) -> Path:
@@ -56,6 +58,13 @@ def resolve_default_memory_dir(explicit: Path | None = None, cwd: Path | None = 
 
 class MemoryError(ValueError):
     """Invalid input, inconsistent state, or failed recovery."""
+
+
+class RecallLimitError(MemoryError):
+    def __init__(self, limit, used):
+        self.limit, self.used = limit, used
+        super().__init__(f"Recall limit reached for this real turn ({used}/{limit}). "
+                         "Reuse existing evidence; do not retry automatically or invent new turn IDs.")
 
 def _json(value):
     return json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
@@ -77,6 +86,19 @@ def _safe_path(root, relative):
         raise MemoryError(f"Memory path escapes root: {relative!r}")
     return target
 
+def _replace_atomic(source, target):
+    """Bounded retry for Windows access/share conflicts; never change permissions."""
+    delays = (.025, .05, .1)
+    for attempt in range(len(delays) + 1):
+        try:
+            os.replace(source, target)
+            return
+        except OSError as exc:
+            if getattr(exc, "winerror", None) not in (5, 32) or attempt == len(delays):
+                raise
+            time.sleep(delays[attempt])
+
+
 def _atomic_write(path, content):
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, name = tempfile.mkstemp(prefix=".hfa-stage-", dir=str(path.parent))
@@ -86,7 +108,7 @@ def _atomic_write(path, content):
             stream.write(content)
             stream.flush()
             os.fsync(stream.fileno())
-        os.replace(temp, path)
+        _replace_atomic(temp, path)
     finally:
         temp.unlink(missing_ok=True)
 
@@ -300,8 +322,16 @@ decide decided decision remember""".split())
 _ENGLISH_TERM = re.compile(r"[a-z][a-z0-9_.-]+")
 
 @functools.lru_cache(maxsize=4096)
-def _search_terms_cached(text, custom_aliases):
-    text = _normalize_for_match(text)
+def _search_terms_cached(text, custom_aliases, query=False):
+    if query:
+        # Query word lists are boundaries, not phrases to glue together. Keep the
+        # legacy document tokenizer so existing indexes require no migration.
+        text = unicodedata.normalize("NFKC", text).lower()
+        # Preserve compatibility with character-spaced Chinese input (数 据 库).
+        text = re.sub(r"(?<![\u4e00-\u9fff])[\u4e00-\u9fff](?:\s+[\u4e00-\u9fff])+(?![\u4e00-\u9fff])",
+                      lambda match: "".join(match.group().split()), text)
+    else:
+        text = _normalize_for_match(text)
     terms = set(re.findall(r"[a-z0-9][a-z0-9_.-]*", text))
     for run in re.findall(r"[\u4e00-\u9fff]+", text):
         terms.update(run[i:i+2] for i in range(len(run)-1))
@@ -311,9 +341,9 @@ def _search_terms_cached(text, custom_aliases):
             terms.add("alias:" + _normalize_for_match(group[0]))
     return frozenset(terms)
 
-def _search_terms(text, config):
+def _search_terms(text, config, *, query=False):
     custom = tuple(tuple(g) for g in config.get("retrieval_aliases", []))
-    return set(_search_terms_cached(text, custom))
+    return set(_search_terms_cached(text, custom, query))
 
 @functools.lru_cache(maxsize=1)
 def _fts5_supported() -> bool:
@@ -387,6 +417,10 @@ def _open_readonly_sqlite(path: Path) -> sqlite3.Connection:
 
 def _verify_fts_file(fts_path: Path, expected_digest: str, expected_doc_count: int) -> bool:
     try:
+        proof = json.loads(_read_utf8(_safe_path(fts_path.parent.parent, "index/fts-integrity.json")))
+        if (proof.get("version") != 1 or proof.get("source_digest") != expected_digest
+                or proof.get("sha256") != hashlib.sha256(fts_path.read_bytes()).hexdigest()):
+            return False
         if not fts_path.is_file() or fts_path.stat().st_size < 100:
             return False
         with fts_path.open("rb") as fh:
@@ -478,10 +512,32 @@ def _fts_search(terms: set[str], fts_bytes: Path | bytes | None) -> tuple[dict[s
         if tmp_path is not None:
             tmp_path.unlink(missing_ok=True)
 
-def _rank_content(query, documents, config, fts_bytes=None):
+def _separate_cjk_clues(words):
+    """Count separated bigrams without counting 数据 + 据库 as two clues."""
+    starts, ends = {}, {}
+    for word in words:
+        starts.setdefault(word[0], []).append(word)
+        ends.setdefault(word[-1], []).append(word)
+    seen, count = set(), 0
+    for word in words:
+        if word in seen:
+            continue
+        count += 1
+        pending = [word]
+        while pending:
+            current = pending.pop()
+            if current in seen:
+                continue
+            seen.add(current)
+            pending.extend(starts.pop(current[-1], []))
+            pending.extend(ends.pop(current[0], []))
+    return count
+
+
+def _rank_content_exact(query, documents, config, fts_bytes=None):
     # Filler words may still match documents, but never count as evidence on their own,
     # never dilute coverage and never count as "unexplained" query concepts.
-    terms = {t for t in _search_terms(query, config) if t not in GENERIC_TERMS}
+    terms = {t for t in _search_terms(query, config, query=True) if t not in GENERIC_TERMS}
     if not terms:
         return []
     groups = DEFAULT_ALIASES + config.get("retrieval_aliases", [])
@@ -509,8 +565,12 @@ def _rank_content(query, documents, config, fts_bytes=None):
         explained = set().union(*(alias_terms.get(a, set()) for a in aliases))
         english = {t for t in shared - aliases - explained if _ENGLISH_TERM.fullmatch(t)}
         cjk = shared - aliases - explained - english
-        # Overlapping Chinese bigrams describe roughly one concept per two bigrams.
-        concepts = len(aliases) + len(english) + math.ceil(len(cjk) / 2)
+        # Keep the legacy estimate for continuous text, but do not collapse two
+        # explicitly separated matched words (启动 加载) into one clue. Repeated
+        # words count once; overlapping bigrams inside 数据库 still form one clue.
+        separate_cjk = set(re.findall(r"[\u4e00-\u9fff]+", unicodedata.normalize("NFKC", query))) & cjk
+        cjk_concepts = max(math.ceil(len(cjk) / 2), _separate_cjk_clues(separate_cjk))
+        concepts = len(aliases) + len(english) + cjk_concepts
         strong = bool(aliases or english)  # includes 2–3 letter terms: API, CLI, Git, SQL
         if concepts == 0 or (len(shared) < 2 and not strong):
             continue  # One generic Chinese bigram is insufficient evidence.
@@ -526,6 +586,102 @@ def _rank_content(query, documents, config, fts_bytes=None):
         score = sum(weights[t] * (3 if t in doc["heading"] else 1) for t in shared) / total
         ranked.append((chunk_id, score, sorted(shared)))
     return ranked
+
+@functools.lru_cache(maxsize=8192)
+def _plural_forms(word):
+    """Small query-only spelling variants; never split symbols or change indexes."""
+    if len(word) < 4 or not word.isascii() or not word.isalpha():
+        return ()
+    bases = {word}
+    if word.endswith("ies") and len(word) > 4:
+        bases.add(word[:-3] + "y")
+    if word.endswith("es") and len(word) > 4:
+        bases.add(word[:-2])
+    if word.endswith("s") and not word.endswith(("ss", "us", "is")):
+        bases.add(word[:-1])
+    forms = set(bases)
+    for base in bases:
+        forms.update((base + "s", base + "es"))
+        if base.endswith("y") and len(base) > 3:
+            forms.add(base[:-1] + "ies")
+    return tuple(sorted(f for f in forms if len(f) >= 4))
+
+
+def _query_spelling_variant(query, vocabulary):
+    def replace(match):
+        word = match.group().lower()
+        if word in vocabulary:
+            return match.group()
+        choices = set(_plural_forms(word)) & vocabulary
+        if not choices:
+            return match.group()
+        return min(choices, key=lambda value: (abs(len(value) - len(word)), value))
+    # Do not rewrite a word inside request_id, v2.0, a path component or a symbol.
+    return re.sub(r"(?<![\w./\\])[A-Za-z]{4,}(?![\w./\\])", replace, query)
+
+
+def _short_literal_matches(query, documents, literal_documents):
+    """Exact compact text only, at most 3 matches; long/noisy questions keep guards."""
+    needle = unicodedata.normalize("NFKC", query).casefold().strip()
+    needle = needle.strip(" \"'“”‘’" + chr(96))
+    if (not needle or len(needle) > 64 or needle.isascii()
+            or (len(needle) == 1 and ord(needle) <= 0xFFFF)
+            or any(not (c.isalnum() or unicodedata.category(c).startswith("M") or c == "_") for c in needle)):
+        return []
+    unsegmented = any(
+        any(part in unicodedata.name(c, "") for part in ("CJK", "HIRAGANA", "KATAKANA", "HANGUL", "THAI", "LAO", "KHMER", "MYANMAR"))
+        for c in needle)
+    pattern = None if unsegmented else re.compile(r"(?<!\w)" + re.escape(needle) + r"(?!\w)")
+    matches = []
+    for chunk_id, text in literal_documents.items():
+        if chunk_id not in documents:
+            continue
+        normalized = unicodedata.normalize("NFKC", text).casefold()
+        if (needle in normalized if unsegmented else bool(pattern.search(normalized))):
+            matches.append((chunk_id, .2, ["literal:" + needle]))
+            if len(matches) > 3:
+                return []  # A widespread short word is not specific enough.
+    return matches
+
+
+def _rank_content(query, documents, config, fts_bytes=None, *, literal_documents=None):
+    """Bounded query normalization and conjunctive subqueries; same source/budgets."""
+    baseline = _rank_content_exact(query, documents, config, fts_bytes)
+    vocabulary = set().union(*(set(doc["terms"]) for doc in documents.values())) if documents else set()
+    alternative = _query_spelling_variant(query, vocabulary)
+    merged = {cid: (score, set(terms)) for cid, score, terms in baseline}
+    ceiling = min((score for _, score, _ in baseline), default=1.0) * .8
+    def supplement(rows, factor):
+        for cid, score, terms in rows:
+            if cid in merged:
+                continue  # Preserve established full-query ordering and evidence.
+            merged[cid] = (min(score * factor, ceiling), set(terms))
+    if alternative != query:
+        supplement(_rank_content_exact(alternative, documents, config, fts_bytes), .8)
+    if not merged and literal_documents is not None:
+        supplement(_short_literal_matches(query, documents, literal_documents), 1)
+    pieces = list(dict.fromkeys(part.strip() for part in
+        re.split(r"\band\b|以及|[和与；;]", query, maxsplit=3, flags=re.I) if part.strip()))
+    if 2 <= len(pieces) <= 4:
+        groups = []
+        for piece in pieces:
+            # A request for "cipher choice" is about cipher, not any saved choice.
+            # These framing words cannot justify a second, unrelated clause hit.
+            piece = re.sub(r"\b(?:details?|choices?)\b", " ", piece, flags=re.I)
+            if not piece.strip():
+                continue
+            piece = _query_spelling_variant(piece, vocabulary)
+            hits = _rank_content_exact(piece, documents, config, fts_bytes)
+            if not hits and literal_documents is not None:
+                hits = _short_literal_matches(piece, documents, literal_documents)
+            if hits:
+                groups.append(hits)
+        # One vaguely related clause or repeated clues must not widen a miss.
+        if len(groups) >= 2 and len({cid for group in groups for cid, _, _ in group}) >= 2:
+            for group in groups:
+                supplement(group, .5)
+    return [(cid, score, sorted(terms)) for cid, (score, terms) in merged.items()]
+
 
 def _profile_drift(query):
     """Flag likely changes to how the assistant should collaborate, not technical settings.
@@ -565,9 +721,14 @@ def _config(root):
         config["version"] = DEFAULT_CONFIG["version"]
     if not isinstance(config["active_mainline"], str) or not re.fullmatch(r"M\d+", config["active_mainline"]):
         raise MemoryError("active_mainline in config must look like M<n>")
-    for key in ("router_token_budget", "recall_token_budget", "max_topics_per_epoch", "max_recall_topics"):
+    for key in ("router_token_budget", "recall_token_budget", "summary_token_budget", "context_token_budget",
+                "status_check_interval", "max_topics_per_epoch", "max_recall_topics"):
         if type(config[key]) is not int or config[key] < 1:
             raise MemoryError(f"Invalid positive integer in config: {key}")
+    # Absent stays absent: do not change derived-index identities for existing directories.
+    limit = config.get("max_recalls_per_turn", 0)
+    if type(limit) is not int or limit < 0:
+        raise MemoryError("max_recalls_per_turn must be a nonnegative integer; 0 disables it")
     aliases = config.get("retrieval_aliases", [])
     if (not isinstance(aliases, list) or len(aliases) > 64
             or any(not isinstance(group, list) or not 2 <= len(group) <= 8
@@ -598,19 +759,28 @@ def parse_directory_nodes(directory_md, text_override=None):
         status = status_match.group(1) if status_match else "STABLE"
         entry = {"id": node_id, "path": relative, "link": match.group(0), "raw": line,
                  "hit_words": extract_hit_words(line), "exists": exists, "status": status}
-        # Only profile/ files are resident HIGH nodes. Any other unrecognized node
+        # Core summary (summary.md) is the resident HIGH node. Any other unrecognized node
         # (DEV, TOOL, branches/...) is a side branch: it needs --unlock to be read
-        # and can be tombstoned. Defaulting unknown nodes to HIGH would silently
-        # promote them to always-permitted user profile material.
-        tier = ("TOMBSTONED" if status == "TOMBSTONED" else "HIGH" if relative.startswith("profile/")
+        # and can be tombstoned.
+        tier = ("TOMBSTONED" if status == "TOMBSTONED"
+                else "HIGH" if (relative == "summary.md" or relative.startswith("profile/"))
                 else "MAX" if re.fullmatch(r"M\d+", node_id)
                 else "HISTORY" if relative.startswith("history/") else "MEDIUM")
         nodes[tier].append(entry)
-    epoch = re.search(r"history/(epoch_\d+)/summaries\.md", text)
+    epoch = re.search(r"history/(epoch_\d+)/summaries\.md", text) or re.search(r"活跃纪元:\s*`(epoch_\d+)`", text)
     measurement, config = measure_tokens(text), _config(root)
+    summary_path = root / "summary.md"
+    summary_text = _read_utf8(summary_path) if summary_path.is_file() else ""
+    summary_measurement = measure_tokens(summary_text)
+    missing_sections = ([s for s in SUMMARY_SECTIONS if s not in summary_text]
+                        if summary_path.is_file() else [])
     return {"active_epoch": epoch.group(1) if epoch else "epoch_01", "nodes": nodes,
             "missing_targets": missing, "routing_tokens": measurement["count"], "token_measurement": measurement,
-            "router_token_budget": config["router_token_budget"], "within_budget": measurement["count"] <= config["router_token_budget"]}
+            "router_token_budget": config["router_token_budget"], "within_budget": measurement["count"] <= config["router_token_budget"],
+            "summary_tokens": summary_measurement["count"], "summary_token_measurement": summary_measurement,
+            "summary_token_budget": config["summary_token_budget"],
+            "summary_within_budget": summary_measurement["count"] <= config["summary_token_budget"],
+            "missing_summary_sections": missing_sections, "summary_text": summary_text}
 
 def count_topics(summaries_md):
     return len(re.findall(r"^###\s+\[(?:Topic|Summary)\s+#\d+\]", _read_utf8(summaries_md), re.M)) if summaries_md.is_file() else 0
@@ -739,11 +909,14 @@ def _derived(root, state, chunks, overrides=None, include_fts=True):
         res = cached.copy()
         if not include_fts:
             res.pop("index/fts.sqlite", None)
+            res.pop("index/fts-integrity.json", None)
         return res
     entries, projects = {}, {}
     for tier, group in state["nodes"].items():
         for node in group:
             projects[node["id"]] = {"tier": tier, "path": node["path"], "status": node["status"]}
+            if tier == "HISTORY" or node["path"].startswith("history/"):
+                continue  # History region never participates in context dilution; only chunk hitwords are searched.
             for word in node["hit_words"]:
                 entries.setdefault(_normalize_for_match(word), []).append({"kind": "node", "id": node["id"]})
     for chunk in chunks:
@@ -758,7 +931,10 @@ def _derived(root, state, chunks, overrides=None, include_fts=True):
         "index/projects.json": _json({"version": 1, "source_digest": digest, "entries": projects}),
     }
     if include_fts:
-        result["index/fts.sqlite"] = _build_fts_cached(digest, _json(documents))
+        fts = _build_fts_cached(digest, _json(documents))
+        result["index/fts.sqlite"] = fts
+        result["index/fts-integrity.json"] = _json({"version": 1, "source_digest": digest,
+                                                  "sha256": hashlib.sha256(fts).hexdigest()})
     if len(_DERIVED_CACHE) >= 32:
         _DERIVED_CACHE.clear()
     _DERIVED_CACHE[cache_key] = result.copy()
@@ -837,12 +1013,17 @@ def cmd_status(root, as_json=False):
             problems.append(str(exc))
         if not state["within_budget"]:
             problems.append("Router exceeds measured budget or conservative upper bound")
+        if not state["summary_within_budget"]:
+            problems.append("Core memory summary (summary.md) exceeds summary_token_budget")
+        if state["missing_summary_sections"]:
+            problems.append("summary.md missing required sections: " + ", ".join(state["missing_summary_sections"]))
         state["problems"] = problems
     if as_json:
         print(_json(state), end="")
     else:
         print(f"HFA status: {'PASS' if not problems else 'FAIL'}")
         print(f"L0: {state['routing_tokens']}/{state['router_token_budget']} ({state['token_measurement']['method']})")
+        print(f"Summary: {state['summary_tokens']}/{state['summary_token_budget']} ({state['summary_token_measurement']['method']})")
         print(f"Epoch: {state['active_epoch']}; topics: {state['topic_count']}; total: {len(chunks)}")
         for problem in problems:
             print(f"[ERROR] {problem}")
@@ -994,19 +1175,276 @@ def _append_jsonl(path, event):
     finally:
         os.close(fd)
 
-def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid"):
+def _next_turn(root, conversation_id, turn_id, interval):
+    """IDs are host-supplied; missing IDs never masquerade as real chat turns."""
+    for value in (conversation_id, turn_id):
+        if value is not None and (not isinstance(value, str) or not value.strip() or len(value) > 256):
+            raise MemoryError("Conversation/turn IDs must contain 1–256 characters")
+    path = _safe_path(root, "history/session-state.json")
+    ledger = json.loads(_read_utf8(path)) if path.is_file() else {"version": 1, "recall_count": 0, "conversations": {}}
+    if (not isinstance(ledger, dict) or ledger.get("version") != 1
+            or type(ledger.get("recall_count")) is not int or ledger["recall_count"] < 0
+            or not isinstance(ledger.get("conversations"), dict)):
+        raise MemoryError("Invalid session-state ledger; preserve it for repair")
+    ledger["recall_count"] += 1
+    result = {"recall_count": ledger["recall_count"], "turn_count": None,
+              "turn_count_exact": False, "turn_search_count": None, "status_check_due": False}
+    if conversation_id and turn_id:
+        conv_key = hashlib.sha256(conversation_id.encode("utf8")).hexdigest()
+        turn_key = hashlib.sha256(turn_id.encode("utf8")).hexdigest()
+        conversation = ledger["conversations"].setdefault(conv_key, {"count": 0, "turns": {}})
+        if (not isinstance(conversation, dict) or type(conversation.get("count")) is not int
+                or conversation["count"] < 0 or not isinstance(conversation.get("turns"), dict)):
+            raise MemoryError("Invalid conversation ledger")
+        fresh = turn_key not in conversation["turns"]
+        if fresh:
+            conversation["count"] += 1
+            conversation["turns"][turn_key] = {"number": conversation["count"], "searches": 0}
+        turn = conversation["turns"][turn_key]
+        if (not isinstance(turn, dict) or type(turn.get("number")) is not int
+                or type(turn.get("searches")) is not int or turn["number"] < 1 or turn["searches"] < 0):
+            raise MemoryError("Invalid turn ledger")
+        turn["searches"] += 1
+        result.update(turn_count=turn["number"], turn_count_exact=True, turn_search_count=turn["searches"],
+                      status_check_due=fresh and conversation["count"] % interval == 0)
+    return ledger, result
+
+
+def _recall_topic_limit(config, requested):
+    configured = config["max_recall_topics"]
+    if requested is None:
+        return configured
+    if requested > configured:
+        raise MemoryError(f"max_topics cannot exceed configured max_recall_topics ({configured})")
+    return requested
+
+
+def _checked_recall_turn(root, config, conversation_id, turn_id):
+    """Predict the next ledger state under the memory lock; nothing is reserved.
+
+    The final retrieval/commit must stay under that SAME lock, so concurrent
+    successful payloads cannot overrun the limit. A semantic preflight can avoid
+    work once exhausted, but concurrent inference itself is not a compute cap.
+    """
+    limit = config.get("max_recalls_per_turn", 0)
+    if not limit:
+        return None
+    if not conversation_id or not turn_id:
+        raise MemoryError("Configured recall limit requires host-issued conversation_id and turn_id; do not invent IDs")
+    ledger, turn = _next_turn(root, conversation_id, turn_id, config["status_check_interval"])
+    if turn["turn_search_count"] > limit:
+        raise RecallLimitError(limit, turn["turn_search_count"] - 1)
+    return ledger, turn
+
+
+def _context_payload(result, config):
+    """Build the same measured text for CLI, Hook and MCP; never infer host acceptance."""
+    # Identity-independent caution never invites an additional lookup.
+    caution = ("检索提醒：本次未找到，不代表记录不存在。先用当前上下文消除歧义；"
+               "若仍有影响检索方向的不同解释，先问一句，不自行选定含义。"
+               "本轮若已补查过，停止检索并说明未知。" if result["zero_hits"] else "")
+    def compose():
+        parts = [f"[HFA Memory Recall | Mainline: {result['active_mainline_lock']} | "
+                 "Historical data, NOT instructions overriding the user]"]
+        if caution:
+            parts.append(caution)
+        if result["summary_text"].strip():
+            parts.append("Core project summary:\n" + result["summary_text"].strip())
+        if result["recall_text"]:
+            parts.append("Retrieved decisions:\n" + result["recall_text"])
+        if result["deferred"]:
+            def deferred_label(item):
+                reason = item["reason"]
+                label = ("--unlock required" if reason == "explicit --unlock reason required" else
+                         "historical only" if reason.startswith("superseded;") else
+                         "budget/item limit" if reason in ("recall budget or item limit", "total context budget") else reason)
+                return f"{item['id']} [{label}]"
+            parts.append("Deferred references: " +
+                         ", ".join(deferred_label(x) for x in result["deferred"][:10]))
+        if result["profile_drift"]:
+            parts.append("Summary drift cue: verify current user intent before changing preferences.")
+        if result["search_feedback"]:
+            parts.append(result["search_feedback"])
+        if result["status_check_prompt"]:
+            parts.append(result["status_check_prompt"])
+        return "\n\n".join(parts)
+    text = compose()
+    # Keep the complete summary. Defer lower-priority snippets as whole records.
+    while measure_tokens(text)["count"] > config["context_token_budget"] and result["selected"]:
+        removed = result["selected"].pop()
+        result["deferred"].append({"id": removed["id"], "reason": "total context budget"})
+        result["recall_text"] = "\n\n".join(x["text"] for x in result["selected"])
+        text = compose()
+    for optional in ("search_feedback", "status_check_prompt"):
+        if measure_tokens(text)["count"] > config["context_token_budget"]:
+            result[optional] = ""
+            text = compose()
+    if measure_tokens(text)["count"] > config["context_token_budget"] and caution:
+        caution = ""
+        text = compose()
+    if measure_tokens(text)["count"] > config["context_token_budget"]:
+        raise MemoryError("Core context exceeds context_token_budget; shorten summary or increase budget explicitly")
+    result.update(context_text=text, context_tokens=measure_tokens(text),
+                  context_token_budget=config["context_token_budget"],
+                  recall_tokens=measure_tokens(result["recall_text"]),
+                  routed_files=[x["path"] for x in result["selected"]],
+                  delivery={"payload_prepared": True, "host_accepted": None, "model_used": None})
+
+
+@functools.lru_cache(maxsize=1)
+def _delivery_module():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("hfa_delivery", Path(__file__).with_name("hfa_delivery.py"))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@functools.lru_cache(maxsize=1)
+def _semantic_module():
+    # File loading works both as a packaged scripts.* entrypoint and directly
+    # executed CLI. No optional inference library is imported on the core path.
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("hfa_local_semantic", Path(__file__).with_name("hfa_semantic.py"))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _semantic_snapshot_locked(root, active_mainline=None):
+    state, config = parse_directory_nodes(root / "directory.md"), _config(root)
+    mainline = active_mainline or config["active_mainline"]
+    _guard_mainline(state, mainline)
+    if state["missing_targets"] or not state["within_budget"] or not state["summary_within_budget"] or state["missing_summary_sections"]:
+        raise MemoryError("Memory health/budget validation failed before semantic inference; run status")
+    chunks = _chunks(root, state)
+    expected = _derived(root, state, chunks, include_fts=False)
+    for relative, content in expected.items():
+        if not _file_matches(root / relative, content):
+            raise MemoryError(f"Stale index: {relative}; run reindex")
+    source_digest = json.loads(str(expected["index/search.json"]))["source_digest"]
+    if not _verify_fts_file(root / "index/fts.sqlite", source_digest, len(chunks)):
+        raise MemoryError("Stale index: index/fts.sqlite; run reindex")
+    return _semantic_module().snapshot(root, chunks, mainline), config
+
+
+def _prepare_semantic(root, model_dir, active_mainline=None, query=None,
+                      min_score=.875, min_margin=0, verify=False, runtime=None):
+    if model_dir is None:
+        raise MemoryError("Explicit local --semantic-model/--model-dir is required")
+    if (type(min_score) not in (int, float) or not math.isfinite(min_score) or not -1 <= min_score <= 1
+            or type(min_margin) not in (int, float) or not math.isfinite(min_margin) or not 0 <= min_margin <= 2):
+        raise MemoryError("Invalid semantic threshold or margin")
+    module = _semantic_module()
+    # Model hashing and inference never hold the memory transaction lock.
+    identity = module.model_identity(model_dir)
+    with _hfa_lock(root):
+        state, config = _semantic_snapshot_locked(root, active_mainline)
+        relative = f"index/semantic-{state['mainline']}.json"
+        path = _safe_path(root, relative)
+        try:
+            previous = json.loads(_read_utf8(path)) if path.exists() else None
+        except (ValueError, UnicodeError):
+            previous = {"invalid_json": True}
+    if verify:
+        return {"state": state, "consistent": module.cache_consistent(previous, state, identity), "relative": relative}
+    runtime = runtime or module.EncoderSession(model_dir)
+    if runtime.directory != Path(model_dir).resolve():
+        raise MemoryError("Semantic runtime is bound to a different model directory")
+    reused = runtime.loaded
+    encode = runtime.encode
+    cache, info = module.prepare_cache(state, previous, identity, encode)
+    ranked = module.rank(cache, encode([query], "query")[0], min_score, min_margin,
+                         max(8, config["max_recall_topics"])) if query else []
+    return {"state": state, "relative": relative, "cache": cache, "ranked": ranked,
+            "info": {**info, "model": identity["model"], "revision": identity["revision"],
+                     "strategy": "lexical_first_dense_backfill", "min_score": min_score, "min_margin": min_margin,
+                     "encoder_reused": reused, "encoder_loads": runtime.loads}}
+
+
+def _publish_semantic_locked(root, prepared, chunks, mainline):
+    current = _semantic_module().snapshot(root, chunks, mainline)
+    if current != prepared["state"]:
+        raise MemoryError("Memory changed during semantic inference; retry against the latest snapshot")
+    _commit(root, {prepared["relative"]: _json(prepared["cache"])})
+
+
+def cmd_semantic_index(root, model_dir, verify=False):
+    prepared = _prepare_semantic(root, model_dir, verify=verify)
+    with _hfa_lock(root):
+        state, _ = _semantic_snapshot_locked(root)
+        if state != prepared["state"]:
+            raise MemoryError("Memory changed during semantic indexing; retry")
+        if not verify:
+            _commit(root, {prepared["relative"]: _json(prepared["cache"])})
+    result = {"consistent": prepared.get("consistent", True), "cache_path": prepared["relative"],
+              "mainline": prepared["state"]["mainline"], "eligible_documents": len(prepared["state"]["documents"]),
+              **prepared.get("info", {}), "derived_only": True}
+    print(_json(result), end="")
+    return 0 if result["consistent"] else 1
+
+
+def validate_refinement_queries(query, refinement_queries):
+    """Caller hypotheses, not generated facts; bounded and never persisted."""
+    if refinement_queries is None:
+        return []
+    if (not isinstance(refinement_queries, list) or len(refinement_queries) > 3
+            or any(not isinstance(q, str) or not q.strip() or len(q) > 256
+                   for q in refinement_queries)):
+        raise MemoryError("refinement_queries must contain at most 3 nonempty queries of at most 256 characters")
+    result = list(dict.fromkeys(q.strip() for q in refinement_queries if q.strip() != query.strip()))
+    if result and (not _positive_query(query).strip()
+                   or any(not _positive_query(q).strip() for q in result)):
+        raise MemoryError("Refinement queries cannot override a no-retrieval request")
+    return result
+
+
+def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
+              conversation_id=None, turn_id=None, allow_refinement=True,
+              semantic_model=None, semantic_min_score=.875, semantic_min_margin=0,
+              *, semantic_runtime=None, return_result=False, output="full", max_topics=None,
+              refinement_queries=None):
     if not isinstance(query, str) or not query.strip() or len(query) > 8000:
         raise MemoryError("Query must contain 1–8000 characters")
-    if mode not in ("hybrid", "keyword"):
+    if max_topics is not None and (type(max_topics) is not int or max_topics < 1):
+        raise MemoryError("max_topics must be a positive integer")
+    if output not in ("full", "compact"):
+        raise MemoryError("Unknown output format")
+    if mode not in ("hybrid", "keyword", "semantic"):
         raise MemoryError("Unknown retrieval mode")
+    if type(allow_refinement) is not bool:
+        raise MemoryError("allow_refinement must be a boolean")
+    refinements = validate_refinement_queries(query, refinement_queries)
+    if refinements and not allow_refinement:
+        raise MemoryError("Refinement queries are disabled by --no-refinement")
+    if semantic_model is not None and mode != "semantic":
+        raise MemoryError("--semantic-model requires --mode semantic")
+    if mode == "semantic" and semantic_model is None:
+        raise MemoryError("--mode semantic requires an explicit --semantic-model")
+    if mode == "semantic":
+        _semantic_module().validate_options(semantic_min_score, semantic_min_margin)
+        # A previously exhausted turn must not even hash/load the semantic model.
+        # Recheck under the final lock: another process may finish during inference.
+        with _hfa_lock(root):
+            preflight = _config(root)
+            _recall_topic_limit(preflight, max_topics)
+            _checked_recall_turn(root, preflight, conversation_id, turn_id)
+    semantic_prepared = (_prepare_semantic(root, semantic_model, active_mainline, _positive_query(query),
+                                         semantic_min_score, semantic_min_margin, runtime=semantic_runtime)
+                         if mode == "semantic" and _positive_query(query).strip() else None)
     with _hfa_lock(root):
         state, config = parse_directory_nodes(root / "directory.md"), _config(root)
+        topic_limit = _recall_topic_limit(config, max_topics)
         active_mainline = active_mainline or config["active_mainline"]
         main = _guard_mainline(state, active_mainline)
         if state["missing_targets"]:
             raise MemoryError("Missing L0 targets: " + ", ".join(state["missing_targets"]))
         if not state["within_budget"]:
             raise MemoryError("L0 exceeds measured router budget; shorten it or change config explicitly")
+        if not state["summary_within_budget"]:
+            raise MemoryError("summary.md exceeds summary_token_budget; condense it or change config explicitly")
+        if state["missing_summary_sections"]:
+            raise MemoryError("summary.md missing required sections")
         chunks = _chunks(root, state)
         expected = _derived(root, state, chunks, include_fts=False)
         for relative, content in expected.items():
@@ -1016,27 +1454,55 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid"):
         expected_digest = json.loads(str(expected["index/search.json"]))["source_digest"]
         if not _verify_fts_file(fts_path, expected_digest, len(chunks)):
             raise MemoryError("Stale index: index/fts.sqlite; run reindex")
+        checked_turn = _checked_recall_turn(root, config, conversation_id, turn_id)
         index = json.loads(_read_utf8(root / "index/hitwords.json"))["entries"]
         positive, refs, matched = _positive_query(query), [], []
         scores, kw_terms, content_terms = {}, {}, {}
-        for word, references in index.items():
-            if _keyword_matches(word, positive):
-                refs.extend(references)
-                matched.append({"word": word, "references": references})
-                for ref in references:
-                    key = (ref["kind"], ref["id"])
-                    scores[key] = scores.get(key, 0) + 100
-                    kw_terms.setdefault(key, set()).add(word)
-        if mode == "hybrid":
+        query_matches = {}
+        search_queries = [positive] + [_positive_query(q) for q in refinements]
+        if mode in ("hybrid", "semantic"):
             documents = json.loads(_read_utf8(root / "index/search.json"))["documents"]
-            for chunk_id, score, terms in _rank_content(positive, documents, config, fts_bytes=fts_path):
-                key = ("chunk", chunk_id)
-                scores[key] = scores.get(key, 0) + score
-                content_terms[key] = set(terms)
-                refs.append({"kind": "chunk", "id": chunk_id})
+            literal_documents = {c["id"]: c["title"] + "\n" + "\n".join(c["summary"]) for c in chunks}
+        for query_number, search_query in enumerate(search_queries):
+            local_scores = {}
+            for word, references in index.items():
+                if _keyword_matches(word, search_query):
+                    refs.extend(references)
+                    entry = {"word": word, "references": references}
+                    if entry not in matched:
+                        matched.append(entry)
+                    for ref in references:
+                        key = (ref["kind"], ref["id"])
+                        local_scores[key] = local_scores.get(key, 0) + 100
+                        kw_terms.setdefault(key, set()).add(word)
+            if mode in ("hybrid", "semantic"):
+                for chunk_id, score, terms in _rank_content(search_query, documents, config, fts_bytes=fts_path,
+                                                           literal_documents=literal_documents):
+                    key = ("chunk", chunk_id)
+                    local_scores[key] = local_scores.get(key, 0) + score
+                    content_terms.setdefault(key, set()).update(terms)
+                    refs.append({"kind": "chunk", "id": chunk_id})
+            if not refinements:
+                scores = local_scores  # Preserve the existing single-query profile exactly.
+            else:
+                # Scores from different questions are not comparable. Reciprocal
+                # rank fusion is deterministic; one document occupies one slot.
+                ordered = sorted(local_scores, key=lambda key: (-local_scores[key], key))
+                for rank, key in enumerate(ordered, 1):
+                    scores[key] = scores.get(key, 0) + 1 / (60 + rank)
+                    query_matches.setdefault(key, []).append(query_number)
         nodes = {n["id"]: (tier, n) for tier, group in state["nodes"].items() for n in group}
         by_id = {c["id"]: c for c in chunks}
         replaced = {old for c in chunks for old in c["supersedes"]}
+        dense_scores = {}
+        if semantic_prepared is not None:
+            _publish_semantic_locked(root, semantic_prepared, chunks, active_mainline)
+            dense_scores = dict(semantic_prepared["ranked"])
+            for rank, (chunk_id, similarity) in enumerate(semantic_prepared["ranked"], 1):
+                key = ("chunk", chunk_id)
+                if key not in scores:
+                    scores[key] = .001 / rank  # lexical evidence retains precedence
+                refs.append({"kind": "chunk", "id": chunk_id})
         candidates, selected, deferred, seen = [], [], [], set()
         for ref in refs:
             identity = (ref["kind"], ref["id"])
@@ -1045,6 +1511,12 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid"):
             seen.add(identity)
             match_info = {"method": "keyword" if identity in kw_terms else "content",
                           "terms": sorted(kw_terms.get(identity, set()) | content_terms.get(identity, set()))}
+            if refinements:
+                match_info["query_indices"] = query_matches.get(identity, [])
+            if ref["kind"] == "chunk" and ref["id"] in dense_scores:
+                match_info["semantic_similarity"] = dense_scores[ref["id"]]
+                if identity not in kw_terms and identity not in content_terms:
+                    match_info["method"] = "semantic"
             if ref["kind"] == "chunk":
                 c = by_id[ref["id"]]
                 if c["id"] in replaced:
@@ -1057,7 +1529,9 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid"):
                              "source": c["source"], "supersedes": c["supersedes"]}
             else:
                 tier, node = nodes[ref["id"]]
-                # Only the active mainline and HIGH profile nodes are resident;
+                if tier == "HISTORY" or node["path"].startswith("history/"):
+                    continue  # History region never participates in context dilution; only chunk hitwords are searched.
+                # Only the active mainline and HIGH summary node are resident;
                 # inactive/planned MAX nodes (e.g. M2) require --unlock like branches.
                 permitted = tier == "HIGH" or (tier == "MAX" and node["id"] == active_mainline)
                 candidate = {"kind": "node", "id": node["id"], "path": node["path"],
@@ -1070,14 +1544,16 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid"):
         payload = ""
         for candidate in candidates:
             if candidate["kind"] == "node" and candidate["permitted"]:
-                continue  # Main/profile are references, not silently injected text.
+                continue  # Main/summary are resident references, not silently injected text.
             if not candidate["permitted"] and not (unlock and unlock.strip()):
                 deferred.append({"id": candidate["id"], "reason": "explicit --unlock reason required"})
                 continue
             if candidate["kind"] == "node":
+                if candidate["path"].startswith("history/"):
+                    continue
                 candidate["text"] = _read_utf8(_safe_path(root, candidate["path"]))
             addition = payload + ("\n\n" if payload else "") + candidate["text"]
-            if len(selected) >= config["max_recall_topics"] or measure_tokens(addition)["count"] > config["recall_token_budget"]:
+            if len(selected) >= topic_limit or measure_tokens(addition)["count"] > config["recall_token_budget"]:
                 deferred.append({"id": candidate["id"], "reason": "recall budget or item limit"})
                 continue
             payload = addition
@@ -1092,19 +1568,68 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid"):
                 for c in candidates
             )
         ]
+        query_terms = sorted(_search_terms(positive, config, query=True) - GENERIC_TERMS) if positive.strip() else []
+        zero_hits = len(selected) == 0 and len(deferred) == 0
+        interval = config["status_check_interval"]
+        ledger, turn = checked_turn or _next_turn(root, conversation_id, turn_id, interval)
+        # A single retry suggestion for a known real turn. No IDs => no unbounded loop.
+        search_feedback = (
+            "Round-1 SQLite BM25 + token-split search returned 0 direct hits. "
+            "If materially ambiguous, clarify first; else propose 3-5 task-related terms for ONE follow-up recall with the same turn IDs/scope. Do not save terms. A miss means not found, not nonexistent."
+            if (zero_hits and positive.strip() and allow_refinement and turn["turn_search_count"] == 1
+                and (not config.get("max_recalls_per_turn", 0)
+                     or turn["turn_search_count"] < config["max_recalls_per_turn"])) else ""
+        )
+        status_check_due = turn["status_check_due"]
+        status_check_prompt = (
+            f"Periodic {interval}-turn task status check reached (turn #{turn['turn_count']}): "
+            "Review mainline and branches; update summary.md only for verified reusable changes."
+            if status_check_due else ""
+        )
         result = {"query": query, "retrieval_mode": mode, "active_mainline_lock": active_mainline, "routed_files": [s["path"] for s in selected],
                   "selected": selected, "resident_references": [main["path"]] + [n["path"] for n in state["nodes"]["HIGH"]],
-                  "router_text": _read_utf8(root / "directory.md"), "recall_text": payload,
+                  "router_text": _read_utf8(root / "directory.md"), "recall_text": payload, "summary_text": state["summary_text"],
                   "router_tokens": state["token_measurement"], "recall_tokens": measure_tokens(payload),
                   "router_token_budget": config["router_token_budget"], "recall_token_budget": config["recall_token_budget"],
+                  "summary_tokens": state["summary_token_measurement"], "summary_token_budget": state["summary_token_budget"],
                   "deferred": deferred, "matched_hit_words": matched, "profile_drift": profile_drift,
                   "lateral_attention_triggered": any(not c["permitted"] for c in candidates) or profile_drift,
-                  "skipped_tombstones": skipped_tombstones,
-                  "unlock_reason": unlock}
-        event = {"ts": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
-                 "selected": [s["id"] for s in selected], "unlock_reason": unlock, "profile_drift": profile_drift}
-        _append_jsonl(_safe_path(root, "history/access.jsonl"), event)
-    print(_json(result), end="")
+                  "skipped_tombstones": skipped_tombstones, "unlock_reason": unlock,
+                  "zero_hits": zero_hits, "query_terms": query_terms, "search_feedback": search_feedback,
+                  **turn, "status_check_interval": interval,
+                  "status_check_due": status_check_due, "status_check_prompt": status_check_prompt}
+        if mode == "semantic":
+            result["retrieval"] = {"backend": "local_semantic", "scope": "active_mainline_only",
+                                   "lateral_semantic_search": False,
+                                   **(semantic_prepared["info"] if semantic_prepared else {"cache_status": "skipped_no_positive_query"})}
+        if refinements:
+            result["query_plan"] = {"origin": "caller_supplied", "refinement_queries": refinements,
+                                    "lexical_queries": len(search_queries), "fusion": "reciprocal_rank_60",
+                                    "shared_scope_and_budget": True,
+                                    "semantic_query": "original_only" if mode == "semantic" else None}
+        if checked_turn is not None:
+            limit = config["max_recalls_per_turn"]
+            result["turn_budget"] = {"limit": limit, "used": turn["turn_search_count"],
+                                     "remaining": limit - turn["turn_search_count"]}
+        _context_payload(result, config)
+        event = {"ts": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"), **turn,
+                 "selected": [s["id"] for s in result["selected"]], "unlock_reason": unlock,
+                 "profile_drift": profile_drift, "status_check_due": status_check_due,
+                 "context_tokens": result["context_tokens"], "payload_prepared": True}
+        if max_topics is not None:
+            event["max_topics"] = max_topics
+        if refinements:
+            event["lexical_directions"] = len(search_queries)  # Counts only; never store query hypotheses.
+        access = _safe_path(root, "history/access.jsonl")
+        prior = _read_utf8(access) if access.is_file() else ""
+        _commit(root, {"history/session-state.json": _json(ledger),
+                       "history/access.jsonl": prior + ("" if not prior or prior.endswith("\n") else "\n") + json.dumps(event, ensure_ascii=False) + "\n"})
+    if output == "compact":
+        result = _delivery_module().compact_recall(result)
+    if return_result:
+        return result
+    print(_json(result) if output == "full" else json.dumps(result, ensure_ascii=False,
+          separators=(",", ":"), allow_nan=False), end="")
     return 0
 
 def _ensure_memory_dir(explicit: Path | None, auto_init: bool = False) -> Path:
@@ -1145,14 +1670,30 @@ def main():
         route = subs.add_parser(name, help="Return bounded L1 snippets; side branches need --unlock")
         route.add_argument("memory_dir", nargs="?", type=Path, default=None, help="Target memory directory (defaults to HFA_MEMORY_DIR or ./memory)")
         route.add_argument("--query", required=True)
+        route.add_argument("--conversation-id")
+        route.add_argument("--turn-id")
+        route.add_argument("--no-refinement", action="store_true")
+        route.add_argument("--refine-query", action="append", default=[],
+                           help="Caller-proposed search direction for one follow-up; repeat at most 3 times; shared budgets")
+        route.add_argument("--max-topics", type=int,
+                           help="Narrow this recall to N records; cannot exceed the directory limit")
+        route.add_argument("--output", choices=("full", "compact"), default="full",
+                           help="Full diagnostics (default), or one-copy agent-facing JSON")
         route.add_argument("--mainline")
-        route.add_argument("--mode", choices=("hybrid", "keyword"), default="hybrid")
+        route.add_argument("--mode", choices=("hybrid", "keyword", "semantic"), default="hybrid")
+        route.add_argument("--semantic-model", type=Path, help="Explicit local pinned E5 model directory; no download")
+        route.add_argument("--semantic-min-score", type=float, default=.875)
+        route.add_argument("--semantic-min-margin", type=float, default=0)
         route.add_argument("--unlock", help="Explicit reason for reading non-mainline or tombstoned memory")
         route.add_argument("--auto-init", action="store_true", help="Initialize memory directory if not yet initialized")
     for name in ("reindex", "summarize"):
         rebuild = subs.add_parser(name, help="Rebuild indexes and Markdown views from L0/L1")
         rebuild.add_argument("memory_dir", nargs="?", type=Path, default=None, help="Target memory directory (defaults to HFA_MEMORY_DIR or ./memory)")
         rebuild.add_argument("--verify", "--check", dest="verify", action="store_true")
+    semantic_index = subs.add_parser("semantic-index", help="Build/check the disposable local vector cache; never change L1")
+    semantic_index.add_argument("memory_dir", nargs="?", type=Path, default=None)
+    semantic_index.add_argument("--model-dir", required=True, type=Path)
+    semantic_index.add_argument("--verify", action="store_true")
     args = parser.parse_args()
     try:
         if args.command == "init":
@@ -1166,10 +1707,18 @@ def main():
         if args.command == "tombstone":
             return cmd_tombstone(target_dir, args.id, args.hit_words, args.reason)
         if args.command in ("route", "recall"):
-            return cmd_route(target_dir, args.query, args.mainline, args.unlock, args.mode)
+            return cmd_route(target_dir, args.query, args.mainline, args.unlock, args.mode,
+                             args.conversation_id, args.turn_id, not args.no_refinement,
+                             args.semantic_model, args.semantic_min_score, args.semantic_min_margin,
+                             output=args.output, max_topics=args.max_topics, refinement_queries=args.refine_query)
+        if args.command == "semantic-index":
+            return cmd_semantic_index(target_dir, args.model_dir, args.verify)
         return cmd_reindex(target_dir, args.verify)
     except (MemoryError, OSError, ValueError, KeyError) as exc:
-        print(_json({"error": str(exc), "command": args.command}), end="")
+        error = {"error": str(exc), "command": args.command}
+        if isinstance(exc, RecallLimitError):
+            error.update(code="turn_recall_limit", limit=exc.limit, used=exc.used)
+        print(_json(error), end="")
         return 1
 
 if __name__ == "__main__":

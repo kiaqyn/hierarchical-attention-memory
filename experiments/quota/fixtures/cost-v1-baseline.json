@@ -1,0 +1,156 @@
+{
+  "fixture_sha256": "d8dcaa2e2c4a2f1659420c02a8d234326f076ba4f8ff328e31398b3e2779de58",
+  "encoding": "o200k_base",
+  "tokenizer_version": "0.14.0",
+  "description": "Developer-authored synthetic regression, not independent model or billing evidence. Ceilings allow 10% + 16 tokens for reviewed protocol changes.",
+  "limits": {
+    "byte_debug": {
+      "single_export": {
+        "reference_tokens": 1390,
+        "max_tokens": 1546,
+        "max_calls": 1
+      },
+      "two_decisions": {
+        "reference_tokens": 2755,
+        "max_tokens": 3047,
+        "max_calls": 2
+      },
+      "font_paraphrase": {
+        "reference_tokens": 1360,
+        "max_tokens": 1513,
+        "max_calls": 1
+      },
+      "no_answer": {
+        "reference_tokens": 1052,
+        "max_tokens": 1174,
+        "max_calls": 1
+      },
+      "branch_boundary": {
+        "reference_tokens": 942,
+        "max_tokens": 1053,
+        "max_calls": 1
+      },
+      "archived_boundary": {
+        "reference_tokens": 945,
+        "max_tokens": 1056,
+        "max_calls": 1
+      },
+      "narrowing_counterexample": {
+        "reference_tokens": 2706,
+        "max_tokens": 2993,
+        "max_calls": 2
+      }
+    },
+    "byte_compact": {
+      "single_export": {
+        "reference_tokens": 422,
+        "max_tokens": 481,
+        "max_calls": 1
+      },
+      "two_decisions": {
+        "reference_tokens": 822,
+        "max_tokens": 921,
+        "max_calls": 2
+      },
+      "font_paraphrase": {
+        "reference_tokens": 388,
+        "max_tokens": 443,
+        "max_calls": 1
+      },
+      "no_answer": {
+        "reference_tokens": 391,
+        "max_tokens": 447,
+        "max_calls": 1
+      },
+      "branch_boundary": {
+        "reference_tokens": 299,
+        "max_tokens": 345,
+        "max_calls": 1
+      },
+      "archived_boundary": {
+        "reference_tokens": 299,
+        "max_tokens": 345,
+        "max_calls": 1
+      },
+      "narrowing_counterexample": {
+        "reference_tokens": 813,
+        "max_tokens": 911,
+        "max_calls": 2
+      }
+    },
+    "token_default": {
+      "single_export": {
+        "reference_tokens": 421,
+        "max_tokens": 480,
+        "max_calls": 1
+      },
+      "two_decisions": {
+        "reference_tokens": 516,
+        "max_tokens": 584,
+        "max_calls": 1
+      },
+      "font_paraphrase": {
+        "reference_tokens": 387,
+        "max_tokens": 442,
+        "max_calls": 1
+      },
+      "no_answer": {
+        "reference_tokens": 390,
+        "max_tokens": 446,
+        "max_calls": 1
+      },
+      "branch_boundary": {
+        "reference_tokens": 298,
+        "max_tokens": 344,
+        "max_calls": 1
+      },
+      "archived_boundary": {
+        "reference_tokens": 298,
+        "max_tokens": 344,
+        "max_calls": 1
+      },
+      "narrowing_counterexample": {
+        "reference_tokens": 507,
+        "max_tokens": 574,
+        "max_calls": 1
+      }
+    },
+    "token_requested": {
+      "single_export": {
+        "reference_tokens": 421,
+        "max_tokens": 480,
+        "max_calls": 1
+      },
+      "two_decisions": {
+        "reference_tokens": 516,
+        "max_tokens": 584,
+        "max_calls": 1
+      },
+      "font_paraphrase": {
+        "reference_tokens": 387,
+        "max_tokens": 442,
+        "max_calls": 1
+      },
+      "no_answer": {
+        "reference_tokens": 390,
+        "max_tokens": 446,
+        "max_calls": 1
+      },
+      "branch_boundary": {
+        "reference_tokens": 298,
+        "max_tokens": 344,
+        "max_calls": 1
+      },
+      "archived_boundary": {
+        "reference_tokens": 298,
+        "max_tokens": 344,
+        "max_calls": 1
+      },
+      "narrowing_counterexample": {
+        "reference_tokens": 811,
+        "max_tokens": 909,
+        "max_calls": 2
+      }
+    }
+  }
+}

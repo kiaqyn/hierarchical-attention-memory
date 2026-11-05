@@ -1,0 +1,362 @@
+[
+  {
+    "id": "v2-test-000",
+    "query": "最开始那屏迟迟不跳转，曾用什么处理措施？",
+    "expected": "boot",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-001",
+    "query": "Which change eventually let the program get beyond its first screen?",
+    "expected": "boot",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-002",
+    "query": "菜单里的字成了空心矩形，过去怎样让字重新显示？",
+    "expected": "font",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-003",
+    "query": "What restored missing characters that appeared as boxes in the menu?",
+    "expected": "font",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-004",
+    "query": "交给财务的文本表格在 Excel 中读不对汉字，之前选了什么输出方式？",
+    "expected": "csv",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-005",
+    "query": "Which output format made the exported Chinese text readable in Excel?",
+    "expected": "csv",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-006",
+    "query": "如今商品价格资料多久过期，改价时如何更新？",
+    "expected": "ttl",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-007",
+    "query": "What is the latest lifetime for stored product prices, and when are they invalidated?",
+    "expected": "ttl",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-008",
+    "query": "去别家认证后回到我们页面又成匿名用户，原来用了哪个办法？",
+    "expected": "cookie",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-009",
+    "query": "What setting kept authentication alive after returning from another site?",
+    "expected": "cookie",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-010",
+    "query": "同一购买请求被网络回放多次，怎样让每次都对应同一笔款？",
+    "expected": "payment",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-011",
+    "query": "How did we prevent replayed checkout submissions from creating another charge?",
+    "expected": "payment",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-012",
+    "query": "几个写入任务互相等锁，SQLite 当时怎么缓解？",
+    "expected": "sqlite",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-013",
+    "query": "How was SQLite configured when competing writes kept reporting a locked database?",
+    "expected": "sqlite",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-014",
+    "query": "传了一半的大附件遇到断线，恢复后怎么避免重新传完整文件？",
+    "expected": "upload",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-015",
+    "query": "What lets an interrupted attachment transfer continue where it stopped?",
+    "expected": "upload",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-016",
+    "query": "扫描来的页只有图像，之前加哪一步才能找里面的文字？",
+    "expected": "pdf",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-017",
+    "query": "Which preprocessing step made words inside scanned pages searchable?",
+    "expected": "pdf",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-018",
+    "query": "换电脑后提交显示每行都被动过，如何统一行尾避免这种变化？",
+    "expected": "git",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-019",
+    "query": "What stopped a different computer from making every line appear changed in Git?",
+    "expected": "git",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-020",
+    "query": "命令窗口可以引用的包，在 IDE 里却报不存在，应该对齐什么？",
+    "expected": "venv",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-021",
+    "query": "Which interpreter setting fixed packages visible in a shell but missing in the editor?",
+    "expected": "venv",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-022",
+    "query": "用键盘打开模态窗口，关掉时输入焦点应回到哪里？",
+    "expected": "keyboard",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-023",
+    "query": "Where does keyboard focus return when the modal closes?",
+    "expected": "keyboard",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-024",
+    "query": "做 OCR 的合成任务月度额度多少，何时得再征求同意？",
+    "expected": "budget",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-025",
+    "query": "What amount was allocated monthly for the OCR demo, and when is approval needed?",
+    "expected": "budget",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-026",
+    "query": "十月份那批测试交易中重新发出请求的占比是多少？",
+    "expected": "metric",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-027",
+    "query": "Which share of synthetic October orders required a request retry?",
+    "expected": "metric",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-028",
+    "query": "审计访问轨迹过多久自动删掉？",
+    "expected": "logs",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-029",
+    "query": "After how many days are access audit entries removed?",
+    "expected": "logs",
+    "kind": "positive"
+  },
+  {
+    "id": "v2-test-030",
+    "query": "那块跑CUDA的显卡当时采购价格多少元？",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v2-test-031",
+    "query": "What was the GPU purchase price in USD?",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v2-test-032",
+    "query": "订单重复扣费的实际比例是多少？",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v2-test-033",
+    "query": "What fraction of orders were charged twice?",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v2-test-034",
+    "query": "字体修复以后每月省了多少钱？",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v2-test-035",
+    "query": "How much money per month did the font change save?",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v2-test-036",
+    "query": "Renderer 4.2 依赖包的实际SHA256校验值是什么？",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v2-test-037",
+    "query": "What is the actual SHA-256 hash value of the downloaded dependency?",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v2-test-038",
+    "query": "构建管理员密码是多少？",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v2-test-039",
+    "query": "What is the build administrator's password?",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v2-test-040",
+    "query": "2025年10月生产订单的重试率是多少？",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v2-test-041",
+    "query": "What was the retry rate for production orders in October 2025?",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v2-test-042",
+    "query": "昨天日志清理实际释放了多少GB空间？",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v2-test-043",
+    "query": "How many gigabytes did yesterday's audit cleanup actually free?",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v2-test-044",
+    "query": "是谁批准了120元预算？",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v2-test-045",
+    "query": "Who authorized the monthly OCR budget?",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v2-test-046",
+    "query": "那个刚才又不行了，以前怎么办？",
+    "expected": null,
+    "kind": "ambiguous"
+  },
+  {
+    "id": "v2-test-047",
+    "query": "It is doing that thing again. What fixed it last time?",
+    "expected": null,
+    "kind": "ambiguous"
+  },
+  {
+    "id": "v2-test-048",
+    "query": "屏幕一直在打转，之前怎么解决？",
+    "expected": null,
+    "kind": "ambiguous"
+  },
+  {
+    "id": "v2-test-049",
+    "query": "The display keeps spinning. What did we change?",
+    "expected": null,
+    "kind": "ambiguous"
+  },
+  {
+    "id": "v2-test-050",
+    "query": "支线演示织女风帆要填哪种颜色？",
+    "expected": null,
+    "kind": "restricted"
+  },
+  {
+    "id": "v2-test-051",
+    "query": "Which color unlocks the side-project demo 织女风帆?",
+    "expected": null,
+    "kind": "restricted"
+  },
+  {
+    "id": "v2-test-052",
+    "query": "湖蓝色归档备选的通关指令是什么？",
+    "expected": null,
+    "kind": "restricted"
+  },
+  {
+    "id": "v2-test-053",
+    "query": "Do not search the payment or cache records",
+    "expected": null,
+    "kind": "restricted"
+  },
+  {
+    "id": "v2-test-054",
+    "query": "为什么树叶到秋天会变黄？",
+    "expected": null,
+    "kind": "unrelated"
+  },
+  {
+    "id": "v2-test-055",
+    "query": "How do migrating birds navigate over the ocean?",
+    "expected": null,
+    "kind": "unrelated"
+  },
+  {
+    "id": "v2-test-056",
+    "query": "长跑前应该怎样安排早餐？",
+    "expected": null,
+    "kind": "unrelated"
+  },
+  {
+    "id": "v2-test-057",
+    "query": "Why does bread rise when yeast is added?",
+    "expected": null,
+    "kind": "unrelated"
+  },
+  {
+    "id": "v2-test-058",
+    "query": "泰坦星的地表温度是多少？",
+    "expected": null,
+    "kind": "unrelated"
+  },
+  {
+    "id": "v2-test-059",
+    "query": "What material is used to make violin strings?",
+    "expected": null,
+    "kind": "unrelated"
+  }
+]

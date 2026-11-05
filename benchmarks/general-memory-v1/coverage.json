@@ -1,0 +1,350 @@
+{
+  "version": "1.0.0",
+  "authored_date": "2026-11-05",
+  "total_cases": 200,
+  "semantic_tasks": 140,
+  "tiers": {
+    "main": 120,
+    "auxiliary": 32,
+    "resilience": 32,
+    "cost_scale": 16
+  },
+  "instruction_languages": {
+    "zh": 100,
+    "en": 100
+  },
+  "main_design_interests": {
+    "neutral": 72,
+    "scoped_control": 24,
+    "workflow_continuity": 24
+  },
+  "families": [
+    {
+      "id": "M01",
+      "name_zh": "精确词与标识符",
+      "name_en": "Exact identifiers",
+      "tier": "main",
+      "design_interest": "neutral",
+      "weight": 0.05
+    },
+    {
+      "id": "M02",
+      "name_zh": "自然问句与关键词",
+      "name_en": "Natural questions",
+      "tier": "main",
+      "design_interest": "neutral",
+      "weight": 0.05
+    },
+    {
+      "id": "M03",
+      "name_zh": "同义、改写与隐含现象",
+      "name_en": "Paraphrase and implicit symptoms",
+      "tier": "main",
+      "design_interest": "neutral",
+      "weight": 0.05
+    },
+    {
+      "id": "M04",
+      "name_zh": "歧义与澄清",
+      "name_en": "Ambiguity and clarification",
+      "tier": "main",
+      "design_interest": "neutral",
+      "weight": 0.05
+    },
+    {
+      "id": "M05",
+      "name_zh": "多条证据与依赖",
+      "name_en": "Evidence composition",
+      "tier": "main",
+      "design_interest": "neutral",
+      "weight": 0.05
+    },
+    {
+      "id": "M06",
+      "name_zh": "代码、路径与错误",
+      "name_en": "Code, paths and errors",
+      "tier": "main",
+      "design_interest": "neutral",
+      "weight": 0.05
+    },
+    {
+      "id": "M07",
+      "name_zh": "时间、版本与现行决定",
+      "name_en": "Time and current decisions",
+      "tier": "main",
+      "design_interest": "neutral",
+      "weight": 0.05
+    },
+    {
+      "id": "M08",
+      "name_zh": "冲突、来源与可信度",
+      "name_en": "Conflicts and authority",
+      "tier": "main",
+      "design_interest": "neutral",
+      "weight": 0.05
+    },
+    {
+      "id": "M09",
+      "name_zh": "项目、分支与环境范围",
+      "name_en": "Scope isolation",
+      "tier": "main",
+      "design_interest": "scoped_control",
+      "weight": 0.05
+    },
+    {
+      "id": "M10",
+      "name_zh": "明确偏好与约束",
+      "name_en": "Explicit preferences",
+      "tier": "main",
+      "design_interest": "scoped_control",
+      "weight": 0.05
+    },
+    {
+      "id": "M11",
+      "name_zh": "可重复工作流程",
+      "name_en": "Reusable workflows",
+      "tier": "main",
+      "design_interest": "workflow_continuity",
+      "weight": 0.05
+    },
+    {
+      "id": "M12",
+      "name_zh": "自动观察与结论沉淀",
+      "name_en": "Observation to durable knowledge",
+      "tier": "main",
+      "design_interest": "workflow_continuity",
+      "weight": 0.05
+    },
+    {
+      "id": "M13",
+      "name_zh": "跨会话与上下文恢复",
+      "name_en": "Session continuity",
+      "tier": "main",
+      "design_interest": "workflow_continuity",
+      "weight": 0.05
+    },
+    {
+      "id": "M14",
+      "name_zh": "补查、停止与用户纠正",
+      "name_en": "Refinement and stopping",
+      "tier": "main",
+      "design_interest": "neutral",
+      "weight": 0.05
+    },
+    {
+      "id": "M15",
+      "name_zh": "未知、部分答案与错误前提",
+      "name_en": "Unknowns and false premises",
+      "tier": "main",
+      "design_interest": "neutral",
+      "weight": 0.05
+    },
+    {
+      "id": "M16",
+      "name_zh": "禁存、撤回与敏感数据",
+      "name_en": "Storage consent and privacy",
+      "tier": "main",
+      "design_interest": "scoped_control",
+      "weight": 0.05
+    },
+    {
+      "id": "M17",
+      "name_zh": "更新、去重与忘记",
+      "name_en": "Updates, dedup and forgetting",
+      "tier": "main",
+      "design_interest": "neutral",
+      "weight": 0.05
+    },
+    {
+      "id": "M18",
+      "name_zh": "预算与完整证据",
+      "name_en": "Budget and evidence integrity",
+      "tier": "main",
+      "design_interest": "neutral",
+      "weight": 0.05
+    },
+    {
+      "id": "M19",
+      "name_zh": "不可信内容与越权指令",
+      "name_en": "Untrusted memory",
+      "tier": "main",
+      "design_interest": "scoped_control",
+      "weight": 0.05
+    },
+    {
+      "id": "M20",
+      "name_zh": "经验迁移与适用边界",
+      "name_en": "Experience and applicability",
+      "tier": "main",
+      "design_interest": "workflow_continuity",
+      "weight": 0.05
+    },
+    {
+      "id": "A01",
+      "name_zh": "短词与无空格文字",
+      "name_en": "短词与无空格文字",
+      "tier": "auxiliary",
+      "design_interest": "portability",
+      "weight": null
+    },
+    {
+      "id": "A02",
+      "name_zh": "其他常用文字体系",
+      "name_en": "其他常用文字体系",
+      "tier": "auxiliary",
+      "design_interest": "portability",
+      "weight": null
+    },
+    {
+      "id": "A03",
+      "name_zh": "Unicode 归一化与字形",
+      "name_en": "Unicode 归一化与字形",
+      "tier": "auxiliary",
+      "design_interest": "portability",
+      "weight": null
+    },
+    {
+      "id": "A04",
+      "name_zh": "代码符号与路径标点",
+      "name_en": "代码符号与路径标点",
+      "tier": "auxiliary",
+      "design_interest": "portability",
+      "weight": null
+    },
+    {
+      "id": "A05",
+      "name_zh": "数字、单位与区域格式",
+      "name_en": "数字、单位与区域格式",
+      "tier": "auxiliary",
+      "design_interest": "portability",
+      "weight": null
+    },
+    {
+      "id": "A06",
+      "name_zh": "否定、交集与查询噪声",
+      "name_en": "否定、交集与查询噪声",
+      "tier": "auxiliary",
+      "design_interest": "portability",
+      "weight": null
+    },
+    {
+      "id": "A07",
+      "name_zh": "长输入与低信号输入",
+      "name_en": "长输入与低信号输入",
+      "tier": "auxiliary",
+      "design_interest": "portability",
+      "weight": null
+    },
+    {
+      "id": "A08",
+      "name_zh": "工具输出与来源兼容",
+      "name_en": "工具输出与来源兼容",
+      "tier": "auxiliary",
+      "design_interest": "portability",
+      "weight": null
+    },
+    {
+      "id": "R01",
+      "name_zh": "事务中断与崩溃恢复",
+      "name_en": "事务中断与崩溃恢复",
+      "tier": "resilience",
+      "design_interest": "operations",
+      "weight": null
+    },
+    {
+      "id": "R02",
+      "name_zh": "并发与幂等",
+      "name_en": "并发与幂等",
+      "tier": "resilience",
+      "design_interest": "operations",
+      "weight": null
+    },
+    {
+      "id": "R03",
+      "name_zh": "索引损坏与真源校验",
+      "name_en": "索引损坏与真源校验",
+      "tier": "resilience",
+      "design_interest": "operations",
+      "weight": null
+    },
+    {
+      "id": "R04",
+      "name_zh": "更新后的缓存有效性",
+      "name_en": "更新后的缓存有效性",
+      "tier": "resilience",
+      "design_interest": "operations",
+      "weight": null
+    },
+    {
+      "id": "R05",
+      "name_zh": "编码、路径与平台",
+      "name_en": "编码、路径与平台",
+      "tier": "resilience",
+      "design_interest": "operations",
+      "weight": null
+    },
+    {
+      "id": "R06",
+      "name_zh": "服务、超时与重连",
+      "name_en": "服务、超时与重连",
+      "tier": "resilience",
+      "design_interest": "operations",
+      "weight": null
+    },
+    {
+      "id": "R07",
+      "name_zh": "导入导出与版本兼容",
+      "name_en": "导入导出与版本兼容",
+      "tier": "resilience",
+      "design_interest": "operations",
+      "weight": null
+    },
+    {
+      "id": "R08",
+      "name_zh": "数据保留与失败可见性",
+      "name_en": "数据保留与失败可见性",
+      "tier": "resilience",
+      "design_interest": "operations",
+      "weight": null
+    },
+    {
+      "id": "C01",
+      "name_zh": "预算与质量联动",
+      "name_en": "预算与质量联动",
+      "tier": "cost_scale",
+      "design_interest": "efficiency",
+      "weight": null
+    },
+    {
+      "id": "C02",
+      "name_zh": "重复查询与刷新",
+      "name_en": "重复查询与刷新",
+      "tier": "cost_scale",
+      "design_interest": "efficiency",
+      "weight": null
+    },
+    {
+      "id": "C03",
+      "name_zh": "数据规模与冷暖启动",
+      "name_en": "数据规模与冷暖启动",
+      "tier": "cost_scale",
+      "design_interest": "efficiency",
+      "weight": null
+    },
+    {
+      "id": "C04",
+      "name_zh": "长期轨迹与总成本",
+      "name_en": "长期轨迹与总成本",
+      "tier": "cost_scale",
+      "design_interest": "efficiency",
+      "weight": null
+    }
+  ],
+  "modes": {
+    "records": 111,
+    "native": 156,
+    "operational": 44
+  },
+  "evidence_policy": "Developer-authored public synthetic development suite; not an independent or hidden benchmark.",
+  "scoring": "Main macro-average by 20 families, with equal Chinese/English weight within each family; auxiliary/resilience/cost separate. No overall winner declared from mixed tiers."
+}

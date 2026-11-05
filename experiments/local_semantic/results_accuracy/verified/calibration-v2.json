@@ -1,0 +1,99 @@
+{
+  "threshold": 0.4,
+  "margin": 0.2,
+  "v1_params": {
+    "threshold": 0.875,
+    "margin": 0.0,
+    "additional_dev_false_hits": 0,
+    "dev_hits": 18,
+    "dev_positives": 18,
+    "objective": "minimize new no-answer returns, then maximize recall, then minimize extras; dev only",
+    "fixture_hashes": {
+      "corpus": {
+        "sha256": "ac367bbae4a0cdd8f367edf30a0454d5ce58894d083e061120c0eba0b9b0814b",
+        "count": 21
+      },
+      "dev": {
+        "sha256": "2abdbe4991fa9e3e02e2b97082082d7007d860d97cd8054270ad68ec9785e675",
+        "count": 30
+      },
+      "test": {
+        "sha256": "cec91269d7f55203b761043ce23f9c07d337e63bbaab8f9bbe2556ee89d53a3f",
+        "count": 52
+      }
+    }
+  },
+  "objective": "Dev only: no more no-answer returns than V1; maximize balanced top1/abstention accuracy, then reduce false returns",
+  "fixture": {
+    "kind": "developer-authored fresh V2.1 holdout; prior V2 test is known regression",
+    "test_frozen_before_v21_scoring": true,
+    "files": {
+      "corpus": {
+        "sha256": "563f9b98c176bef05b305fd47a7c2c4bb2f8882d517725a29a2e9ec5a786e3eb",
+        "count": 24
+      },
+      "dev": {
+        "sha256": "9fa839f2c47e68acde2009c76dd89e4fc600b3405a0035314fef03113a46fdf9",
+        "count": 66
+      },
+      "test": {
+        "sha256": "be2567e5aa220405baed6a6b7964a34d56c298f087d00e12965dcaf547e6a71c",
+        "count": 40
+      }
+    }
+  },
+  "dev_v1": {
+    "positive_cases": 42,
+    "correct_top1": 21,
+    "hits_at_2": 21,
+    "negative_cases": 24,
+    "no_answer_returns": 6,
+    "returned_queries": 27,
+    "returned_query_precision": 0.7777777777777778,
+    "balanced_decision_accuracy": 0.625,
+    "extra_candidates_on_positive": 7,
+    "language": {
+      "Chinese": {
+        "total": 18,
+        "correct_top1": 18
+      },
+      "English": {
+        "total": 24,
+        "correct_top1": 3
+      }
+    },
+    "no_answer_by_kind": {
+      "ambiguous": 0,
+      "restricted": 0,
+      "unanswerable": 6,
+      "unrelated": 0
+    }
+  },
+  "dev_v21": {
+    "positive_cases": 42,
+    "correct_top1": 33,
+    "hits_at_2": 33,
+    "negative_cases": 24,
+    "no_answer_returns": 1,
+    "returned_queries": 34,
+    "returned_query_precision": 0.9705882352941176,
+    "balanced_decision_accuracy": 0.8720238095238095,
+    "extra_candidates_on_positive": 6,
+    "language": {
+      "Chinese": {
+        "total": 18,
+        "correct_top1": 18
+      },
+      "English": {
+        "total": 24,
+        "correct_top1": 15
+      }
+    },
+    "no_answer_by_kind": {
+      "ambiguous": 0,
+      "restricted": 0,
+      "unanswerable": 1,
+      "unrelated": 0
+    }
+  }
+}

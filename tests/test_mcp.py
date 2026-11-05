@@ -27,6 +27,31 @@ def _open_client(params):
 
 
 class MCPIntegrationTests(unittest.IsolatedAsyncioTestCase):
+    @unittest.skipIf(Client is None, "optional mcp SDK not installed")
+    async def test_real_client_summary_delivery_measurement_and_stable_turn_identity(self):
+        with tempfile.TemporaryDirectory(prefix="hfa-mcp-summary-") as temp:
+            memory=Path(temp)/"memory"
+            params=StdioServerParameters(command=sys.executable,
+                args=["-B",str(ROOT/"scripts/hfa_mcp.py"),"--memory-dir",str(memory)],
+                env={"PYTHONUTF8":"1","PYTHONDONTWRITEBYTECODE":"1"})
+            async with _open_client(params) as client:
+                await client.call_tool("memory_health",{})
+                path=memory/"summary.md"
+                marker="MCP_ONLY_SUMMARY_RULE_ZEBRA_999"
+                path.write_text(path.read_text(encoding="utf8")+"\n- "+marker,encoding="utf8")
+                args={"query":"previous unknown concept", "conversation_id":"one-session", "turn_id":"one-turn"}
+                first=(await client.call_tool("recall_memory",args)).structured_content
+                second=(await client.call_tool("recall_memory",args)).structured_content
+                self.assertEqual(first["memory_text"].count(marker),1)
+                self.assertEqual(first["turn_count"],1)
+                self.assertEqual(second["turn_count"],1)
+                self.assertTrue(first["turn_count_exact"])
+                self.assertTrue(first["search_feedback"])
+                self.assertFalse(second["search_feedback"])
+                self.assertLessEqual(first["payload_tokens"]["count"],first["payload_budget"])
+                self.assertIsNone(first["delivery"]["host_accepted"])
+                self.assertIsNone(first["delivery"]["model_used"])
+
     def test_print_config_works_without_sdk_or_initialized_memory(self):
         with tempfile.TemporaryDirectory(prefix="hfa-mcp-cfg-") as temp:
             uninitialized = Path(temp) / "not_yet_created"
@@ -93,7 +118,9 @@ class MCPIntegrationTests(unittest.IsolatedAsyncioTestCase):
                 strange = await client.call_tool("recall_memory", {"query": "--help"})
                 self.assertFalse(strange.is_error)
                 unknown = await client.call_tool("recall_memory", {"query": "今晚吃什么"})
-                self.assertEqual(unknown.structured_content["memory_text"], "")
+                self.assertEqual(unknown.structured_content["matches"], [])
+                self.assertIn("核心记忆摘要", unknown.structured_content["memory_text"])
+                self.assertFalse(unknown.structured_content["turn_count_exact"])
             explicit_params = StdioServerParameters(command=sys.executable,
                 args=["-B", str(ROOT / "scripts/hfa_mcp.py"), "--memory-dir", str(memory)],
                 env={"PYTHONUTF8": "1", "PYTHONDONTWRITEBYTECODE": "1"})

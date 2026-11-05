@@ -1,0 +1,6 @@
+{
+  "metrics": true,
+  "predictions": true,
+  "thresholdWithinRoundoff": true,
+  "fixtureHashes": true
+}

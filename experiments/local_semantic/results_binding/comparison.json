@@ -1,0 +1,179 @@
+{
+  "groups": {
+    "fixed40": {
+      "before": {
+        "positive_cases": 20,
+        "correct_top1": 12,
+        "hits_at_2": 14,
+        "negative_cases": 20,
+        "no_answer_returns": 2,
+        "returned_queries": 16,
+        "returned_query_precision": 0.75,
+        "balanced_decision_accuracy": 0.75,
+        "extra_candidates_on_positive": 4,
+        "language": {
+          "Chinese": {
+            "total": 10,
+            "correct_top1": 6
+          },
+          "English": {
+            "total": 10,
+            "correct_top1": 6
+          }
+        },
+        "no_answer_by_kind": {
+          "ambiguous": 0,
+          "restricted": 0,
+          "unanswerable": 2,
+          "unrelated": 0
+        }
+      },
+      "after": {
+        "positive_cases": 20,
+        "correct_top1": 12,
+        "hits_at_2": 14,
+        "negative_cases": 20,
+        "no_answer_returns": 0,
+        "returned_queries": 14,
+        "returned_query_precision": 0.8571428571428571,
+        "balanced_decision_accuracy": 0.8,
+        "extra_candidates_on_positive": 4,
+        "language": {
+          "Chinese": {
+            "total": 10,
+            "correct_top1": 6
+          },
+          "English": {
+            "total": 10,
+            "correct_top1": 6
+          }
+        },
+        "no_answer_by_kind": {
+          "ambiguous": 0,
+          "restricted": 0,
+          "unanswerable": 0,
+          "unrelated": 0
+        }
+      },
+      "scores_and_prior_predictions_exactly_reproduced": true,
+      "integrated_filter_equals_saved_score_replay": true
+    },
+    "known60": {
+      "before": {
+        "positive_cases": 30,
+        "correct_top1": 20,
+        "hits_at_2": 20,
+        "negative_cases": 30,
+        "no_answer_returns": 2,
+        "returned_queries": 22,
+        "returned_query_precision": 0.9090909090909091,
+        "balanced_decision_accuracy": 0.8,
+        "extra_candidates_on_positive": 3,
+        "language": {
+          "Chinese": {
+            "total": 15,
+            "correct_top1": 12
+          },
+          "English": {
+            "total": 15,
+            "correct_top1": 8
+          }
+        },
+        "no_answer_by_kind": {
+          "ambiguous": 0,
+          "restricted": 0,
+          "unanswerable": 2,
+          "unrelated": 0
+        }
+      },
+      "after": {
+        "positive_cases": 30,
+        "correct_top1": 20,
+        "hits_at_2": 20,
+        "negative_cases": 30,
+        "no_answer_returns": 2,
+        "returned_queries": 22,
+        "returned_query_precision": 0.9090909090909091,
+        "balanced_decision_accuracy": 0.8,
+        "extra_candidates_on_positive": 3,
+        "language": {
+          "Chinese": {
+            "total": 15,
+            "correct_top1": 12
+          },
+          "English": {
+            "total": 15,
+            "correct_top1": 8
+          }
+        },
+        "no_answer_by_kind": {
+          "ambiguous": 0,
+          "restricted": 0,
+          "unanswerable": 2,
+          "unrelated": 0
+        }
+      },
+      "scores_and_prior_predictions_exactly_reproduced": true,
+      "integrated_filter_equals_saved_score_replay": true
+    },
+    "known52": {
+      "before": {
+        "positive_cases": 36,
+        "correct_top1": 22,
+        "hits_at_2": 22,
+        "negative_cases": 16,
+        "no_answer_returns": 2,
+        "returned_queries": 24,
+        "returned_query_precision": 0.9166666666666666,
+        "balanced_decision_accuracy": 0.7430555555555556,
+        "extra_candidates_on_positive": 9,
+        "language": {
+          "Chinese": {
+            "total": 18,
+            "correct_top1": 13
+          },
+          "English": {
+            "total": 18,
+            "correct_top1": 9
+          }
+        },
+        "no_answer_by_kind": {
+          "ambiguous": 0,
+          "restricted": 0,
+          "unanswerable": 2,
+          "unrelated": 0
+        }
+      },
+      "after": {
+        "positive_cases": 36,
+        "correct_top1": 22,
+        "hits_at_2": 22,
+        "negative_cases": 16,
+        "no_answer_returns": 0,
+        "returned_queries": 22,
+        "returned_query_precision": 1.0,
+        "balanced_decision_accuracy": 0.8055555555555556,
+        "extra_candidates_on_positive": 9,
+        "language": {
+          "Chinese": {
+            "total": 18,
+            "correct_top1": 13
+          },
+          "English": {
+            "total": 18,
+            "correct_top1": 9
+          }
+        },
+        "no_answer_by_kind": {
+          "ambiguous": 0,
+          "restricted": 0,
+          "unanswerable": 0,
+          "unrelated": 0
+        }
+      },
+      "scores_and_prior_predictions_exactly_reproduced": true,
+      "integrated_filter_equals_saved_score_replay": true
+    }
+  },
+  "binding_evidence_items_across_all_scored_candidates": 35
+}

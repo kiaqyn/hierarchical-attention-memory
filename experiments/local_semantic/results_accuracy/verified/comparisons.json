@@ -1,0 +1,42 @@
+{
+  "fixed40": {
+    "lost_correct_first": [],
+    "lost_correct_within_two": [],
+    "gained_correct_first": [
+      "v21-test-003",
+      "v21-test-009",
+      "v21-test-013",
+      "v21-test-015",
+      "v21-test-017",
+      "v21-test-019"
+    ]
+  },
+  "known60": {
+    "lost_correct_first": [],
+    "lost_correct_within_two": [],
+    "gained_correct_first": [
+      "v2-test-011",
+      "v2-test-015",
+      "v2-test-021",
+      "v2-test-023",
+      "v2-test-025",
+      "v2-test-027",
+      "v2-test-029"
+    ]
+  },
+  "known52": {
+    "lost_correct_first": [],
+    "lost_correct_within_two": [],
+    "gained_correct_first": [
+      "test-003",
+      "test-007",
+      "test-009",
+      "test-011",
+      "test-013",
+      "test-015",
+      "test-023",
+      "test-031",
+      "test-035"
+    ]
+  }
+}

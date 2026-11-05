@@ -1,0 +1,242 @@
+[
+  {
+    "id": "v21-test-000",
+    "query": "哪次调整让应用不再停留在刚打开时那张页面？",
+    "expected": "boot",
+    "kind": "positive"
+  },
+  {
+    "id": "v21-test-001",
+    "query": "What dependency change got the application past its initial waiting view?",
+    "expected": "boot",
+    "kind": "positive"
+  },
+  {
+    "id": "v21-test-002",
+    "query": "中文字符只剩矩形占位符，之前怎样补齐文字？",
+    "expected": "font",
+    "kind": "positive"
+  },
+  {
+    "id": "v21-test-003",
+    "query": "How did we get the missing Chinese characters to render instead of square placeholders?",
+    "expected": "font",
+    "kind": "positive"
+  },
+  {
+    "id": "v21-test-004",
+    "query": "产品售价的临时副本现在允许保留多长时间？",
+    "expected": "ttl",
+    "kind": "positive"
+  },
+  {
+    "id": "v21-test-005",
+    "query": "How long is a stored product price kept before it must be refreshed?",
+    "expected": "ttl",
+    "kind": "positive"
+  },
+  {
+    "id": "v21-test-006",
+    "query": "从身份提供方回来就必须重登的问题，以前修过什么？",
+    "expected": "cookie",
+    "kind": "positive"
+  },
+  {
+    "id": "v21-test-007",
+    "query": "What cookie change prevented a fresh sign-in being needed after the identity-provider redirect?",
+    "expected": "cookie",
+    "kind": "positive"
+  },
+  {
+    "id": "v21-test-008",
+    "query": "以前用哪个字段识别重复付款，让订单重发不会再多扣钱？",
+    "expected": "payment",
+    "kind": "positive"
+  },
+  {
+    "id": "v21-test-009",
+    "query": "What identifies the same purchase so retries cannot trigger an extra charge?",
+    "expected": "payment",
+    "kind": "positive"
+  },
+  {
+    "id": "v21-test-010",
+    "query": "编辑器和终端加载的Python环境不同，过去怎么统一？",
+    "expected": "venv",
+    "kind": "positive"
+  },
+  {
+    "id": "v21-test-011",
+    "query": "What did we align when the editor and terminal used different Python environments?",
+    "expected": "venv",
+    "kind": "positive"
+  },
+  {
+    "id": "v21-test-012",
+    "query": "没有文字层的扫描页，之前先做什么再检索？",
+    "expected": "pdf",
+    "kind": "positive"
+  },
+  {
+    "id": "v21-test-013",
+    "query": "What preparation is required before searching scanned pages with no text layer?",
+    "expected": "pdf",
+    "kind": "positive"
+  },
+  {
+    "id": "v21-test-014",
+    "query": "项目演示里的识字任务，每月经费确定成多少元？",
+    "expected": "budget",
+    "kind": "positive"
+  },
+  {
+    "id": "v21-test-015",
+    "query": "How much money was allocated per month to the synthetic OCR task?",
+    "expected": "budget",
+    "kind": "positive"
+  },
+  {
+    "id": "v21-test-016",
+    "query": "十月测试请求中有多大比例需要再次提交？",
+    "expected": "metric",
+    "kind": "positive"
+  },
+  {
+    "id": "v21-test-017",
+    "query": "What percentage of the October test orders had their requests retried?",
+    "expected": "metric",
+    "kind": "positive"
+  },
+  {
+    "id": "v21-test-018",
+    "query": "触发自动清理之前，访问审计能查到几天的记录？",
+    "expected": "logs",
+    "kind": "positive"
+  },
+  {
+    "id": "v21-test-019",
+    "query": "How many days of access audit history remain before automatic deletion?",
+    "expected": "logs",
+    "kind": "positive"
+  },
+  {
+    "id": "v21-test-020",
+    "query": "购买Excel许可证一共花了多少钱？",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v21-test-021",
+    "query": "How much did the Excel license purchase cost?",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v21-test-022",
+    "query": "处理字体问题这件事的批准人是谁？",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v21-test-023",
+    "query": "Who approved the missing-glyph fix?",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v21-test-024",
+    "query": "实际下载包的64位十六进制哈希值是什么？",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v21-test-025",
+    "query": "What is the actual 64-character hexadecimal hash value of the package?",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v21-test-026",
+    "query": "2024年测试订单的实测重试率是多少？",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v21-test-027",
+    "query": "What retry percentage was measured for test orders in 2024?",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v21-test-028",
+    "query": "支付成功率的实测百分比是多少？",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v21-test-029",
+    "query": "What percentage of payments actually succeeded?",
+    "expected": null,
+    "kind": "unanswerable"
+  },
+  {
+    "id": "v21-test-030",
+    "query": "这件事怎么搞来着？",
+    "expected": null,
+    "kind": "ambiguous"
+  },
+  {
+    "id": "v21-test-031",
+    "query": "What should we do about that again?",
+    "expected": null,
+    "kind": "ambiguous"
+  },
+  {
+    "id": "v21-test-032",
+    "query": "织女风帆支线的关卡配色结论是什么？",
+    "expected": null,
+    "kind": "restricted"
+  },
+  {
+    "id": "v21-test-033",
+    "query": "What was the archived lake-blue completion-color decision?",
+    "expected": null,
+    "kind": "restricted"
+  },
+  {
+    "id": "v21-test-034",
+    "query": "为什么海水结冰时盐分会变化？",
+    "expected": null,
+    "kind": "unrelated"
+  },
+  {
+    "id": "v21-test-035",
+    "query": "How do spiders make their silk?",
+    "expected": null,
+    "kind": "unrelated"
+  },
+  {
+    "id": "v21-test-036",
+    "query": "交响乐队里的双簧管是什么乐器？",
+    "expected": null,
+    "kind": "unrelated"
+  },
+  {
+    "id": "v21-test-037",
+    "query": "Why do lunar eclipses not occur every month?",
+    "expected": null,
+    "kind": "unrelated"
+  },
+  {
+    "id": "v21-test-038",
+    "query": "人体缺水为什么会口渴？",
+    "expected": null,
+    "kind": "unrelated"
+  },
+  {
+    "id": "v21-test-039",
+    "query": "How do plants move water from roots to leaves?",
+    "expected": null,
+    "kind": "unrelated"
+  }
+]

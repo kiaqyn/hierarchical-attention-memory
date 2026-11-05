@@ -27,6 +27,10 @@ Home-page: https://github.com/kiaqyn/hierarchical-attention-memory
 License: MIT
 Requires-Python: >=3.10
 Provides-Extra: mcp
+Provides-Extra: semantic
+Requires-Dist: numpy==2.5.4; python_version >= "3.12" and extra == "semantic"
+Requires-Dist: onnxruntime==1.31.1; python_version >= "3.12" and extra == "semantic"
+Requires-Dist: tokenizers==0.23.3; python_version >= "3.12" and extra == "semantic"
 Requires-Dist: mcp==2.3.0; python_version >= "3.11" and extra == "mcp"
 Provides-Extra: tokenizer
 Requires-Dist: tiktoken==0.14.0; extra == "tokenizer"
@@ -119,7 +123,8 @@ def build_sdist(sdist_directory, config_settings=None):
         info.size = len(pkg_info)
         tf.addfile(info, io.BytesIO(pkg_info))
         for rel_glob in ("pyproject.toml", "README.md", "SKILL.md", "hooks.json", "plugin.json",
-                         "scripts/*.py", "templates/memory/**/*", "docs/*.md", "tests/*.py"):
+                         "scripts/*.py", "templates/memory/**/*", "docs/*.md", "tests/*.py",
+                         "experiments/quota/*.py", "experiments/quota/fixtures/*.json"):
             for path in sorted(ROOT.glob(rel_glob)):
                 if path.is_file() and not path.name.startswith(".hfa") and "__pycache__" not in path.parts:
                     rel = path.relative_to(ROOT).as_posix()

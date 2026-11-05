@@ -72,7 +72,10 @@ class HfaTests(unittest.TestCase):
             process = self.cli("status", str(self.mem), "--json", env={"PYTHONUTF8": utf8})
             self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
             state = json.loads(process.stdout)
-            self.assertEqual(len(state["nodes"]["HIGH"]), 2)
+            self.assertEqual(len(state["nodes"]["HIGH"]), 1)
+            self.assertEqual(state["nodes"]["HIGH"][0]["path"], "summary.md")
+            self.assertLessEqual(state["summary_tokens"], 800)
+            self.assertEqual(state["missing_summary_sections"], [])
             self.assertEqual(state["total_topics"], 1)
 
     def test_add_and_recall_returns_single_L1_snippet(self):
@@ -359,10 +362,61 @@ hfa.cmd_add_topic(Path(sys.argv[2]),"Committed","committed-key","fact")
         self.assertIn("legacy fact", self.route("legacy-key")["recall_text"])
 
     def test_init_force_preserves_existing_data(self):
-        path = self.mem / "profile/traits.md"
-        path.write_text("user-owned preferences", encoding="utf-8")
+        path = self.mem / "summary.md"
+        custom = read(path) + "\n- custom user preference\n"
+        path.write_text(custom, encoding="utf-8")
         invoke(hfa.cmd_init, self.mem, True)
-        self.assertEqual(read(path), "user-owned preferences")
+        self.assertEqual(read(path), custom)
+
+    def test_core_summary_sections_and_800_token_upper_bound(self):
+        summary_path = self.mem / "summary.md"
+        original = read(summary_path)
+        for section in ("身份和背景", "长期目标", "技术环境", "偏好与习惯", "持续项目和共同语境"):
+            self.assertIn(section, original)
+        # Missing a required section is flagged by status
+        summary_path.write_text("# 摘要\n## 身份和背景\n", encoding="utf-8")
+        rc, out = invoke(hfa.cmd_status, self.mem, True)
+        self.assertEqual(rc, 1)
+        self.assertTrue(any("missing required sections" in p for p in json.loads(out)["problems"]))
+        # Exceeding 800 tokens is rejected by status and route
+        summary_path.write_text(original + "\n" + ("超长摘要内容 " * 400), encoding="utf-8")
+        self.assertEqual(invoke(hfa.cmd_status, self.mem, True)[0], 1)
+        with self.assertRaises(hfa.MemoryError):
+            self.route("核心")
+        summary_path.write_text(original, encoding="utf-8")
+        self.assertEqual(invoke(hfa.cmd_status, self.mem, True)[0], 0)
+
+    def test_zero_hits_feedback_20_turn_status_check_and_history_never_dilutes(self):
+        def real_turn(number):
+            rc, output = invoke(hfa.cmd_route, self.mem, "完全未曾记录过的生僻概念查询",
+                                None, None, "hybrid", "test-session", str(number))
+            self.assertEqual(rc, 0)
+            return json.loads(output)
+        # 1. Round-1 SQLite BM25 + token split returning 0 hits feeds back to model
+        miss = real_turn(1)
+        self.assertTrue(miss["zero_hits"])
+        self.assertIn("Round-1 SQLite BM25", miss["search_feedback"])
+        self.assertEqual(miss["turn_count"], 1)
+        self.assertFalse(miss["status_check_due"])
+        # 2. Every 20 turns triggers task status check
+        for turn in range(2, 20):
+            res = real_turn(turn)
+            self.assertEqual(res["turn_count"], turn)
+            self.assertFalse(res["status_check_due"])
+        twentieth = real_turn(20)
+        self.assertEqual(twentieth["turn_count"], 20)
+        self.assertTrue(twentieth["status_check_due"])
+        self.assertIn("20-turn task status check", twentieth["status_check_prompt"])
+        # 3. History region never participates in context dilution (only chunk hitwords searched)
+        d = self.mem / "directory.md"
+        d.write_text(
+            read(d) + "* **[H1]** [`H1`](history/epoch_01/summaries.md) ➔ `HISTORY` | `[命中词: 历史汇总大文件]`\n",
+            encoding="utf-8",
+        )
+        invoke(hfa.cmd_reindex, self.mem)
+        hist_res = self.route("历史汇总大文件", "attempt to unlock history file")
+        self.assertEqual(hist_res["selected"], [])
+        self.assertNotIn("# HFA epoch_01", hist_res["recall_text"])
 
     @unittest.skipUnless(os.name == "nt", "Windows lock error handling")
     def test_invalid_lock_error_fails_fast_and_contention_times_out(self):

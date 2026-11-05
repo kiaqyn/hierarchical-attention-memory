@@ -1,0 +1,6245 @@
+{
+  "kind": "finite explicit-claim binding experiment; not production or answer-generation accuracy",
+  "pair_fixture": {
+    "kind": "developer-authored frozen candidate-evidence pairs, not retrieval benchmark",
+    "frozen_before_checker_implementation": true,
+    "count": 40,
+    "positive": 20,
+    "negative": 20,
+    "test_sha256": "46c02e1b6bda28455f34c014fa5d13fe055f89ef7b14d698fb94077cd464571e",
+    "threshold_changes": false
+  },
+  "pair_metrics": {
+    "positive_pairs": 20,
+    "negative_pairs": 20,
+    "before_accepted_positive": 20,
+    "after_accepted_positive": 20,
+    "before_accepted_negative": 19,
+    "after_accepted_negative": 0,
+    "correct_values_cited_on_positive": 19
+  },
+  "pair_cases": [
+    {
+      "id": "bind-pos-00",
+      "query": "Vega 月度预算是多少元？",
+      "body": "Vega 月度预算为 210 元。",
+      "expected_allowed": true,
+      "expected_value": "210 元",
+      "before_allowed": true,
+      "after_allowed": true,
+      "expected_value_cited": true,
+      "decision": {
+        "allowed": true,
+        "status": "explicit_value_binding_found",
+        "checks": [
+          {
+            "field": "currency",
+            "present": true,
+            "quote": "210 元",
+            "start": 11,
+            "end": 16
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "vega"
+            ],
+            "metrics": {
+              "currency": [
+                "budget"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [
+            {
+              "field": "currency",
+              "present": true,
+              "quote": "210 元",
+              "start": 11,
+              "end": 16,
+              "clause": "Vega 月度预算为 210 元",
+              "clause_start": 0,
+              "clause_end": 16,
+              "entities": [
+                "vega"
+              ],
+              "metrics": [
+                "budget"
+              ],
+              "time": {
+                "years": [],
+                "months": [],
+                "needs_reference_date": false
+              }
+            }
+          ],
+          "reasons": []
+        }
+      }
+    },
+    {
+      "id": "bind-pos-01",
+      "query": "What is the Nova purchase price in USD?",
+      "body": "Nova purchase price is $42.",
+      "expected_allowed": true,
+      "expected_value": "$42",
+      "before_allowed": true,
+      "after_allowed": true,
+      "expected_value_cited": true,
+      "decision": {
+        "allowed": true,
+        "status": "explicit_value_binding_found",
+        "checks": [
+          {
+            "field": "currency",
+            "present": true,
+            "quote": "$42",
+            "start": 23,
+            "end": 26
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "nova"
+            ],
+            "metrics": {
+              "currency": [
+                "price"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [
+            {
+              "field": "currency",
+              "present": true,
+              "quote": "$42",
+              "start": 23,
+              "end": 26,
+              "clause": "Nova purchase price is $42",
+              "clause_start": 0,
+              "clause_end": 26,
+              "entities": [
+                "nova"
+              ],
+              "metrics": [
+                "price"
+              ],
+              "time": {
+                "years": [],
+                "months": [],
+                "needs_reference_date": false
+              }
+            }
+          ],
+          "reasons": []
+        }
+      }
+    },
+    {
+      "id": "bind-pos-02",
+      "query": "“青禾”的预算多少元？",
+      "body": "“青禾”预算 700 元；“星桥”预算 900 元。",
+      "expected_allowed": true,
+      "expected_value": "700 元",
+      "before_allowed": true,
+      "after_allowed": true,
+      "expected_value_cited": true,
+      "decision": {
+        "allowed": true,
+        "status": "explicit_value_binding_found",
+        "checks": [
+          {
+            "field": "currency",
+            "present": true,
+            "quote": "700 元",
+            "start": 7,
+            "end": 12
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "青禾"
+            ],
+            "metrics": {
+              "currency": [
+                "budget"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [
+            {
+              "field": "currency",
+              "present": true,
+              "quote": "700 元",
+              "start": 7,
+              "end": 12,
+              "clause": "“青禾”预算 700 元",
+              "clause_start": 0,
+              "clause_end": 12,
+              "entities": [
+                "青禾"
+              ],
+              "metrics": [
+                "budget"
+              ],
+              "time": {
+                "years": [],
+                "months": [],
+                "needs_reference_date": false
+              }
+            }
+          ],
+          "reasons": []
+        }
+      }
+    },
+    {
+      "id": "bind-pos-03",
+      "query": "What percentage is the Atlas success rate?",
+      "body": "Atlas success rate: 97.4%.",
+      "expected_allowed": true,
+      "expected_value": "97.4%",
+      "before_allowed": true,
+      "after_allowed": true,
+      "expected_value_cited": true,
+      "decision": {
+        "allowed": true,
+        "status": "explicit_value_binding_found",
+        "checks": [
+          {
+            "field": "percentage",
+            "present": true,
+            "quote": "97.4%",
+            "start": 20,
+            "end": 25
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "atlas"
+            ],
+            "metrics": {
+              "percentage": [
+                "success_rate"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [
+            {
+              "field": "percentage",
+              "present": true,
+              "quote": "97.4%",
+              "start": 20,
+              "end": 25,
+              "clause": "Atlas success rate: 97.4%",
+              "clause_start": 0,
+              "clause_end": 25,
+              "entities": [
+                "atlas"
+              ],
+              "metrics": [
+                "success_rate"
+              ],
+              "time": {
+                "years": [],
+                "months": [],
+                "needs_reference_date": false
+              }
+            }
+          ],
+          "reasons": []
+        }
+      }
+    },
+    {
+      "id": "bind-pos-04",
+      "query": "Lyra 的实测重试率是多少？",
+      "body": "Lyra 实测重试率为 2.3%。",
+      "expected_allowed": true,
+      "expected_value": "2.3%",
+      "before_allowed": true,
+      "after_allowed": true,
+      "expected_value_cited": true,
+      "decision": {
+        "allowed": true,
+        "status": "explicit_value_binding_found",
+        "checks": [
+          {
+            "field": "percentage",
+            "present": true,
+            "quote": "2.3%",
+            "start": 12,
+            "end": 16
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "lyra"
+            ],
+            "metrics": {
+              "percentage": [
+                "retry_rate"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [
+            {
+              "field": "percentage",
+              "present": true,
+              "quote": "2.3%",
+              "start": 12,
+              "end": 16,
+              "clause": "Lyra 实测重试率为 2.3%",
+              "clause_start": 0,
+              "clause_end": 16,
+              "entities": [
+                "lyra"
+              ],
+              "metrics": [
+                "retry_rate"
+              ],
+              "time": {
+                "years": [],
+                "months": [],
+                "needs_reference_date": false
+              }
+            }
+          ],
+          "reasons": []
+        }
+      }
+    },
+    {
+      "id": "bind-pos-05",
+      "query": "What was the measured Vega failure rate in 2025?",
+      "body": "In 2025 Vega measured failure rate: 1.6%.",
+      "expected_allowed": true,
+      "expected_value": "1.6%",
+      "before_allowed": true,
+      "after_allowed": true,
+      "expected_value_cited": false,
+      "decision": {
+        "allowed": true,
+        "status": "requested_fields_present",
+        "checks": [
+          {
+            "field": "explicit_year",
+            "present": true,
+            "quote": "2025",
+            "start": 3,
+            "end": 7
+          }
+        ],
+        "binding": {
+          "coverage": "not_checked_non_numeric_request",
+          "requested": {
+            "entities": [
+              "vega"
+            ],
+            "metrics": {},
+            "time": {
+              "years": [
+                "2025"
+              ],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [],
+          "reasons": []
+        }
+      }
+    },
+    {
+      "id": "bind-pos-06",
+      "query": "2026年 Nova 成功率是多少？",
+      "body": "2025年 Nova 成功率 91%；2026年 Nova 成功率 96%。",
+      "expected_allowed": true,
+      "expected_value": "96%",
+      "before_allowed": true,
+      "after_allowed": true,
+      "expected_value_cited": true,
+      "decision": {
+        "allowed": true,
+        "status": "explicit_value_binding_found",
+        "checks": [
+          {
+            "field": "explicit_year",
+            "present": true,
+            "quote": "2026",
+            "start": 19,
+            "end": 23
+          },
+          {
+            "field": "percentage",
+            "present": true,
+            "quote": "96%",
+            "start": 34,
+            "end": 37
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "nova"
+            ],
+            "metrics": {
+              "percentage": [
+                "success_rate"
+              ]
+            },
+            "time": {
+              "years": [
+                "2026"
+              ],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [
+            {
+              "field": "percentage",
+              "present": true,
+              "quote": "96%",
+              "start": 34,
+              "end": 37,
+              "clause": "2026年 Nova 成功率 96%",
+              "clause_start": 19,
+              "clause_end": 37,
+              "entities": [
+                "nova"
+              ],
+              "metrics": [
+                "success_rate"
+              ],
+              "time": {
+                "years": [
+                  "2026"
+                ],
+                "months": [],
+                "needs_reference_date": false
+              }
+            }
+          ],
+          "reasons": [
+            {
+              "field": "percentage",
+              "reason": "requested_year_not_in_value_clause",
+              "start": 0,
+              "end": 18
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bind-pos-07",
+      "query": "Atlas 在3月实测重试率是多少？",
+      "body": "Atlas 在3月实测重试率 4.1%；Atlas 在4月实测重试率 3.2%。",
+      "expected_allowed": true,
+      "expected_value": "4.1%",
+      "before_allowed": true,
+      "after_allowed": true,
+      "expected_value_cited": true,
+      "decision": {
+        "allowed": true,
+        "status": "explicit_value_binding_found",
+        "checks": [
+          {
+            "field": "percentage",
+            "present": true,
+            "quote": "4.1%",
+            "start": 15,
+            "end": 19
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "atlas"
+            ],
+            "metrics": {
+              "percentage": [
+                "retry_rate"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [
+                3
+              ],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [
+            {
+              "field": "percentage",
+              "present": true,
+              "quote": "4.1%",
+              "start": 15,
+              "end": 19,
+              "clause": "Atlas 在3月实测重试率 4.1%",
+              "clause_start": 0,
+              "clause_end": 19,
+              "entities": [
+                "atlas"
+              ],
+              "metrics": [
+                "retry_rate"
+              ],
+              "time": {
+                "years": [],
+                "months": [
+                  3
+                ],
+                "needs_reference_date": false
+              }
+            }
+          ],
+          "reasons": []
+        }
+      }
+    },
+    {
+      "id": "bind-pos-08",
+      "query": "How long is the Quartz audit retention period?",
+      "body": "Quartz audit retention period is 21 days.",
+      "expected_allowed": true,
+      "expected_value": "21 days",
+      "before_allowed": true,
+      "after_allowed": true,
+      "expected_value_cited": true,
+      "decision": {
+        "allowed": true,
+        "status": "explicit_value_binding_found",
+        "checks": [
+          {
+            "field": "duration",
+            "present": true,
+            "quote": "21 days",
+            "start": 33,
+            "end": 40
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "quartz"
+            ],
+            "metrics": {
+              "duration": [
+                "retention"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [
+            {
+              "field": "duration",
+              "present": true,
+              "quote": "21 days",
+              "start": 33,
+              "end": 40,
+              "clause": "Quartz audit retention period is 21 days",
+              "clause_start": 0,
+              "clause_end": 40,
+              "entities": [
+                "quartz"
+              ],
+              "metrics": [
+                "retention"
+              ],
+              "time": {
+                "years": [],
+                "months": [],
+                "needs_reference_date": false
+              }
+            }
+          ],
+          "reasons": []
+        }
+      }
+    },
+    {
+      "id": "bind-pos-09",
+      "query": "Polaris 超时设置是多久？",
+      "body": "Polaris 超时为 8 秒。",
+      "expected_allowed": true,
+      "expected_value": "8 秒",
+      "before_allowed": true,
+      "after_allowed": true,
+      "expected_value_cited": true,
+      "decision": {
+        "allowed": true,
+        "status": "explicit_value_binding_found",
+        "checks": [
+          {
+            "field": "duration",
+            "present": true,
+            "quote": "8 秒",
+            "start": 12,
+            "end": 15
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "polaris"
+            ],
+            "metrics": {
+              "duration": [
+                "timeout"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [
+            {
+              "field": "duration",
+              "present": true,
+              "quote": "8 秒",
+              "start": 12,
+              "end": 15,
+              "clause": "Polaris 超时为 8 秒",
+              "clause_start": 0,
+              "clause_end": 15,
+              "entities": [
+                "polaris"
+              ],
+              "metrics": [
+                "timeout"
+              ],
+              "time": {
+                "years": [],
+                "months": [],
+                "needs_reference_date": false
+              }
+            }
+          ],
+          "reasons": []
+        }
+      }
+    },
+    {
+      "id": "bind-pos-10",
+      "query": "2024年“星桥”的预算多少元？",
+      "body": "2024年“星桥”预算 540 元。2025年“星桥”预算 610 元。",
+      "expected_allowed": true,
+      "expected_value": "540 元",
+      "before_allowed": true,
+      "after_allowed": true,
+      "expected_value_cited": true,
+      "decision": {
+        "allowed": true,
+        "status": "explicit_value_binding_found",
+        "checks": [
+          {
+            "field": "explicit_year",
+            "present": true,
+            "quote": "2024",
+            "start": 0,
+            "end": 4
+          },
+          {
+            "field": "currency",
+            "present": true,
+            "quote": "540 元",
+            "start": 12,
+            "end": 17
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "星桥"
+            ],
+            "metrics": {
+              "currency": [
+                "budget"
+              ]
+            },
+            "time": {
+              "years": [
+                "2024"
+              ],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [
+            {
+              "field": "currency",
+              "present": true,
+              "quote": "540 元",
+              "start": 12,
+              "end": 17,
+              "clause": "2024年“星桥”预算 540 元",
+              "clause_start": 0,
+              "clause_end": 17,
+              "entities": [
+                "星桥"
+              ],
+              "metrics": [
+                "budget"
+              ],
+              "time": {
+                "years": [
+                  "2024"
+                ],
+                "months": [],
+                "needs_reference_date": false
+              }
+            }
+          ],
+          "reasons": []
+        }
+      }
+    },
+    {
+      "id": "bind-pos-11",
+      "query": "What is the Lyra refund rate in October?",
+      "body": "Lyra refund rate in October: 0.6%.",
+      "expected_allowed": true,
+      "expected_value": "0.6%",
+      "before_allowed": true,
+      "after_allowed": true,
+      "expected_value_cited": true,
+      "decision": {
+        "allowed": true,
+        "status": "explicit_value_binding_found",
+        "checks": [
+          {
+            "field": "percentage",
+            "present": true,
+            "quote": "0.6%",
+            "start": 29,
+            "end": 33
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "lyra"
+            ],
+            "metrics": {
+              "percentage": [
+                "refund_rate"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [
+                10
+              ],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [
+            {
+              "field": "percentage",
+              "present": true,
+              "quote": "0.6%",
+              "start": 29,
+              "end": 33,
+              "clause": "Lyra refund rate in October: 0.6%",
+              "clause_start": 0,
+              "clause_end": 33,
+              "entities": [
+                "lyra"
+              ],
+              "metrics": [
+                "refund_rate"
+              ],
+              "time": {
+                "years": [],
+                "months": [
+                  10
+                ],
+                "needs_reference_date": false
+              }
+            }
+          ],
+          "reasons": []
+        }
+      }
+    },
+    {
+      "id": "bind-pos-12",
+      "query": "Atlas 的预算多少元？",
+      "body": "Atlas 预算 430 元，Nova 预算 260 元。",
+      "expected_allowed": true,
+      "expected_value": "430 元",
+      "before_allowed": true,
+      "after_allowed": true,
+      "expected_value_cited": true,
+      "decision": {
+        "allowed": true,
+        "status": "explicit_value_binding_found",
+        "checks": [
+          {
+            "field": "currency",
+            "present": true,
+            "quote": "430 元",
+            "start": 9,
+            "end": 14
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "atlas"
+            ],
+            "metrics": {
+              "currency": [
+                "budget"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [
+            {
+              "field": "currency",
+              "present": true,
+              "quote": "430 元",
+              "start": 9,
+              "end": 14,
+              "clause": "Atlas 预算 430 元",
+              "clause_start": 0,
+              "clause_end": 14,
+              "entities": [
+                "atlas"
+              ],
+              "metrics": [
+                "budget"
+              ],
+              "time": {
+                "years": [],
+                "months": [],
+                "needs_reference_date": false
+              }
+            }
+          ],
+          "reasons": []
+        }
+      }
+    },
+    {
+      "id": "bind-pos-13",
+      "query": "How much is the Vega monthly budget?",
+      "body": "Vega monthly budget is 75 dollars; Nova monthly budget is 90 dollars.",
+      "expected_allowed": true,
+      "expected_value": "75 dollars",
+      "before_allowed": true,
+      "after_allowed": true,
+      "expected_value_cited": true,
+      "decision": {
+        "allowed": true,
+        "status": "explicit_value_binding_found",
+        "checks": [
+          {
+            "field": "currency",
+            "present": true,
+            "quote": "75 dollars",
+            "start": 23,
+            "end": 33
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "vega"
+            ],
+            "metrics": {
+              "currency": [
+                "budget"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [
+            {
+              "field": "currency",
+              "present": true,
+              "quote": "75 dollars",
+              "start": 23,
+              "end": 33,
+              "clause": "Vega monthly budget is 75 dollars",
+              "clause_start": 0,
+              "clause_end": 33,
+              "entities": [
+                "vega"
+              ],
+              "metrics": [
+                "budget"
+              ],
+              "time": {
+                "years": [],
+                "months": [],
+                "needs_reference_date": false
+              }
+            }
+          ],
+          "reasons": []
+        }
+      }
+    },
+    {
+      "id": "bind-pos-14",
+      "query": "What percentage was the measured Atlas success rate?",
+      "body": "Atlas planned success rate: 99%. Atlas measured success rate: 94%.",
+      "expected_allowed": true,
+      "expected_value": "94%",
+      "before_allowed": true,
+      "after_allowed": true,
+      "expected_value_cited": true,
+      "decision": {
+        "allowed": true,
+        "status": "explicit_value_binding_found",
+        "checks": [
+          {
+            "field": "percentage",
+            "present": true,
+            "quote": "94%",
+            "start": 62,
+            "end": 65
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "atlas"
+            ],
+            "metrics": {
+              "percentage": [
+                "success_rate"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [
+            {
+              "field": "percentage",
+              "present": true,
+              "quote": "94%",
+              "start": 62,
+              "end": 65,
+              "clause": " Atlas measured success rate: 94%",
+              "clause_start": 32,
+              "clause_end": 65,
+              "entities": [
+                "atlas"
+              ],
+              "metrics": [
+                "success_rate"
+              ],
+              "time": {
+                "years": [],
+                "months": [],
+                "needs_reference_date": false
+              }
+            }
+          ],
+          "reasons": [
+            {
+              "field": "percentage",
+              "reason": "planned_clause_does_not_establish_measurement",
+              "start": 0,
+              "end": 31
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bind-pos-15",
+      "query": "Quartz 的实际重试率是多少？",
+      "body": "Quartz 实测重试率 1.4%；Quartz 计划重试率 0.5%。",
+      "expected_allowed": true,
+      "expected_value": "1.4%",
+      "before_allowed": true,
+      "after_allowed": true,
+      "expected_value_cited": true,
+      "decision": {
+        "allowed": true,
+        "status": "explicit_value_binding_found",
+        "checks": [
+          {
+            "field": "percentage",
+            "present": true,
+            "quote": "1.4%",
+            "start": 13,
+            "end": 17
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "quartz"
+            ],
+            "metrics": {
+              "percentage": [
+                "retry_rate"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [
+            {
+              "field": "percentage",
+              "present": true,
+              "quote": "1.4%",
+              "start": 13,
+              "end": 17,
+              "clause": "Quartz 实测重试率 1.4%",
+              "clause_start": 0,
+              "clause_end": 17,
+              "entities": [
+                "quartz"
+              ],
+              "metrics": [
+                "retry_rate"
+              ],
+              "time": {
+                "years": [],
+                "months": [],
+                "needs_reference_date": false
+              }
+            }
+          ],
+          "reasons": []
+        }
+      }
+    },
+    {
+      "id": "bind-pos-16",
+      "query": "What is the Nova retry rate in 2024?",
+      "body": "In 2024 Nova retry rate was 3.8%, in 2025 Nova retry rate was 2.7%.",
+      "expected_allowed": true,
+      "expected_value": "3.8%",
+      "before_allowed": true,
+      "after_allowed": true,
+      "expected_value_cited": true,
+      "decision": {
+        "allowed": true,
+        "status": "explicit_value_binding_found",
+        "checks": [
+          {
+            "field": "explicit_year",
+            "present": true,
+            "quote": "2024",
+            "start": 3,
+            "end": 7
+          },
+          {
+            "field": "percentage",
+            "present": true,
+            "quote": "3.8%",
+            "start": 28,
+            "end": 32
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "nova"
+            ],
+            "metrics": {
+              "percentage": [
+                "retry_rate"
+              ]
+            },
+            "time": {
+              "years": [
+                "2024"
+              ],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [
+            {
+              "field": "percentage",
+              "present": true,
+              "quote": "3.8%",
+              "start": 28,
+              "end": 32,
+              "clause": "In 2024 Nova retry rate was 3.8%",
+              "clause_start": 0,
+              "clause_end": 32,
+              "entities": [
+                "nova"
+              ],
+              "metrics": [
+                "retry_rate"
+              ],
+              "time": {
+                "years": [
+                  "2024"
+                ],
+                "months": [],
+                "needs_reference_date": false
+              }
+            }
+          ],
+          "reasons": []
+        }
+      }
+    },
+    {
+      "id": "bind-pos-17",
+      "query": "“青禾”成功率的百分比是多少？",
+      "body": "“青禾”成功率为百分之九十六。",
+      "expected_allowed": true,
+      "expected_value": "百分之九十六",
+      "before_allowed": true,
+      "after_allowed": true,
+      "expected_value_cited": true,
+      "decision": {
+        "allowed": true,
+        "status": "explicit_value_binding_found",
+        "checks": [
+          {
+            "field": "percentage",
+            "present": true,
+            "quote": "百分之九十六",
+            "start": 8,
+            "end": 14
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "青禾"
+            ],
+            "metrics": {
+              "percentage": [
+                "success_rate"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [
+            {
+              "field": "percentage",
+              "present": true,
+              "quote": "百分之九十六",
+              "start": 8,
+              "end": 14,
+              "clause": "“青禾”成功率为百分之九十六",
+              "clause_start": 0,
+              "clause_end": 14,
+              "entities": [
+                "青禾"
+              ],
+              "metrics": [
+                "success_rate"
+              ],
+              "time": {
+                "years": [],
+                "months": [],
+                "needs_reference_date": false
+              }
+            }
+          ],
+          "reasons": []
+        }
+      }
+    },
+    {
+      "id": "bind-pos-18",
+      "query": "Atlas 日志保留多久？",
+      "body": "Atlas 日志保留 28 天。",
+      "expected_allowed": true,
+      "expected_value": "28 天",
+      "before_allowed": true,
+      "after_allowed": true,
+      "expected_value_cited": true,
+      "decision": {
+        "allowed": true,
+        "status": "explicit_value_binding_found",
+        "checks": [
+          {
+            "field": "duration",
+            "present": true,
+            "quote": "28 天",
+            "start": 11,
+            "end": 15
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "atlas"
+            ],
+            "metrics": {
+              "duration": [
+                "retention"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [
+            {
+              "field": "duration",
+              "present": true,
+              "quote": "28 天",
+              "start": 11,
+              "end": 15,
+              "clause": "Atlas 日志保留 28 天",
+              "clause_start": 0,
+              "clause_end": 15,
+              "entities": [
+                "atlas"
+              ],
+              "metrics": [
+                "retention"
+              ],
+              "time": {
+                "years": [],
+                "months": [],
+                "needs_reference_date": false
+              }
+            }
+          ],
+          "reasons": []
+        }
+      }
+    },
+    {
+      "id": "bind-pos-19",
+      "query": "What is the Polaris success rate in April 2026?",
+      "body": "Polaris success rate in April 2026: 98.2%.",
+      "expected_allowed": true,
+      "expected_value": "98.2%",
+      "before_allowed": true,
+      "after_allowed": true,
+      "expected_value_cited": true,
+      "decision": {
+        "allowed": true,
+        "status": "explicit_value_binding_found",
+        "checks": [
+          {
+            "field": "explicit_year",
+            "present": true,
+            "quote": "2026",
+            "start": 30,
+            "end": 34
+          },
+          {
+            "field": "percentage",
+            "present": true,
+            "quote": "98.2%",
+            "start": 36,
+            "end": 41
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "polaris"
+            ],
+            "metrics": {
+              "percentage": [
+                "success_rate"
+              ]
+            },
+            "time": {
+              "years": [
+                "2026"
+              ],
+              "months": [
+                4
+              ],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [
+            {
+              "field": "percentage",
+              "present": true,
+              "quote": "98.2%",
+              "start": 36,
+              "end": 41,
+              "clause": "Polaris success rate in April 2026: 98.2%",
+              "clause_start": 0,
+              "clause_end": 41,
+              "entities": [
+                "polaris"
+              ],
+              "metrics": [
+                "success_rate"
+              ],
+              "time": {
+                "years": [
+                  "2026"
+                ],
+                "months": [
+                  4
+                ],
+                "needs_reference_date": false
+              }
+            }
+          ],
+          "reasons": []
+        }
+      }
+    },
+    {
+      "id": "bind-neg-00",
+      "query": "Vega 月度预算是多少元？",
+      "body": "Nova 月度预算为 210 元。",
+      "expected_allowed": false,
+      "expected_value": null,
+      "before_allowed": true,
+      "after_allowed": false,
+      "expected_value_cited": null,
+      "decision": {
+        "allowed": false,
+        "status": "explicit_value_binding_not_established",
+        "checks": [
+          {
+            "field": "currency",
+            "present": false,
+            "quote": null,
+            "start": null,
+            "end": null
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "vega"
+            ],
+            "metrics": {
+              "currency": [
+                "budget"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [],
+          "reasons": [
+            {
+              "field": "currency",
+              "reason": "explicit_entity_not_in_value_clause",
+              "start": 0,
+              "end": 16
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bind-neg-01",
+      "query": "What is the Nova purchase price in USD?",
+      "body": "Nova budget is $42.",
+      "expected_allowed": false,
+      "expected_value": null,
+      "before_allowed": true,
+      "after_allowed": false,
+      "expected_value_cited": null,
+      "decision": {
+        "allowed": false,
+        "status": "explicit_value_binding_not_established",
+        "checks": [
+          {
+            "field": "currency",
+            "present": false,
+            "quote": null,
+            "start": null,
+            "end": null
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "nova"
+            ],
+            "metrics": {
+              "currency": [
+                "price"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [],
+          "reasons": [
+            {
+              "field": "currency",
+              "reason": "requested_metric_not_in_value_clause",
+              "start": 0,
+              "end": 18
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bind-neg-02",
+      "query": "“青禾”的预算多少元？",
+      "body": "“青禾”使用新字体；“星桥”预算 900 元。",
+      "expected_allowed": false,
+      "expected_value": null,
+      "before_allowed": true,
+      "after_allowed": false,
+      "expected_value_cited": null,
+      "decision": {
+        "allowed": false,
+        "status": "explicit_value_binding_not_established",
+        "checks": [
+          {
+            "field": "currency",
+            "present": false,
+            "quote": null,
+            "start": null,
+            "end": null
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "青禾"
+            ],
+            "metrics": {
+              "currency": [
+                "budget"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [],
+          "reasons": [
+            {
+              "field": "currency",
+              "reason": "explicit_entity_not_in_value_clause",
+              "start": 10,
+              "end": 22
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bind-neg-03",
+      "query": "What percentage is the Atlas success rate?",
+      "body": "Atlas retry rate: 2.6%.",
+      "expected_allowed": false,
+      "expected_value": null,
+      "before_allowed": true,
+      "after_allowed": false,
+      "expected_value_cited": null,
+      "decision": {
+        "allowed": false,
+        "status": "explicit_value_binding_not_established",
+        "checks": [
+          {
+            "field": "percentage",
+            "present": false,
+            "quote": null,
+            "start": null,
+            "end": null
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "atlas"
+            ],
+            "metrics": {
+              "percentage": [
+                "success_rate"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [],
+          "reasons": [
+            {
+              "field": "percentage",
+              "reason": "requested_metric_not_in_value_clause",
+              "start": 0,
+              "end": 22
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bind-neg-04",
+      "query": "Lyra 的实测重试率是多少？",
+      "body": "Lyra 实测成功率为 97.7%。",
+      "expected_allowed": false,
+      "expected_value": null,
+      "before_allowed": true,
+      "after_allowed": false,
+      "expected_value_cited": null,
+      "decision": {
+        "allowed": false,
+        "status": "explicit_value_binding_not_established",
+        "checks": [
+          {
+            "field": "percentage",
+            "present": false,
+            "quote": null,
+            "start": null,
+            "end": null
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "lyra"
+            ],
+            "metrics": {
+              "percentage": [
+                "retry_rate"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [],
+          "reasons": [
+            {
+              "field": "percentage",
+              "reason": "requested_metric_not_in_value_clause",
+              "start": 0,
+              "end": 17
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bind-neg-05",
+      "query": "What was the measured Vega failure rate in 2025?",
+      "body": "In 2026 Vega measured failure rate: 1.6%.",
+      "expected_allowed": false,
+      "expected_value": null,
+      "before_allowed": false,
+      "after_allowed": false,
+      "expected_value_cited": null,
+      "decision": {
+        "allowed": false,
+        "status": "requested_fields_missing",
+        "checks": [
+          {
+            "field": "explicit_year",
+            "present": false,
+            "quote": null,
+            "start": null,
+            "end": null
+          }
+        ],
+        "binding": {
+          "coverage": "not_checked_non_numeric_request",
+          "requested": {
+            "entities": [
+              "vega"
+            ],
+            "metrics": {},
+            "time": {
+              "years": [
+                "2025"
+              ],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [],
+          "reasons": []
+        }
+      }
+    },
+    {
+      "id": "bind-neg-06",
+      "query": "2026年 Nova 成功率是多少？",
+      "body": "2025年 Nova 成功率 91%；2026年 Nova 重试率 4%。",
+      "expected_allowed": false,
+      "expected_value": null,
+      "before_allowed": true,
+      "after_allowed": false,
+      "expected_value_cited": null,
+      "decision": {
+        "allowed": false,
+        "status": "explicit_value_binding_not_established",
+        "checks": [
+          {
+            "field": "explicit_year",
+            "present": true,
+            "quote": "2026",
+            "start": 19,
+            "end": 23
+          },
+          {
+            "field": "percentage",
+            "present": false,
+            "quote": null,
+            "start": null,
+            "end": null
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "nova"
+            ],
+            "metrics": {
+              "percentage": [
+                "success_rate"
+              ]
+            },
+            "time": {
+              "years": [
+                "2026"
+              ],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [],
+          "reasons": [
+            {
+              "field": "percentage",
+              "reason": "requested_year_not_in_value_clause",
+              "start": 0,
+              "end": 18
+            },
+            {
+              "field": "percentage",
+              "reason": "requested_metric_not_in_value_clause",
+              "start": 19,
+              "end": 36
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bind-neg-07",
+      "query": "Atlas 在3月实测重试率是多少？",
+      "body": "Atlas 在3月实测成功率 95%；Atlas 在4月实测重试率 3.2%。",
+      "expected_allowed": false,
+      "expected_value": null,
+      "before_allowed": true,
+      "after_allowed": false,
+      "expected_value_cited": null,
+      "decision": {
+        "allowed": false,
+        "status": "explicit_value_binding_not_established",
+        "checks": [
+          {
+            "field": "percentage",
+            "present": false,
+            "quote": null,
+            "start": null,
+            "end": null
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "atlas"
+            ],
+            "metrics": {
+              "percentage": [
+                "retry_rate"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [
+                3
+              ],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [],
+          "reasons": [
+            {
+              "field": "percentage",
+              "reason": "requested_metric_not_in_value_clause",
+              "start": 0,
+              "end": 18
+            },
+            {
+              "field": "percentage",
+              "reason": "requested_month_not_in_value_clause",
+              "start": 19,
+              "end": 38
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bind-neg-08",
+      "query": "How long is the Quartz audit retention period?",
+      "body": "Quartz timeout is 21 days.",
+      "expected_allowed": false,
+      "expected_value": null,
+      "before_allowed": true,
+      "after_allowed": false,
+      "expected_value_cited": null,
+      "decision": {
+        "allowed": false,
+        "status": "explicit_value_binding_not_established",
+        "checks": [
+          {
+            "field": "duration",
+            "present": false,
+            "quote": null,
+            "start": null,
+            "end": null
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "quartz"
+            ],
+            "metrics": {
+              "duration": [
+                "retention"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [],
+          "reasons": [
+            {
+              "field": "duration",
+              "reason": "requested_metric_not_in_value_clause",
+              "start": 0,
+              "end": 25
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bind-neg-09",
+      "query": "Polaris 超时设置是多久？",
+      "body": "Polaris 日志保留 8 天。",
+      "expected_allowed": false,
+      "expected_value": null,
+      "before_allowed": true,
+      "after_allowed": false,
+      "expected_value_cited": null,
+      "decision": {
+        "allowed": false,
+        "status": "explicit_value_binding_not_established",
+        "checks": [
+          {
+            "field": "duration",
+            "present": false,
+            "quote": null,
+            "start": null,
+            "end": null
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "polaris"
+            ],
+            "metrics": {
+              "duration": [
+                "timeout"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [],
+          "reasons": [
+            {
+              "field": "duration",
+              "reason": "requested_metric_not_in_value_clause",
+              "start": 0,
+              "end": 16
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bind-neg-10",
+      "query": "2024年“星桥”的预算多少元？",
+      "body": "2024年“青禾”预算 540 元。2025年“星桥”预算 610 元。",
+      "expected_allowed": false,
+      "expected_value": null,
+      "before_allowed": true,
+      "after_allowed": false,
+      "expected_value_cited": null,
+      "decision": {
+        "allowed": false,
+        "status": "explicit_value_binding_not_established",
+        "checks": [
+          {
+            "field": "explicit_year",
+            "present": true,
+            "quote": "2024",
+            "start": 0,
+            "end": 4
+          },
+          {
+            "field": "currency",
+            "present": false,
+            "quote": null,
+            "start": null,
+            "end": null
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "星桥"
+            ],
+            "metrics": {
+              "currency": [
+                "budget"
+              ]
+            },
+            "time": {
+              "years": [
+                "2024"
+              ],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [],
+          "reasons": [
+            {
+              "field": "currency",
+              "reason": "explicit_entity_not_in_value_clause",
+              "start": 0,
+              "end": 17
+            },
+            {
+              "field": "currency",
+              "reason": "requested_year_not_in_value_clause",
+              "start": 18,
+              "end": 35
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bind-neg-11",
+      "query": "What is the Lyra refund rate in October?",
+      "body": "Lyra refund rate in November: 0.6%.",
+      "expected_allowed": false,
+      "expected_value": null,
+      "before_allowed": true,
+      "after_allowed": false,
+      "expected_value_cited": null,
+      "decision": {
+        "allowed": false,
+        "status": "explicit_value_binding_not_established",
+        "checks": [
+          {
+            "field": "percentage",
+            "present": false,
+            "quote": null,
+            "start": null,
+            "end": null
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "lyra"
+            ],
+            "metrics": {
+              "percentage": [
+                "refund_rate"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [
+                10
+              ],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [],
+          "reasons": [
+            {
+              "field": "percentage",
+              "reason": "requested_month_not_in_value_clause",
+              "start": 0,
+              "end": 34
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bind-neg-12",
+      "query": "Atlas 的预算多少元？",
+      "body": "Atlas 价格 430 元，Nova 预算 260 元。",
+      "expected_allowed": false,
+      "expected_value": null,
+      "before_allowed": true,
+      "after_allowed": false,
+      "expected_value_cited": null,
+      "decision": {
+        "allowed": false,
+        "status": "explicit_value_binding_not_established",
+        "checks": [
+          {
+            "field": "currency",
+            "present": false,
+            "quote": null,
+            "start": null,
+            "end": null
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "atlas"
+            ],
+            "metrics": {
+              "currency": [
+                "budget"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [],
+          "reasons": [
+            {
+              "field": "currency",
+              "reason": "requested_metric_not_in_value_clause",
+              "start": 0,
+              "end": 14
+            },
+            {
+              "field": "currency",
+              "reason": "explicit_entity_not_in_value_clause",
+              "start": 15,
+              "end": 28
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bind-neg-13",
+      "query": "How much is the Vega monthly budget?",
+      "body": "Vega has a budget entry; Nova monthly budget is 90 dollars.",
+      "expected_allowed": false,
+      "expected_value": null,
+      "before_allowed": true,
+      "after_allowed": false,
+      "expected_value_cited": null,
+      "decision": {
+        "allowed": false,
+        "status": "explicit_value_binding_not_established",
+        "checks": [
+          {
+            "field": "currency",
+            "present": false,
+            "quote": null,
+            "start": null,
+            "end": null
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "vega"
+            ],
+            "metrics": {
+              "currency": [
+                "budget"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [],
+          "reasons": [
+            {
+              "field": "currency",
+              "reason": "explicit_entity_not_in_value_clause",
+              "start": 24,
+              "end": 58
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bind-neg-14",
+      "query": "What percentage was the measured Atlas success rate?",
+      "body": "Atlas planned success rate: 99%. Atlas measured retry rate: 6%.",
+      "expected_allowed": false,
+      "expected_value": null,
+      "before_allowed": true,
+      "after_allowed": false,
+      "expected_value_cited": null,
+      "decision": {
+        "allowed": false,
+        "status": "explicit_value_binding_not_established",
+        "checks": [
+          {
+            "field": "percentage",
+            "present": false,
+            "quote": null,
+            "start": null,
+            "end": null
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "atlas"
+            ],
+            "metrics": {
+              "percentage": [
+                "success_rate"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [],
+          "reasons": [
+            {
+              "field": "percentage",
+              "reason": "planned_clause_does_not_establish_measurement",
+              "start": 0,
+              "end": 31
+            },
+            {
+              "field": "percentage",
+              "reason": "requested_metric_not_in_value_clause",
+              "start": 32,
+              "end": 62
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bind-neg-15",
+      "query": "Quartz 的实际重试率是多少？",
+      "body": "Quartz 未记录实测重试率；Quartz 计划重试率 0.5%。",
+      "expected_allowed": false,
+      "expected_value": null,
+      "before_allowed": true,
+      "after_allowed": false,
+      "expected_value_cited": null,
+      "decision": {
+        "allowed": false,
+        "status": "explicit_value_binding_not_established",
+        "checks": [
+          {
+            "field": "percentage",
+            "present": false,
+            "quote": null,
+            "start": null,
+            "end": null
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "quartz"
+            ],
+            "metrics": {
+              "percentage": [
+                "retry_rate"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [],
+          "reasons": [
+            {
+              "field": "percentage",
+              "reason": "planned_clause_does_not_establish_measurement",
+              "start": 16,
+              "end": 33
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bind-neg-16",
+      "query": "What is the Nova retry rate in 2024?",
+      "body": "In 2024 Nova failure rate was 3.8%, in 2025 Nova retry rate was 2.7%.",
+      "expected_allowed": false,
+      "expected_value": null,
+      "before_allowed": true,
+      "after_allowed": false,
+      "expected_value_cited": null,
+      "decision": {
+        "allowed": false,
+        "status": "explicit_value_binding_not_established",
+        "checks": [
+          {
+            "field": "explicit_year",
+            "present": true,
+            "quote": "2024",
+            "start": 3,
+            "end": 7
+          },
+          {
+            "field": "percentage",
+            "present": false,
+            "quote": null,
+            "start": null,
+            "end": null
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "nova"
+            ],
+            "metrics": {
+              "percentage": [
+                "retry_rate"
+              ]
+            },
+            "time": {
+              "years": [
+                "2024"
+              ],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [],
+          "reasons": [
+            {
+              "field": "percentage",
+              "reason": "requested_metric_not_in_value_clause",
+              "start": 0,
+              "end": 34
+            },
+            {
+              "field": "percentage",
+              "reason": "requested_year_not_in_value_clause",
+              "start": 35,
+              "end": 68
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bind-neg-17",
+      "query": "“青禾”成功率的百分比是多少？",
+      "body": "“青禾”没有记录成功率；“青禾”重试率为百分之四。",
+      "expected_allowed": false,
+      "expected_value": null,
+      "before_allowed": true,
+      "after_allowed": false,
+      "expected_value_cited": null,
+      "decision": {
+        "allowed": false,
+        "status": "explicit_value_binding_not_established",
+        "checks": [
+          {
+            "field": "percentage",
+            "present": false,
+            "quote": null,
+            "start": null,
+            "end": null
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "青禾"
+            ],
+            "metrics": {
+              "percentage": [
+                "success_rate"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [],
+          "reasons": [
+            {
+              "field": "percentage",
+              "reason": "requested_metric_not_in_value_clause",
+              "start": 12,
+              "end": 24
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bind-neg-18",
+      "query": "Atlas 日志保留多久？",
+      "body": "Atlas 讨论了日志保留策略；Nova 日志保留 28 天。",
+      "expected_allowed": false,
+      "expected_value": null,
+      "before_allowed": true,
+      "after_allowed": false,
+      "expected_value_cited": null,
+      "decision": {
+        "allowed": false,
+        "status": "explicit_value_binding_not_established",
+        "checks": [
+          {
+            "field": "duration",
+            "present": false,
+            "quote": null,
+            "start": null,
+            "end": null
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "atlas"
+            ],
+            "metrics": {
+              "duration": [
+                "retention"
+              ]
+            },
+            "time": {
+              "years": [],
+              "months": [],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [],
+          "reasons": [
+            {
+              "field": "duration",
+              "reason": "explicit_entity_not_in_value_clause",
+              "start": 16,
+              "end": 30
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bind-neg-19",
+      "query": "What is the Polaris success rate in April 2026?",
+      "body": "Polaris success rate in April 2025: 98.2%. Polaris retry rate in April 2026: 1.8%.",
+      "expected_allowed": false,
+      "expected_value": null,
+      "before_allowed": true,
+      "after_allowed": false,
+      "expected_value_cited": null,
+      "decision": {
+        "allowed": false,
+        "status": "explicit_value_binding_not_established",
+        "checks": [
+          {
+            "field": "explicit_year",
+            "present": true,
+            "quote": "2026",
+            "start": 71,
+            "end": 75
+          },
+          {
+            "field": "percentage",
+            "present": false,
+            "quote": null,
+            "start": null,
+            "end": null
+          }
+        ],
+        "binding": {
+          "coverage": "finite_explicit_anchors_only",
+          "requested": {
+            "entities": [
+              "polaris"
+            ],
+            "metrics": {
+              "percentage": [
+                "success_rate"
+              ]
+            },
+            "time": {
+              "years": [
+                "2026"
+              ],
+              "months": [
+                4
+              ],
+              "needs_reference_date": false
+            }
+          },
+          "evidence": [],
+          "reasons": [
+            {
+              "field": "percentage",
+              "reason": "requested_year_not_in_value_clause",
+              "start": 0,
+              "end": 41
+            },
+            {
+              "field": "percentage",
+              "reason": "requested_metric_not_in_value_clause",
+              "start": 42,
+              "end": 81
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "known_retrieval_replay": {
+    "fixed40": {
+      "before": {
+        "positive_cases": 20,
+        "correct_first": 12,
+        "correct_within_two": 14,
+        "negative_cases": 20,
+        "no_answer_returns": 2,
+        "wrong_first_on_positive": 2,
+        "abstained_on_positive": 6
+      },
+      "after": {
+        "positive_cases": 20,
+        "correct_first": 11,
+        "correct_within_two": 13,
+        "negative_cases": 20,
+        "no_answer_returns": 0,
+        "wrong_first_on_positive": 3,
+        "abstained_on_positive": 6
+      },
+      "lost_previous_correct_source": [
+        "v21-test-004"
+      ],
+      "cases": [
+        {
+          "id": "v21-test-000",
+          "query": "哪次调整让应用不再停留在刚打开时那张页面？",
+          "expected": "boot",
+          "before": [
+            "retry",
+            "boot"
+          ],
+          "after": [
+            "retry",
+            "boot"
+          ],
+          "decisions": {
+            "retry": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            },
+            "boot": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v21-test-001",
+          "query": "What dependency change got the application past its initial waiting view?",
+          "expected": "boot",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v21-test-002",
+          "query": "中文字符只剩矩形占位符，之前怎样补齐文字？",
+          "expected": "font",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v21-test-003",
+          "query": "How did we get the missing Chinese characters to render instead of square placeholders?",
+          "expected": "font",
+          "before": [
+            "font"
+          ],
+          "after": [
+            "font"
+          ],
+          "decisions": {
+            "font": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [
+                    "chinese"
+                  ],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v21-test-004",
+          "query": "产品售价的临时副本现在允许保留多长时间？",
+          "expected": "ttl",
+          "before": [
+            "ttl",
+            "logs"
+          ],
+          "after": [
+            "logs"
+          ],
+          "decisions": {
+            "ttl": {
+              "allowed": false,
+              "status": "explicit_value_binding_not_established",
+              "checks": [
+                {
+                  "field": "duration",
+                  "present": false,
+                  "quote": null,
+                  "start": null,
+                  "end": null
+                }
+              ],
+              "binding": {
+                "coverage": "finite_explicit_anchors_only",
+                "requested": {
+                  "entities": [],
+                  "metrics": {
+                    "duration": [
+                      "retention"
+                    ]
+                  },
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": [
+                  {
+                    "field": "duration",
+                    "reason": "requested_metric_not_in_value_clause",
+                    "start": 0,
+                    "end": 31
+                  }
+                ]
+              }
+            },
+            "logs": {
+              "allowed": true,
+              "status": "explicit_value_binding_found",
+              "checks": [
+                {
+                  "field": "duration",
+                  "present": true,
+                  "quote": "14 天",
+                  "start": 11,
+                  "end": 15
+                }
+              ],
+              "binding": {
+                "coverage": "finite_explicit_anchors_only",
+                "requested": {
+                  "entities": [],
+                  "metrics": {
+                    "duration": [
+                      "retention"
+                    ]
+                  },
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [
+                  {
+                    "field": "duration",
+                    "present": true,
+                    "quote": "14 天",
+                    "start": 11,
+                    "end": 15,
+                    "clause": "项目访问审计日志保留 14 天",
+                    "clause_start": 0,
+                    "clause_end": 15,
+                    "entities": [],
+                    "metrics": [
+                      "retention"
+                    ],
+                    "time": {
+                      "years": [],
+                      "months": [],
+                      "needs_reference_date": false
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v21-test-005",
+          "query": "How long is a stored product price kept before it must be refreshed?",
+          "expected": "ttl",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v21-test-006",
+          "query": "从身份提供方回来就必须重登的问题，以前修过什么？",
+          "expected": "cookie",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v21-test-007",
+          "query": "What cookie change prevented a fresh sign-in being needed after the identity-provider redirect?",
+          "expected": "cookie",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v21-test-008",
+          "query": "以前用哪个字段识别重复付款，让订单重发不会再多扣钱？",
+          "expected": "payment",
+          "before": [
+            "metric",
+            "payment"
+          ],
+          "after": [
+            "metric",
+            "payment"
+          ],
+          "decisions": {
+            "metric": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            },
+            "payment": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v21-test-009",
+          "query": "What identifies the same purchase so retries cannot trigger an extra charge?",
+          "expected": "payment",
+          "before": [
+            "payment"
+          ],
+          "after": [
+            "payment"
+          ],
+          "decisions": {
+            "payment": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v21-test-010",
+          "query": "编辑器和终端加载的Python环境不同，过去怎么统一？",
+          "expected": "venv",
+          "before": [
+            "venv"
+          ],
+          "after": [
+            "venv"
+          ],
+          "decisions": {
+            "venv": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [
+                    "python"
+                  ],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v21-test-011",
+          "query": "What did we align when the editor and terminal used different Python environments?",
+          "expected": "venv",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v21-test-012",
+          "query": "没有文字层的扫描页，之前先做什么再检索？",
+          "expected": "pdf",
+          "before": [
+            "pdf",
+            "initial"
+          ],
+          "after": [
+            "pdf",
+            "initial"
+          ],
+          "decisions": {
+            "pdf": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            },
+            "initial": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v21-test-013",
+          "query": "What preparation is required before searching scanned pages with no text layer?",
+          "expected": "pdf",
+          "before": [
+            "pdf"
+          ],
+          "after": [
+            "pdf"
+          ],
+          "decisions": {
+            "pdf": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v21-test-014",
+          "query": "项目演示里的识字任务，每月经费确定成多少元？",
+          "expected": "budget",
+          "before": [
+            "budget"
+          ],
+          "after": [
+            "budget"
+          ],
+          "decisions": {
+            "budget": {
+              "allowed": true,
+              "status": "explicit_value_binding_found",
+              "checks": [
+                {
+                  "field": "currency",
+                  "present": true,
+                  "quote": "120 元",
+                  "start": 15,
+                  "end": 20
+                }
+              ],
+              "binding": {
+                "coverage": "finite_explicit_anchors_only",
+                "requested": {
+                  "entities": [],
+                  "metrics": {
+                    "currency": [
+                      "budget"
+                    ]
+                  },
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [
+                  {
+                    "field": "currency",
+                    "present": true,
+                    "quote": "120 元",
+                    "start": 15,
+                    "end": 20,
+                    "clause": "合成 OCR 任务月度预算为 120 元",
+                    "clause_start": 0,
+                    "clause_end": 20,
+                    "entities": [
+                      "ocr"
+                    ],
+                    "metrics": [
+                      "budget"
+                    ],
+                    "time": {
+                      "years": [],
+                      "months": [],
+                      "needs_reference_date": false
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v21-test-015",
+          "query": "How much money was allocated per month to the synthetic OCR task?",
+          "expected": "budget",
+          "before": [
+            "budget"
+          ],
+          "after": [
+            "budget"
+          ],
+          "decisions": {
+            "budget": {
+              "allowed": true,
+              "status": "explicit_value_binding_found",
+              "checks": [
+                {
+                  "field": "currency",
+                  "present": true,
+                  "quote": "120 元",
+                  "start": 15,
+                  "end": 20
+                }
+              ],
+              "binding": {
+                "coverage": "finite_explicit_anchors_only",
+                "requested": {
+                  "entities": [
+                    "ocr"
+                  ],
+                  "metrics": {
+                    "currency": [
+                      "budget"
+                    ]
+                  },
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [
+                  {
+                    "field": "currency",
+                    "present": true,
+                    "quote": "120 元",
+                    "start": 15,
+                    "end": 20,
+                    "clause": "合成 OCR 任务月度预算为 120 元",
+                    "clause_start": 0,
+                    "clause_end": 20,
+                    "entities": [
+                      "ocr"
+                    ],
+                    "metrics": [
+                      "budget"
+                    ],
+                    "time": {
+                      "years": [],
+                      "months": [],
+                      "needs_reference_date": false
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v21-test-016",
+          "query": "十月测试请求中有多大比例需要再次提交？",
+          "expected": "metric",
+          "before": [
+            "metric"
+          ],
+          "after": [
+            "metric"
+          ],
+          "decisions": {
+            "metric": {
+              "allowed": true,
+              "status": "explicit_value_binding_found",
+              "checks": [
+                {
+                  "field": "percentage",
+                  "present": true,
+                  "quote": "0.8%",
+                  "start": 28,
+                  "end": 32
+                }
+              ],
+              "binding": {
+                "coverage": "finite_explicit_anchors_only",
+                "requested": {
+                  "entities": [],
+                  "metrics": {
+                    "percentage": [
+                      "retry_rate"
+                    ]
+                  },
+                  "time": {
+                    "years": [],
+                    "months": [
+                      10
+                    ],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [
+                  {
+                    "field": "percentage",
+                    "present": true,
+                    "quote": "0.8%",
+                    "start": 28,
+                    "end": 32,
+                    "clause": "合成演示在 2026 年 10 月实测订单请求重试率为 0.8%",
+                    "clause_start": 0,
+                    "clause_end": 32,
+                    "entities": [],
+                    "metrics": [
+                      "retry_rate"
+                    ],
+                    "time": {
+                      "years": [
+                        "2026"
+                      ],
+                      "months": [
+                        10
+                      ],
+                      "needs_reference_date": false
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v21-test-017",
+          "query": "What percentage of the October test orders had their requests retried?",
+          "expected": "metric",
+          "before": [
+            "metric"
+          ],
+          "after": [
+            "metric"
+          ],
+          "decisions": {
+            "metric": {
+              "allowed": true,
+              "status": "explicit_value_binding_found",
+              "checks": [
+                {
+                  "field": "percentage",
+                  "present": true,
+                  "quote": "0.8%",
+                  "start": 28,
+                  "end": 32
+                }
+              ],
+              "binding": {
+                "coverage": "finite_explicit_anchors_only",
+                "requested": {
+                  "entities": [],
+                  "metrics": {
+                    "percentage": []
+                  },
+                  "time": {
+                    "years": [],
+                    "months": [
+                      10
+                    ],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [
+                  {
+                    "field": "percentage",
+                    "present": true,
+                    "quote": "0.8%",
+                    "start": 28,
+                    "end": 32,
+                    "clause": "合成演示在 2026 年 10 月实测订单请求重试率为 0.8%",
+                    "clause_start": 0,
+                    "clause_end": 32,
+                    "entities": [],
+                    "metrics": [
+                      "retry_rate"
+                    ],
+                    "time": {
+                      "years": [
+                        "2026"
+                      ],
+                      "months": [
+                        10
+                      ],
+                      "needs_reference_date": false
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v21-test-018",
+          "query": "触发自动清理之前，访问审计能查到几天的记录？",
+          "expected": "logs",
+          "before": [
+            "logs"
+          ],
+          "after": [
+            "logs"
+          ],
+          "decisions": {
+            "logs": {
+              "allowed": true,
+              "status": "explicit_value_binding_found",
+              "checks": [
+                {
+                  "field": "duration",
+                  "present": true,
+                  "quote": "14 天",
+                  "start": 11,
+                  "end": 15
+                }
+              ],
+              "binding": {
+                "coverage": "finite_explicit_anchors_only",
+                "requested": {
+                  "entities": [],
+                  "metrics": {
+                    "duration": []
+                  },
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [
+                  {
+                    "field": "duration",
+                    "present": true,
+                    "quote": "14 天",
+                    "start": 11,
+                    "end": 15,
+                    "clause": "项目访问审计日志保留 14 天",
+                    "clause_start": 0,
+                    "clause_end": 15,
+                    "entities": [],
+                    "metrics": [
+                      "retention"
+                    ],
+                    "time": {
+                      "years": [],
+                      "months": [],
+                      "needs_reference_date": false
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v21-test-019",
+          "query": "How many days of access audit history remain before automatic deletion?",
+          "expected": "logs",
+          "before": [
+            "logs"
+          ],
+          "after": [
+            "logs"
+          ],
+          "decisions": {
+            "logs": {
+              "allowed": true,
+              "status": "explicit_value_binding_found",
+              "checks": [
+                {
+                  "field": "duration",
+                  "present": true,
+                  "quote": "14 天",
+                  "start": 11,
+                  "end": 15
+                }
+              ],
+              "binding": {
+                "coverage": "finite_explicit_anchors_only",
+                "requested": {
+                  "entities": [],
+                  "metrics": {
+                    "duration": []
+                  },
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [
+                  {
+                    "field": "duration",
+                    "present": true,
+                    "quote": "14 天",
+                    "start": 11,
+                    "end": 15,
+                    "clause": "项目访问审计日志保留 14 天",
+                    "clause_start": 0,
+                    "clause_end": 15,
+                    "entities": [],
+                    "metrics": [
+                      "retention"
+                    ],
+                    "time": {
+                      "years": [],
+                      "months": [],
+                      "needs_reference_date": false
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v21-test-020",
+          "query": "购买Excel许可证一共花了多少钱？",
+          "expected": null,
+          "before": [
+            "budget"
+          ],
+          "after": [],
+          "decisions": {
+            "budget": {
+              "allowed": false,
+              "status": "explicit_value_binding_not_established",
+              "checks": [
+                {
+                  "field": "currency",
+                  "present": false,
+                  "quote": null,
+                  "start": null,
+                  "end": null
+                }
+              ],
+              "binding": {
+                "coverage": "finite_explicit_anchors_only",
+                "requested": {
+                  "entities": [
+                    "excel"
+                  ],
+                  "metrics": {
+                    "currency": [
+                      "spending"
+                    ]
+                  },
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": [
+                  {
+                    "field": "currency",
+                    "reason": "explicit_entity_not_in_value_clause",
+                    "start": 0,
+                    "end": 20
+                  },
+                  {
+                    "field": "currency",
+                    "reason": "explicit_entity_not_in_value_clause",
+                    "start": 21,
+                    "end": 36
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "v21-test-021",
+          "query": "How much did the Excel license purchase cost?",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v21-test-022",
+          "query": "处理字体问题这件事的批准人是谁？",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v21-test-023",
+          "query": "Who approved the missing-glyph fix?",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v21-test-024",
+          "query": "实际下载包的64位十六进制哈希值是什么？",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v21-test-025",
+          "query": "What is the actual 64-character hexadecimal hash value of the package?",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v21-test-026",
+          "query": "2024年测试订单的实测重试率是多少？",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v21-test-027",
+          "query": "What retry percentage was measured for test orders in 2024?",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v21-test-028",
+          "query": "支付成功率的实测百分比是多少？",
+          "expected": null,
+          "before": [
+            "metric"
+          ],
+          "after": [],
+          "decisions": {
+            "metric": {
+              "allowed": false,
+              "status": "explicit_value_binding_not_established",
+              "checks": [
+                {
+                  "field": "percentage",
+                  "present": false,
+                  "quote": null,
+                  "start": null,
+                  "end": null
+                }
+              ],
+              "binding": {
+                "coverage": "finite_explicit_anchors_only",
+                "requested": {
+                  "entities": [],
+                  "metrics": {
+                    "percentage": [
+                      "success_rate"
+                    ]
+                  },
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": [
+                  {
+                    "field": "percentage",
+                    "reason": "requested_metric_not_in_value_clause",
+                    "start": 0,
+                    "end": 32
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "v21-test-029",
+          "query": "What percentage of payments actually succeeded?",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v21-test-030",
+          "query": "这件事怎么搞来着？",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v21-test-031",
+          "query": "What should we do about that again?",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v21-test-032",
+          "query": "织女风帆支线的关卡配色结论是什么？",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v21-test-033",
+          "query": "What was the archived lake-blue completion-color decision?",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v21-test-034",
+          "query": "为什么海水结冰时盐分会变化？",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v21-test-035",
+          "query": "How do spiders make their silk?",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v21-test-036",
+          "query": "交响乐队里的双簧管是什么乐器？",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v21-test-037",
+          "query": "Why do lunar eclipses not occur every month?",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v21-test-038",
+          "query": "人体缺水为什么会口渴？",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v21-test-039",
+          "query": "How do plants move water from roots to leaves?",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        }
+      ]
+    },
+    "known60": {
+      "before": {
+        "positive_cases": 30,
+        "correct_first": 20,
+        "correct_within_two": 20,
+        "negative_cases": 30,
+        "no_answer_returns": 2,
+        "wrong_first_on_positive": 0,
+        "abstained_on_positive": 10
+      },
+      "after": {
+        "positive_cases": 30,
+        "correct_first": 19,
+        "correct_within_two": 19,
+        "negative_cases": 30,
+        "no_answer_returns": 2,
+        "wrong_first_on_positive": 0,
+        "abstained_on_positive": 11
+      },
+      "lost_previous_correct_source": [
+        "v2-test-029"
+      ],
+      "cases": [
+        {
+          "id": "v2-test-000",
+          "query": "最开始那屏迟迟不跳转，曾用什么处理措施？",
+          "expected": "boot",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-001",
+          "query": "Which change eventually let the program get beyond its first screen?",
+          "expected": "boot",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-002",
+          "query": "菜单里的字成了空心矩形，过去怎样让字重新显示？",
+          "expected": "font",
+          "before": [
+            "font"
+          ],
+          "after": [
+            "font"
+          ],
+          "decisions": {
+            "font": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v2-test-003",
+          "query": "What restored missing characters that appeared as boxes in the menu?",
+          "expected": "font",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-004",
+          "query": "交给财务的文本表格在 Excel 中读不对汉字，之前选了什么输出方式？",
+          "expected": "csv",
+          "before": [
+            "csv",
+            "font"
+          ],
+          "after": [
+            "csv",
+            "font"
+          ],
+          "decisions": {
+            "csv": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [
+                    "excel"
+                  ],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            },
+            "font": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [
+                    "excel"
+                  ],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v2-test-005",
+          "query": "Which output format made the exported Chinese text readable in Excel?",
+          "expected": "csv",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-006",
+          "query": "如今商品价格资料多久过期，改价时如何更新？",
+          "expected": "ttl",
+          "before": [
+            "ttl"
+          ],
+          "after": [
+            "ttl"
+          ],
+          "decisions": {
+            "ttl": {
+              "allowed": true,
+              "status": "explicit_value_binding_found",
+              "checks": [
+                {
+                  "field": "duration",
+                  "present": true,
+                  "quote": "300 秒",
+                  "start": 26,
+                  "end": 31
+                }
+              ],
+              "binding": {
+                "coverage": "finite_explicit_anchors_only",
+                "requested": {
+                  "entities": [],
+                  "metrics": {
+                    "duration": []
+                  },
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [
+                  {
+                    "field": "duration",
+                    "present": true,
+                    "quote": "300 秒",
+                    "start": 26,
+                    "end": 31,
+                    "clause": "产品价格 Redis 缓存有效期已从 60 秒改为 300 秒",
+                    "clause_start": 0,
+                    "clause_end": 31,
+                    "entities": [
+                      "redis"
+                    ],
+                    "metrics": [
+                      "cache_lifetime"
+                    ],
+                    "time": {
+                      "years": [],
+                      "months": [],
+                      "needs_reference_date": false
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v2-test-007",
+          "query": "What is the latest lifetime for stored product prices, and when are they invalidated?",
+          "expected": "ttl",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-008",
+          "query": "去别家认证后回到我们页面又成匿名用户，原来用了哪个办法？",
+          "expected": "cookie",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-009",
+          "query": "What setting kept authentication alive after returning from another site?",
+          "expected": "cookie",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-010",
+          "query": "同一购买请求被网络回放多次，怎样让每次都对应同一笔款？",
+          "expected": "payment",
+          "before": [
+            "payment",
+            "retry"
+          ],
+          "after": [
+            "payment",
+            "retry"
+          ],
+          "decisions": {
+            "payment": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            },
+            "retry": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v2-test-011",
+          "query": "How did we prevent replayed checkout submissions from creating another charge?",
+          "expected": "payment",
+          "before": [
+            "payment"
+          ],
+          "after": [
+            "payment"
+          ],
+          "decisions": {
+            "payment": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v2-test-012",
+          "query": "几个写入任务互相等锁，SQLite 当时怎么缓解？",
+          "expected": "sqlite",
+          "before": [
+            "sqlite"
+          ],
+          "after": [
+            "sqlite"
+          ],
+          "decisions": {
+            "sqlite": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [
+                    "sqlite"
+                  ],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v2-test-013",
+          "query": "How was SQLite configured when competing writes kept reporting a locked database?",
+          "expected": "sqlite",
+          "before": [
+            "sqlite"
+          ],
+          "after": [
+            "sqlite"
+          ],
+          "decisions": {
+            "sqlite": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [
+                    "sqlite"
+                  ],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v2-test-014",
+          "query": "传了一半的大附件遇到断线，恢复后怎么避免重新传完整文件？",
+          "expected": "upload",
+          "before": [
+            "upload"
+          ],
+          "after": [
+            "upload"
+          ],
+          "decisions": {
+            "upload": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v2-test-015",
+          "query": "What lets an interrupted attachment transfer continue where it stopped?",
+          "expected": "upload",
+          "before": [
+            "upload"
+          ],
+          "after": [
+            "upload"
+          ],
+          "decisions": {
+            "upload": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v2-test-016",
+          "query": "扫描来的页只有图像，之前加哪一步才能找里面的文字？",
+          "expected": "pdf",
+          "before": [
+            "pdf"
+          ],
+          "after": [
+            "pdf"
+          ],
+          "decisions": {
+            "pdf": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v2-test-017",
+          "query": "Which preprocessing step made words inside scanned pages searchable?",
+          "expected": "pdf",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-018",
+          "query": "换电脑后提交显示每行都被动过，如何统一行尾避免这种变化？",
+          "expected": "git",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-019",
+          "query": "What stopped a different computer from making every line appear changed in Git?",
+          "expected": "git",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-020",
+          "query": "命令窗口可以引用的包，在 IDE 里却报不存在，应该对齐什么？",
+          "expected": "venv",
+          "before": [
+            "venv"
+          ],
+          "after": [
+            "venv"
+          ],
+          "decisions": {
+            "venv": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [
+                    "ide"
+                  ],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v2-test-021",
+          "query": "Which interpreter setting fixed packages visible in a shell but missing in the editor?",
+          "expected": "venv",
+          "before": [
+            "venv"
+          ],
+          "after": [
+            "venv"
+          ],
+          "decisions": {
+            "venv": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v2-test-022",
+          "query": "用键盘打开模态窗口，关掉时输入焦点应回到哪里？",
+          "expected": "keyboard",
+          "before": [
+            "keyboard"
+          ],
+          "after": [
+            "keyboard"
+          ],
+          "decisions": {
+            "keyboard": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v2-test-023",
+          "query": "Where does keyboard focus return when the modal closes?",
+          "expected": "keyboard",
+          "before": [
+            "keyboard"
+          ],
+          "after": [
+            "keyboard"
+          ],
+          "decisions": {
+            "keyboard": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v2-test-024",
+          "query": "做 OCR 的合成任务月度额度多少，何时得再征求同意？",
+          "expected": "budget",
+          "before": [
+            "budget",
+            "metric"
+          ],
+          "after": [
+            "budget",
+            "metric"
+          ],
+          "decisions": {
+            "budget": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [
+                    "ocr"
+                  ],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            },
+            "metric": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [
+                    "ocr"
+                  ],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v2-test-025",
+          "query": "What amount was allocated monthly for the OCR demo, and when is approval needed?",
+          "expected": "budget",
+          "before": [
+            "budget"
+          ],
+          "after": [
+            "budget"
+          ],
+          "decisions": {
+            "budget": {
+              "allowed": true,
+              "status": "explicit_value_binding_found",
+              "checks": [
+                {
+                  "field": "currency",
+                  "present": true,
+                  "quote": "120 元",
+                  "start": 15,
+                  "end": 20
+                }
+              ],
+              "binding": {
+                "coverage": "finite_explicit_anchors_only",
+                "requested": {
+                  "entities": [
+                    "ocr"
+                  ],
+                  "metrics": {
+                    "currency": [
+                      "budget"
+                    ]
+                  },
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [
+                  {
+                    "field": "currency",
+                    "present": true,
+                    "quote": "120 元",
+                    "start": 15,
+                    "end": 20,
+                    "clause": "合成 OCR 任务月度预算为 120 元",
+                    "clause_start": 0,
+                    "clause_end": 20,
+                    "entities": [
+                      "ocr"
+                    ],
+                    "metrics": [
+                      "budget"
+                    ],
+                    "time": {
+                      "years": [],
+                      "months": [],
+                      "needs_reference_date": false
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v2-test-026",
+          "query": "十月份那批测试交易中重新发出请求的占比是多少？",
+          "expected": "metric",
+          "before": [
+            "metric"
+          ],
+          "after": [
+            "metric"
+          ],
+          "decisions": {
+            "metric": {
+              "allowed": true,
+              "status": "explicit_value_binding_found",
+              "checks": [
+                {
+                  "field": "percentage",
+                  "present": true,
+                  "quote": "0.8%",
+                  "start": 28,
+                  "end": 32
+                }
+              ],
+              "binding": {
+                "coverage": "finite_explicit_anchors_only",
+                "requested": {
+                  "entities": [],
+                  "metrics": {
+                    "percentage": [
+                      "retry_rate"
+                    ]
+                  },
+                  "time": {
+                    "years": [],
+                    "months": [
+                      10
+                    ],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [
+                  {
+                    "field": "percentage",
+                    "present": true,
+                    "quote": "0.8%",
+                    "start": 28,
+                    "end": 32,
+                    "clause": "合成演示在 2026 年 10 月实测订单请求重试率为 0.8%",
+                    "clause_start": 0,
+                    "clause_end": 32,
+                    "entities": [],
+                    "metrics": [
+                      "retry_rate"
+                    ],
+                    "time": {
+                      "years": [
+                        "2026"
+                      ],
+                      "months": [
+                        10
+                      ],
+                      "needs_reference_date": false
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v2-test-027",
+          "query": "Which share of synthetic October orders required a request retry?",
+          "expected": "metric",
+          "before": [
+            "metric"
+          ],
+          "after": [
+            "metric"
+          ],
+          "decisions": {
+            "metric": {
+              "allowed": true,
+              "status": "explicit_value_binding_found",
+              "checks": [
+                {
+                  "field": "percentage",
+                  "present": true,
+                  "quote": "0.8%",
+                  "start": 28,
+                  "end": 32
+                }
+              ],
+              "binding": {
+                "coverage": "finite_explicit_anchors_only",
+                "requested": {
+                  "entities": [],
+                  "metrics": {
+                    "percentage": []
+                  },
+                  "time": {
+                    "years": [],
+                    "months": [
+                      10
+                    ],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [
+                  {
+                    "field": "percentage",
+                    "present": true,
+                    "quote": "0.8%",
+                    "start": 28,
+                    "end": 32,
+                    "clause": "合成演示在 2026 年 10 月实测订单请求重试率为 0.8%",
+                    "clause_start": 0,
+                    "clause_end": 32,
+                    "entities": [],
+                    "metrics": [
+                      "retry_rate"
+                    ],
+                    "time": {
+                      "years": [
+                        "2026"
+                      ],
+                      "months": [
+                        10
+                      ],
+                      "needs_reference_date": false
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v2-test-028",
+          "query": "审计访问轨迹过多久自动删掉？",
+          "expected": "logs",
+          "before": [
+            "logs"
+          ],
+          "after": [
+            "logs"
+          ],
+          "decisions": {
+            "logs": {
+              "allowed": true,
+              "status": "explicit_value_binding_found",
+              "checks": [
+                {
+                  "field": "duration",
+                  "present": true,
+                  "quote": "14 天",
+                  "start": 11,
+                  "end": 15
+                }
+              ],
+              "binding": {
+                "coverage": "finite_explicit_anchors_only",
+                "requested": {
+                  "entities": [],
+                  "metrics": {
+                    "duration": []
+                  },
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [
+                  {
+                    "field": "duration",
+                    "present": true,
+                    "quote": "14 天",
+                    "start": 11,
+                    "end": 15,
+                    "clause": "项目访问审计日志保留 14 天",
+                    "clause_start": 0,
+                    "clause_end": 15,
+                    "entities": [],
+                    "metrics": [
+                      "retention"
+                    ],
+                    "time": {
+                      "years": [],
+                      "months": [],
+                      "needs_reference_date": false
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v2-test-029",
+          "query": "After how many days are access audit entries removed?",
+          "expected": "logs",
+          "before": [
+            "logs"
+          ],
+          "after": [],
+          "decisions": {
+            "logs": {
+              "allowed": false,
+              "status": "explicit_value_binding_not_established",
+              "checks": [
+                {
+                  "field": "duration",
+                  "present": false,
+                  "quote": null,
+                  "start": null,
+                  "end": null
+                }
+              ],
+              "binding": {
+                "coverage": "finite_explicit_anchors_only",
+                "requested": {
+                  "entities": [
+                    "after"
+                  ],
+                  "metrics": {
+                    "duration": []
+                  },
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": [
+                  {
+                    "field": "duration",
+                    "reason": "explicit_entity_not_in_value_clause",
+                    "start": 0,
+                    "end": 15
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "v2-test-030",
+          "query": "那块跑CUDA的显卡当时采购价格多少元？",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-031",
+          "query": "What was the GPU purchase price in USD?",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-032",
+          "query": "订单重复扣费的实际比例是多少？",
+          "expected": null,
+          "before": [
+            "metric"
+          ],
+          "after": [
+            "metric"
+          ],
+          "decisions": {
+            "metric": {
+              "allowed": true,
+              "status": "explicit_value_binding_found",
+              "checks": [
+                {
+                  "field": "percentage",
+                  "present": true,
+                  "quote": "0.8%",
+                  "start": 28,
+                  "end": 32
+                }
+              ],
+              "binding": {
+                "coverage": "finite_explicit_anchors_only",
+                "requested": {
+                  "entities": [],
+                  "metrics": {
+                    "percentage": [
+                      "retry_rate"
+                    ]
+                  },
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [
+                  {
+                    "field": "percentage",
+                    "present": true,
+                    "quote": "0.8%",
+                    "start": 28,
+                    "end": 32,
+                    "clause": "合成演示在 2026 年 10 月实测订单请求重试率为 0.8%",
+                    "clause_start": 0,
+                    "clause_end": 32,
+                    "entities": [],
+                    "metrics": [
+                      "retry_rate"
+                    ],
+                    "time": {
+                      "years": [
+                        "2026"
+                      ],
+                      "months": [
+                        10
+                      ],
+                      "needs_reference_date": false
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v2-test-033",
+          "query": "What fraction of orders were charged twice?",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-034",
+          "query": "字体修复以后每月省了多少钱？",
+          "expected": null,
+          "before": [
+            "budget"
+          ],
+          "after": [
+            "budget"
+          ],
+          "decisions": {
+            "budget": {
+              "allowed": true,
+              "status": "explicit_value_binding_found",
+              "checks": [
+                {
+                  "field": "currency",
+                  "present": true,
+                  "quote": "120 元",
+                  "start": 15,
+                  "end": 20
+                }
+              ],
+              "binding": {
+                "coverage": "finite_explicit_anchors_only",
+                "requested": {
+                  "entities": [],
+                  "metrics": {
+                    "currency": []
+                  },
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [
+                  {
+                    "field": "currency",
+                    "present": true,
+                    "quote": "120 元",
+                    "start": 15,
+                    "end": 20,
+                    "clause": "合成 OCR 任务月度预算为 120 元",
+                    "clause_start": 0,
+                    "clause_end": 20,
+                    "entities": [
+                      "ocr"
+                    ],
+                    "metrics": [
+                      "budget"
+                    ],
+                    "time": {
+                      "years": [],
+                      "months": [],
+                      "needs_reference_date": false
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "v2-test-035",
+          "query": "How much money per month did the font change save?",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-036",
+          "query": "Renderer 4.2 依赖包的实际SHA256校验值是什么？",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-037",
+          "query": "What is the actual SHA-256 hash value of the downloaded dependency?",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-038",
+          "query": "构建管理员密码是多少？",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-039",
+          "query": "What is the build administrator's password?",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-040",
+          "query": "2025年10月生产订单的重试率是多少？",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-041",
+          "query": "What was the retry rate for production orders in October 2025?",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-042",
+          "query": "昨天日志清理实际释放了多少GB空间？",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-043",
+          "query": "How many gigabytes did yesterday's audit cleanup actually free?",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-044",
+          "query": "是谁批准了120元预算？",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-045",
+          "query": "Who authorized the monthly OCR budget?",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-046",
+          "query": "那个刚才又不行了，以前怎么办？",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-047",
+          "query": "It is doing that thing again. What fixed it last time?",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-048",
+          "query": "屏幕一直在打转，之前怎么解决？",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-049",
+          "query": "The display keeps spinning. What did we change?",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-050",
+          "query": "支线演示织女风帆要填哪种颜色？",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-051",
+          "query": "Which color unlocks the side-project demo 织女风帆?",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-052",
+          "query": "湖蓝色归档备选的通关指令是什么？",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-053",
+          "query": "Do not search the payment or cache records",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-054",
+          "query": "为什么树叶到秋天会变黄？",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-055",
+          "query": "How do migrating birds navigate over the ocean?",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-056",
+          "query": "长跑前应该怎样安排早餐？",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-057",
+          "query": "Why does bread rise when yeast is added?",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-058",
+          "query": "泰坦星的地表温度是多少？",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "v2-test-059",
+          "query": "What material is used to make violin strings?",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        }
+      ]
+    },
+    "known52": {
+      "before": {
+        "positive_cases": 36,
+        "correct_first": 22,
+        "correct_within_two": 22,
+        "negative_cases": 16,
+        "no_answer_returns": 2,
+        "wrong_first_on_positive": 0,
+        "abstained_on_positive": 14
+      },
+      "after": {
+        "positive_cases": 36,
+        "correct_first": 22,
+        "correct_within_two": 22,
+        "negative_cases": 16,
+        "no_answer_returns": 1,
+        "wrong_first_on_positive": 0,
+        "abstained_on_positive": 14
+      },
+      "lost_previous_correct_source": [],
+      "cases": [
+        {
+          "id": "test-000",
+          "query": "为什么那个启动时始终在等待的程序后来能打开了？",
+          "expected": "boot",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "test-001",
+          "query": "When the app never gets past its opening screen, what was our fix?",
+          "expected": "boot",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "test-002",
+          "query": "页面里的汉字全成豆腐块，过去采用了什么办法？",
+          "expected": "font",
+          "before": [
+            "font"
+          ],
+          "after": [
+            "font"
+          ],
+          "decisions": {
+            "font": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "test-003",
+          "query": "How did we restore Chinese glyphs missing from the interface?",
+          "expected": "font",
+          "before": [
+            "font"
+          ],
+          "after": [
+            "font"
+          ],
+          "decisions": {
+            "font": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [
+                    "chinese"
+                  ],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "test-004",
+          "query": "给财务的逗号分隔文件，在微软表格里文字乱掉了，之前怎么导出？",
+          "expected": "csv",
+          "before": [
+            "csv",
+            "initial"
+          ],
+          "after": [
+            "csv",
+            "initial"
+          ],
+          "decisions": {
+            "csv": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            },
+            "initial": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "test-005",
+          "query": "What encoding did we choose for spreadsheets to display Chinese correctly?",
+          "expected": "csv",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "test-006",
+          "query": "价格缓存如今存多久，改完商品怎么刷新？",
+          "expected": "ttl",
+          "before": [
+            "ttl"
+          ],
+          "after": [
+            "ttl"
+          ],
+          "decisions": {
+            "ttl": {
+              "allowed": true,
+              "status": "explicit_value_binding_found",
+              "checks": [
+                {
+                  "field": "duration",
+                  "present": true,
+                  "quote": "300 秒",
+                  "start": 26,
+                  "end": 31
+                }
+              ],
+              "binding": {
+                "coverage": "finite_explicit_anchors_only",
+                "requested": {
+                  "entities": [],
+                  "metrics": {
+                    "duration": []
+                  },
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [
+                  {
+                    "field": "duration",
+                    "present": true,
+                    "quote": "300 秒",
+                    "start": 26,
+                    "end": 31,
+                    "clause": "产品价格 Redis 缓存有效期已从 60 秒改为 300 秒",
+                    "clause_start": 0,
+                    "clause_end": 31,
+                    "entities": [
+                      "redis"
+                    ],
+                    "metrics": [
+                      "cache_lifetime"
+                    ],
+                    "time": {
+                      "years": [],
+                      "months": [],
+                      "needs_reference_date": false
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "test-007",
+          "query": "What is the current price-cache lifetime and invalidation policy?",
+          "expected": "ttl",
+          "before": [
+            "ttl"
+          ],
+          "after": [
+            "ttl"
+          ],
+          "decisions": {
+            "ttl": {
+              "allowed": true,
+              "status": "explicit_value_binding_found",
+              "checks": [
+                {
+                  "field": "duration",
+                  "present": true,
+                  "quote": "300 秒",
+                  "start": 26,
+                  "end": 31
+                }
+              ],
+              "binding": {
+                "coverage": "finite_explicit_anchors_only",
+                "requested": {
+                  "entities": [],
+                  "metrics": {
+                    "duration": [
+                      "cache_lifetime"
+                    ]
+                  },
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [
+                  {
+                    "field": "duration",
+                    "present": true,
+                    "quote": "300 秒",
+                    "start": 26,
+                    "end": 31,
+                    "clause": "产品价格 Redis 缓存有效期已从 60 秒改为 300 秒",
+                    "clause_start": 0,
+                    "clause_end": 31,
+                    "entities": [
+                      "redis"
+                    ],
+                    "metrics": [
+                      "cache_lifetime"
+                    ],
+                    "time": {
+                      "years": [],
+                      "months": [],
+                      "needs_reference_date": false
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "test-008",
+          "query": "第三方授权成功回到站点却像没登录过，旧决定是什么？",
+          "expected": "cookie",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "test-009",
+          "query": "Which cookie attributes fixed sessions lost after the external sign-in callback?",
+          "expected": "cookie",
+          "before": [
+            "cookie"
+          ],
+          "after": [
+            "cookie"
+          ],
+          "decisions": {
+            "cookie": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "test-010",
+          "query": "顾客网络不好重复提交订单，怎样确保只付一笔？",
+          "expected": "payment",
+          "before": [
+            "payment",
+            "retry"
+          ],
+          "after": [
+            "payment",
+            "retry"
+          ],
+          "decisions": {
+            "payment": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            },
+            "retry": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "test-011",
+          "query": "What makes repeated checkout requests safe for the same order?",
+          "expected": "payment",
+          "before": [
+            "payment"
+          ],
+          "after": [
+            "payment"
+          ],
+          "decisions": {
+            "payment": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "test-012",
+          "query": "多个任务同时写 SQLite 时提示忙，原来怎么配置的？",
+          "expected": "sqlite",
+          "before": [
+            "sqlite"
+          ],
+          "after": [
+            "sqlite"
+          ],
+          "decisions": {
+            "sqlite": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [
+                    "sqlite"
+                  ],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "test-013",
+          "query": "What settings helped when simultaneous SQLite writers blocked each other?",
+          "expected": "sqlite",
+          "before": [
+            "sqlite"
+          ],
+          "after": [
+            "sqlite"
+          ],
+          "decisions": {
+            "sqlite": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [
+                    "sqlite"
+                  ],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "test-014",
+          "query": "大附件上传中断后不想从零开始，已有方案是什么？",
+          "expected": "upload",
+          "before": [
+            "upload",
+            "download"
+          ],
+          "after": [
+            "upload",
+            "download"
+          ],
+          "decisions": {
+            "upload": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            },
+            "download": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "test-015",
+          "query": "How can a large transfer resume after the connection drops?",
+          "expected": "upload",
+          "before": [
+            "upload"
+          ],
+          "after": [
+            "upload"
+          ],
+          "decisions": {
+            "upload": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "test-016",
+          "query": "扫描件里复制不出文字，如何让它变得可检索？",
+          "expected": "pdf",
+          "before": [
+            "pdf",
+            "font"
+          ],
+          "after": [
+            "pdf",
+            "font"
+          ],
+          "decisions": {
+            "pdf": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            },
+            "font": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "test-017",
+          "query": "What did we do before indexing image-only document pages?",
+          "expected": "pdf",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "test-018",
+          "query": "同一事件在不同时区怎么存和展示才不会乱？",
+          "expected": "time",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "test-019",
+          "query": "How should one event time be persisted for users in different time zones?",
+          "expected": "time",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "test-020",
+          "query": "提交里所有行都像被修改了，实际上只是回车不同，怎么消掉噪声？",
+          "expected": "git",
+          "before": [
+            "git",
+            "cookie"
+          ],
+          "after": [
+            "git",
+            "cookie"
+          ],
+          "decisions": {
+            "git": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            },
+            "cookie": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "test-021",
+          "query": "What repository setting prevents line-ending-only changes?",
+          "expected": "git",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "test-022",
+          "query": "怎么避免把途中被改坏的依赖包加载进来？",
+          "expected": "download",
+          "before": [
+            "download",
+            "boot"
+          ],
+          "after": [
+            "download",
+            "boot"
+          ],
+          "decisions": {
+            "download": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            },
+            "boot": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "test-023",
+          "query": "Which digest must a downloaded dependency match before it is accepted?",
+          "expected": "download",
+          "before": [
+            "download"
+          ],
+          "after": [
+            "download"
+          ],
+          "decisions": {
+            "download": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "test-024",
+          "query": "加速卡和软件版本对不上时，当时的降级路线是什么？",
+          "expected": "gpu",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "test-025",
+          "query": "What was our fallback when the graphics runtime and driver did not agree?",
+          "expected": "gpu",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "test-026",
+          "query": "上游没响应要怎么间隔再试，能试到什么时候？",
+          "expected": "retry",
+          "before": [
+            "retry",
+            "boot"
+          ],
+          "after": [
+            "retry",
+            "boot"
+          ],
+          "decisions": {
+            "retry": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            },
+            "boot": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "test-027",
+          "query": "What bounded retry schedule did we choose for upstream timeouts?",
+          "expected": "retry",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "test-028",
+          "query": "明明已经安装模块，IDE 却报缺包，当时改了哪条路径？",
+          "expected": "venv",
+          "before": [
+            "venv"
+          ],
+          "after": [
+            "venv"
+          ],
+          "decisions": {
+            "venv": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [
+                    "ide"
+                  ],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "test-029",
+          "query": "The editor cannot see a module that the shell imports. What did we align?",
+          "expected": "venv",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "test-030",
+          "query": "怎样让每次前端打包都用锁定的依赖，而不是临时升级？",
+          "expected": "build",
+          "before": [
+            "build",
+            "boot"
+          ],
+          "after": [
+            "build",
+            "boot"
+          ],
+          "decisions": {
+            "build": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            },
+            "boot": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "test-031",
+          "query": "Which Node version and install command make the build follow the existing lockfile?",
+          "expected": "build",
+          "before": [
+            "build"
+          ],
+          "after": [
+            "build"
+          ],
+          "decisions": {
+            "build": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [
+                    "node"
+                  ],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "test-032",
+          "query": "文件明明存在，只要名字带汉字链接就失效，用什么处理地址？",
+          "expected": "url",
+          "before": [
+            "url",
+            "download"
+          ],
+          "after": [
+            "url",
+            "download"
+          ],
+          "decisions": {
+            "url": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            },
+            "download": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "test-033",
+          "query": "What fixed missing-download errors caused by non-ASCII path characters?",
+          "expected": "url",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "test-034",
+          "query": "不碰鼠标时，打开和关掉模态窗口，光标应该怎么走？",
+          "expected": "keyboard",
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "test-035",
+          "query": "Where should keyboard focus go while a modal is open and after it closes?",
+          "expected": "keyboard",
+          "before": [
+            "keyboard"
+          ],
+          "after": [
+            "keyboard"
+          ],
+          "decisions": {
+            "keyboard": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "test-036",
+          "query": "鲸鱼为什么要到海面换气？",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "test-037",
+          "query": "怎么烤出外脆内软的面包？",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "test-038",
+          "query": "帮我找附近的牙科诊所",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "test-039",
+          "query": "量子纠缠能用来超光速通信吗？",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "test-040",
+          "query": "What was the purchase price of our CUDA graphics card?",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "test-041",
+          "query": "支付接口上个月实际重复扣款率是多少？",
+          "expected": null,
+          "before": [
+            "metric"
+          ],
+          "after": [],
+          "decisions": {
+            "metric": {
+              "allowed": false,
+              "status": "explicit_value_binding_not_established",
+              "checks": [
+                {
+                  "field": "percentage",
+                  "present": false,
+                  "quote": null,
+                  "start": null,
+                  "end": null
+                }
+              ],
+              "binding": {
+                "coverage": "finite_explicit_anchors_only",
+                "requested": {
+                  "entities": [],
+                  "metrics": {
+                    "percentage": [
+                      "duplicate_charge_rate"
+                    ]
+                  },
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": [
+                  {
+                    "field": "percentage",
+                    "reason": "requested_metric_not_in_value_clause",
+                    "start": 0,
+                    "end": 32
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "test-042",
+          "query": "前端构建环境的管理员密码是什么？",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "test-043",
+          "query": "UTC 时间方案已经节省了多少服务器费用？",
+          "expected": null,
+          "before": [
+            "time"
+          ],
+          "after": [
+            "time"
+          ],
+          "decisions": {
+            "time": {
+              "allowed": true,
+              "status": "relevance_only_unverified",
+              "checks": [],
+              "binding": {
+                "coverage": "not_checked_non_numeric_request",
+                "requested": {
+                  "entities": [
+                    "utc"
+                  ],
+                  "metrics": {},
+                  "time": {
+                    "years": [],
+                    "months": [],
+                    "needs_reference_date": false
+                  }
+                },
+                "evidence": [],
+                "reasons": []
+              }
+            }
+          }
+        },
+        {
+          "id": "test-044",
+          "query": "那个还是不行，之前怎么弄的？",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "test-045",
+          "query": "有个页面一直转圈，原来怎么处理？",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "test-046",
+          "query": "Give me the secret completion color for the side quest 织女风帆",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "test-047",
+          "query": "已归档的湖蓝色备选决定具体是什么？",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "test-048",
+          "query": "不要查支付或缓存的旧记录",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "test-049",
+          "query": "do not retrieve database backup history",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "test-050",
+          "query": "Python programming python's pet snake enclosure cost",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        },
+        {
+          "id": "test-051",
+          "query": "机场登机口换了，行李要去哪里领取？",
+          "expected": null,
+          "before": [],
+          "after": [],
+          "decisions": {}
+        }
+      ]
+    }
+  },
+  "exact_source_spans_checked": 35,
+  "cached_report_sha256": "a8ac8aa5dc018419330c1181a70db1924ef77185a5e441cf2fd4cf78d25da767",
+  "boundaries": {
+    "model_calls": 0,
+    "calibration_changed": false,
+    "new_candidates_added": false,
+    "final_candidate_limit": 2,
+    "final_budget_can_only_shrink": true,
+    "real_memory_opened": false,
+    "daily_installation_changed": false,
+    "python_socket_calls_blocked": true,
+    "system_network_disabled": false
+  },
+  "limits": [
+    "Finite literal proper-name anchors and metric vocabulary, not full semantics",
+    "Same-clause evidence only; implicit subjects/cross-sentence references may be rejected",
+    "No universal currency/period/denominator disambiguation or contradiction resolution",
+    "New pairs were authored and frozen by the same developer; no independent external holdout",
+    "Known retrieval scores are replayed; no new retrieval/end-to-end host benchmark"
+  ]
+}

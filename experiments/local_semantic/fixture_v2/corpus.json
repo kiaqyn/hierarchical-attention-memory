@@ -1,0 +1,196 @@
+[
+  {
+    "id": "boot",
+    "title": "加载停滞修复",
+    "body": "将 Renderer 依赖固定为 4.2，清理本地缓存后验证启动通过。",
+    "project": "M1",
+    "status": "ACTIVE",
+    "supersedes": []
+  },
+  {
+    "id": "font",
+    "title": "缺字处理",
+    "body": "界面汉字显示方框，是字体缺少字形；打包 Noto Sans CJK 字体并配置字体回退。",
+    "project": "M1",
+    "status": "ACTIVE",
+    "supersedes": []
+  },
+  {
+    "id": "csv",
+    "title": "电子表格导出",
+    "body": "Excel 打开 CSV 出现中文乱码，导出文件使用 UTF-8-SIG，带 BOM。",
+    "project": "M1",
+    "status": "ACTIVE",
+    "supersedes": []
+  },
+  {
+    "id": "ttl_old",
+    "title": "旧缓存决定",
+    "body": "Redis 缓存有效期为 60 秒。",
+    "project": "M1",
+    "status": "ACTIVE",
+    "supersedes": []
+  },
+  {
+    "id": "ttl",
+    "title": "当前缓存决定",
+    "body": "产品价格 Redis 缓存有效期已从 60 秒改为 300 秒，商品更新后主动失效。",
+    "project": "M1",
+    "status": "ACTIVE",
+    "supersedes": [
+      "ttl_old"
+    ]
+  },
+  {
+    "id": "cookie",
+    "title": "登录回跳",
+    "body": "跨站登录回调丢失会话，Cookie 改为 SameSite=Lax，并在 HTTPS 下设置 Secure。",
+    "project": "M1",
+    "status": "ACTIVE",
+    "supersedes": []
+  },
+  {
+    "id": "payment",
+    "title": "支付重复请求",
+    "body": "付款接口使用订单号作为幂等键，同一订单的重试返回原结果，避免重复扣款。",
+    "project": "M1",
+    "status": "ACTIVE",
+    "supersedes": []
+  },
+  {
+    "id": "sqlite",
+    "title": "数据库忙",
+    "body": "SQLite 并发写入出现 database is locked，启用 WAL，设置 busy_timeout=5000 毫秒。",
+    "project": "M1",
+    "status": "ACTIVE",
+    "supersedes": []
+  },
+  {
+    "id": "upload",
+    "title": "大文件上传",
+    "body": "大文件按 8 MiB 分片，保存已完成分片编号，断线后断点续传。",
+    "project": "M1",
+    "status": "ACTIVE",
+    "supersedes": []
+  },
+  {
+    "id": "pdf",
+    "title": "扫描文档提取",
+    "body": "扫描 PDF 没有文本层，先 OCR 识别图片中的文字，再建立检索索引。",
+    "project": "M1",
+    "status": "ACTIVE",
+    "supersedes": []
+  },
+  {
+    "id": "time",
+    "title": "时间显示约定",
+    "body": "数据库保存 UTC 时间，界面根据用户时区转换显示，不保存本地时间字符串。",
+    "project": "M1",
+    "status": "ACTIVE",
+    "supersedes": []
+  },
+  {
+    "id": "git",
+    "title": "换行符噪声",
+    "body": "Git diff 整个文件都变了是 CRLF/LF 混用，使用 .gitattributes 统一仓库为 LF。",
+    "project": "M1",
+    "status": "ACTIVE",
+    "supersedes": []
+  },
+  {
+    "id": "download",
+    "title": "下载完整性",
+    "body": "下载依赖后核对 SHA-256 校验值，不一致就拒绝加载，保留失败文件供检查。",
+    "project": "M1",
+    "status": "ACTIVE",
+    "supersedes": []
+  },
+  {
+    "id": "gpu",
+    "title": "显卡运行错误",
+    "body": "GPU 加速失败来自 CUDA 与驱动不兼容；使用匹配的运行时，暂时可切换 CPU。",
+    "project": "M1",
+    "status": "ACTIVE",
+    "supersedes": []
+  },
+  {
+    "id": "retry",
+    "title": "网络超时重试",
+    "body": "上游请求超时最多重试两次，使用指数退避和随机抖动，不能无限循环。",
+    "project": "M1",
+    "status": "ACTIVE",
+    "supersedes": []
+  },
+  {
+    "id": "venv",
+    "title": "解释器路径",
+    "body": "命令行装了包但 IDE 找不到，是 Python 解释器不同；IDE 选择项目 .venv 的解释器。",
+    "project": "M1",
+    "status": "ACTIVE",
+    "supersedes": []
+  },
+  {
+    "id": "build",
+    "title": "前端构建环境",
+    "body": "前端统一 Node 20，按现有锁文件执行 npm ci，不在构建时更新依赖版本。",
+    "project": "M1",
+    "status": "ACTIVE",
+    "supersedes": []
+  },
+  {
+    "id": "url",
+    "title": "中文文件链接",
+    "body": "中文文件路径的下载链接 404，路径各部分做 URL 编码，保留路径分隔符。",
+    "project": "M1",
+    "status": "ACTIVE",
+    "supersedes": []
+  },
+  {
+    "id": "keyboard",
+    "title": "键盘可访问性",
+    "body": "弹窗打开后焦点移入弹窗，Tab 在弹窗内循环，关闭后焦点返回触发按钮。",
+    "project": "M1",
+    "status": "ACTIVE",
+    "supersedes": []
+  },
+  {
+    "id": "branch",
+    "title": "支线专用口令",
+    "body": "织女风帆演示的通关颜色是靛紫色，仅供支线演示。",
+    "project": "S1",
+    "status": "ACTIVE",
+    "supersedes": []
+  },
+  {
+    "id": "archived",
+    "title": "已归档备选",
+    "body": "织女风帆备选通关颜色是湖蓝色，已归档，不再使用。",
+    "project": "M1",
+    "status": "ARCHIVED",
+    "supersedes": []
+  },
+  {
+    "id": "budget",
+    "title": "OCR 合成预算",
+    "body": "合成 OCR 任务月度预算为 120 元，超过 180 元前必须获得确认。",
+    "project": "M1",
+    "status": "ACTIVE",
+    "supersedes": []
+  },
+  {
+    "id": "metric",
+    "title": "合成订单重试测量",
+    "body": "合成演示在 2026 年 10 月实测订单请求重试率为 0.8%，统计 1000 笔测试订单；没有记录重复扣款率。",
+    "project": "M1",
+    "status": "ACTIVE",
+    "supersedes": []
+  },
+  {
+    "id": "logs",
+    "title": "访问审计保留",
+    "body": "项目访问审计日志保留 14 天，到期自动清理；不在日志中记录口令。",
+    "project": "M1",
+    "status": "ACTIVE",
+    "supersedes": []
+  }
+]

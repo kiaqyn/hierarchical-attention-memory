@@ -1,0 +1,24 @@
+{
+  "version": "1.0.0",
+  "created_utc": "2026-11-05T12:39:52.503147+00:00",
+  "files": {
+    "answer-key.json": "478251455069885d3c43b9b6b5e5c9f5483fb3640d2930cecd6fc72744491b51",
+    "cases.jsonl": "72172eb11b345cb32749a134d82096e65e45e18dbbae6abb5d29ed29fa68d614",
+    "coverage.json": "9c790d9a26ec074c08be81b71dd057190ce8e1836a1e382ead0b21948823342a",
+    "grade.py": "0d5e2d6223550f06459a0ed646e6dbc3096165d9a3bd4ec65475f81293f031b9",
+    "materialize.py": "1850db69b9a3ba2c4102d8748273df89b3a6ba2bb392d0475b61d884d5134ea1",
+    "protocol.md": "0c9f07941219d2561d8e4ba7eac25a7ea3458b8ce76ac1c8c33dffd4c9c8aa5e",
+    "question-book.md": "1c108f86afae5480ee1d4ebf79ce8c453adb76bba65eb290748f9bd439501836",
+    "README.md": "18814d4d9cdcc2db8c85568ec523827f3a674e2e593de60f6750e20b55c9bce1",
+    "scenarios.json": "b15942135a92278cba9350f9a487b05a6e3c17b41e7558d745e1ccf0bb75241e",
+    "validate.py": "f0f6cefccb5d86122377355f1f0dc4b173fcbfd6080ca7b7637cca9d68965525"
+  },
+  "case_count": 200,
+  "families": 40,
+  "benchmark_engine_runs": 0,
+  "main": 120,
+  "auxiliary": 32,
+  "resilience": 32,
+  "cost_scale": 16,
+  "scope": "Text coding-agent memory; authored public development suite, not independent or exhaustive."
+}

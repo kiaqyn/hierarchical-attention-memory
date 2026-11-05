@@ -1,0 +1,22 @@
+{
+  "threshold": 0.875,
+  "margin": 0.0,
+  "additional_dev_false_hits": 0,
+  "dev_hits": 18,
+  "dev_positives": 18,
+  "objective": "minimize new no-answer returns, then maximize recall, then minimize extras; dev only",
+  "fixture_hashes": {
+    "corpus": {
+      "sha256": "ac367bbae4a0cdd8f367edf30a0454d5ce58894d083e061120c0eba0b9b0814b",
+      "count": 21
+    },
+    "dev": {
+      "sha256": "2abdbe4991fa9e3e02e2b97082082d7007d860d97cd8054270ad68ec9785e675",
+      "count": 30
+    },
+    "test": {
+      "sha256": "cec91269d7f55203b761043ce23f9c07d337e63bbaab8f9bbe2556ee89d53a3f",
+      "count": 52
+    }
+  }
+}
