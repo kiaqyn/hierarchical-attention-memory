@@ -121,7 +121,7 @@ python scripts/hfa_manager.py reindex ./memory --verify
 python scripts/hfa_manager.py summarize ./memory --check
 ```
 
-旧版目录升级到 3.0 后先重建新增的正文检索索引，再使用。CLI 支持的命令只有 `init`、`status`、`add-topic`、`tombstone`、`route`、`recall`、`reindex`、`summarize`。不要虚构 `evidence`、`lock promote`、`lint`、`gc` 或裁决 API 已经存在。
+旧版目录升级到 3.0 后先重建新增的正文检索索引，再使用。CLI 支持的命令有 `init`、`doctor`、`status`、`add-topic`、`tombstone`、`route`、`recall`、`reindex`、`summarize`、`semantic-index`。`doctor` 只检查本地目录和依赖，不返回记忆正文，也不证明宿主已接入。`semantic-index` 只维护可删除的本地向量缓存，需要显式模型目录，默认召回不会调用它。不要虚构 `evidence`、`lock promote`、`lint`、`gc` 或裁决 API 已经存在。
 
 所有 CLI 请求先持锁并恢复未提交事务。恢复失败时停止使用该记忆，保留 `.hfa-transaction.json` 及现有文件供核对，不删除日志或强行宣布成功。
 

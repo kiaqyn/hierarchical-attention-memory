@@ -195,6 +195,16 @@ def _root_lock(root):
 def _to_bytes(content: str | bytes) -> bytes:
     return content if isinstance(content, bytes) else content.encode("utf-8")
 
+def _sqlite_comparable(data: bytes) -> bytes:
+    """Drop SQLite header offsets 92–99.
+
+    Bytes 92–95 are version-valid-for and 96–99 are the library version.
+    Those two fields can change across SQLite builds without changing pages.
+    """
+    if len(data) >= 100 and data.startswith(b"SQLite format 3\x00"):
+        return data[:92] + data[100:]
+    return data
+
 def _file_matches(path: Path, expected: str | bytes) -> bool:
     if not path.is_file():
         return False
@@ -203,7 +213,7 @@ def _file_matches(path: Path, expected: str | bytes) -> bool:
         if actual == expected:
             return True
         if len(expected) >= 100 and len(actual) == len(expected) and expected.startswith(b"SQLite format 3\x00"):
-            return actual[:92] == expected[:92] and actual[100:] == expected[100:]
+            return _sqlite_comparable(actual) == _sqlite_comparable(expected)
         return False
     return _read_utf8(path) == expected
 
@@ -446,6 +456,34 @@ def _verify_fts_file(fts_path: Path, expected_digest: str, expected_doc_count: i
             conn.close()
     except Exception:
         return False
+
+def _accept_fts_index(root, state, chunks, expected_digest):
+    """Require the on-disk FTS index to match L1, without rewriting it.
+
+    A matching content hash returns immediately. A miss rebuilds the expected
+    image in memory only, so header offsets 92–99 can differ the same way
+    `status` already allows. Page changes still fail closed.
+    """
+    fts_path = root / "index/fts.sqlite"
+    if _verify_fts_file(fts_path, expected_digest, len(chunks)):
+        return
+    expected = _derived(root, state, chunks, include_fts=True).get("index/fts.sqlite")
+    actual = fts_path.read_bytes() if fts_path.is_file() else b""
+    if (isinstance(expected, bytes) and len(actual) == len(expected)
+            and actual[:16] == b"SQLite format 3\x00"
+            and _sqlite_comparable(actual) == _sqlite_comparable(expected)):
+        conn = None
+        try:
+            conn = _open_readonly_sqlite(fts_path)
+            quick = conn.execute("PRAGMA quick_check").fetchone()
+            if quick and quick[0] == "ok":
+                return
+        except Exception:
+            pass
+        finally:
+            if conn is not None:
+                conn.close()
+    raise MemoryError("Stale index: index/fts.sqlite; run reindex")
 
 def _fts_search(terms: set[str], fts_bytes: Path | bytes | None) -> tuple[dict[str, float] | None, dict[str, int] | None]:
     if not fts_bytes or not terms or not _fts5_supported():
@@ -737,6 +775,36 @@ def _config(root):
         raise MemoryError("retrieval_aliases must contain up to 64 groups of 2–8 short phrases")
     return config
 
+def _active_epoch_label(text):
+    """Prefer the explicit marker over any historical summaries path."""
+    marker = re.search(r"活跃纪元:\s*`(epoch_\d+)`", text)
+    if marker:
+        return marker.group(1)
+    header = re.search(r"(?m)^#\s*HFA L0 \(history/(epoch_\d+)/summaries\.md", text)
+    if header:
+        return header.group(1)
+    legacy = re.search(r"history/(epoch_\d+)/summaries\.md", text)
+    return legacy.group(1) if legacy else "epoch_01"
+
+def _retarget_active_epoch(directory, epoch):
+    """Move only the active-epoch header. Other history/epoch links stay put."""
+    name = f"epoch_{epoch:02d}"
+    headers = re.findall(r"(?m)^#\s*HFA L0 \(history/epoch_\d+/summaries\.md", directory)
+    markers = re.findall(r"活跃纪元:\s*`epoch_\d+`", directory)
+    if len(headers) != 1 or len(markers) > 1:
+        raise MemoryError(
+            "directory.md must contain one HFA L0 epoch header and at most one 活跃纪元 marker; "
+            "history links were not rewritten")
+    directory = re.sub(
+        r"(?m)^(#\s*HFA L0 \(history/)epoch_\d+(/summaries\.md)",
+        rf"\g<1>{name}\2",
+        directory,
+        count=1,
+    )
+    if markers:
+        directory = re.sub(r"活跃纪元:\s*`epoch_\d+`", f"活跃纪元: `{name}`", directory, count=1)
+    return directory
+
 def parse_directory_nodes(directory_md, text_override=None):
     text, root = (_read_utf8(directory_md) if text_override is None else text_override), directory_md.parent
     nodes = {"MAX": [], "HIGH": [], "MEDIUM": [], "TOMBSTONED": [], "HISTORY": []}
@@ -767,14 +835,14 @@ def parse_directory_nodes(directory_md, text_override=None):
                 else "MAX" if re.fullmatch(r"M\d+", node_id)
                 else "HISTORY" if relative.startswith("history/") else "MEDIUM")
         nodes[tier].append(entry)
-    epoch = re.search(r"history/(epoch_\d+)/summaries\.md", text) or re.search(r"活跃纪元:\s*`(epoch_\d+)`", text)
+    epoch_label = _active_epoch_label(text)
     measurement, config = measure_tokens(text), _config(root)
     summary_path = root / "summary.md"
     summary_text = _read_utf8(summary_path) if summary_path.is_file() else ""
     summary_measurement = measure_tokens(summary_text)
     missing_sections = ([s for s in SUMMARY_SECTIONS if s not in summary_text]
                         if summary_path.is_file() else [])
-    return {"active_epoch": epoch.group(1) if epoch else "epoch_01", "nodes": nodes,
+    return {"active_epoch": epoch_label, "nodes": nodes,
             "missing_targets": missing, "routing_tokens": measurement["count"], "token_measurement": measurement,
             "router_token_budget": config["router_token_budget"], "within_budget": measurement["count"] <= config["router_token_budget"],
             "summary_tokens": summary_measurement["count"], "summary_token_measurement": summary_measurement,
@@ -1098,9 +1166,7 @@ def cmd_add_topic(root, title, hit_words, conclusion, milestone_log=None, projec
             previous = epoch
             epoch = max([epoch] + [c["epoch"] for c in chunks]) + 1
             epoch_chunks = []
-            directory = _read_utf8(root / "directory.md")
-            directory = re.sub(r"history/epoch_\d+/summaries\.md", f"history/epoch_{epoch:02d}/summaries.md", directory)
-            directory = re.sub(r"活跃纪元:\s*`epoch_\d+`", f"活跃纪元: `epoch_{epoch:02d}`", directory)
+            directory = _retarget_active_epoch(_read_utf8(root / "directory.md"), epoch)
             updates["directory.md"] = directory
             # Update only the status line; keep any human-written notes in framework.md.
             updates.update(_framework_update(root, previous, "SEALED"))
@@ -1167,15 +1233,6 @@ def cmd_tombstone(root, branch_id, hit_words=None, reason=None):
         _commit(root, updates)
     print(f"[OK] Tombstoned {branch_id}; audit event committed")
     return 0
-
-def _append_jsonl(path, event):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    line = (json.dumps(event, ensure_ascii=False) + "\n").encode("utf-8")
-    fd = os.open(str(path), os.O_CREAT | os.O_WRONLY | os.O_APPEND, 0o600)
-    try:
-        os.write(fd, line)
-    finally:
-        os.close(fd)
 
 def _next_turn(root, conversation_id, turn_id, interval):
     """IDs are host-supplied; missing IDs never masquerade as real chat turns."""
@@ -1325,8 +1382,7 @@ def _semantic_snapshot_locked(root, active_mainline=None):
         if not _file_matches(root / relative, content):
             raise MemoryError(f"Stale index: {relative}; run reindex")
     source_digest = json.loads(str(expected["index/search.json"]))["source_digest"]
-    if not _verify_fts_file(root / "index/fts.sqlite", source_digest, len(chunks)):
-        raise MemoryError("Stale index: index/fts.sqlite; run reindex")
+    _accept_fts_index(root, state, chunks, source_digest)
     return _semantic_module().snapshot(root, chunks, mainline), config
 
 
@@ -1454,8 +1510,7 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
                 raise MemoryError(f"Stale index: {relative}; run reindex")
         fts_path = root / "index/fts.sqlite"
         expected_digest = json.loads(str(expected["index/search.json"]))["source_digest"]
-        if not _verify_fts_file(fts_path, expected_digest, len(chunks)):
-            raise MemoryError("Stale index: index/fts.sqlite; run reindex")
+        _accept_fts_index(root, state, chunks, expected_digest)
         checked_turn = _checked_recall_turn(root, config, conversation_id, turn_id)
         index = json.loads(_read_utf8(root / "index/hitwords.json"))["entries"]
         positive, refs, matched = _positive_query(query), [], []

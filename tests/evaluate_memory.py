@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 import statistics
+import sys
 import tempfile
 import time
 from pathlib import Path
@@ -121,4 +122,13 @@ if __name__ == "__main__":
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(text, encoding="utf-8")
-    print(text)
+    print(text, end="")
+    hybrid = result["retrieval"]["modes"]["hybrid"]
+    # Keyword mode is a weaker comparison and is not part of this gate.
+    # The published contract is hybrid recall of every positive case, zero
+    # negative false hits, and budgets held. A printed report alone would
+    # hide a regression.
+    if (hybrid["hits"] != hybrid["positive_cases"] or hybrid["false_hits"]
+            or not hybrid["budget_ok"]):
+        print("Hybrid retrieval regressed against the published synthetic contract.", file=sys.stderr)
+        raise SystemExit(1)

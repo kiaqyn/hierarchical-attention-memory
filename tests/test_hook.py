@@ -212,6 +212,20 @@ class HookIntegrationTests(unittest.TestCase):
         self.assertEqual(json.loads(proc_fresh.stdout)["saved"]["id"], "chunk_0002")
         self.assertTrue((fresh_ws / "memory" / "chunks" / "chunk_0002.json").is_file())
 
+    def test_numeric_zero_identity_is_kept_on_save(self):
+        payload = json.dumps({
+            "conversationId": 0,
+            "turnId": 0,
+            "workspacePaths": [str(self.workspace)],
+            "memoryWriteAllowed": True,
+            "lastUserInput": "请保存这条结论",
+            "lastAssistantResponse": "结论：已将导出编码固定为 UTF-8。",
+        })
+        proc = self.run_hook(payload, extra_args=["--phase", "post"])
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        saved = json.loads(proc.stdout)["saved"]
+        self.assertTrue(saved["request_id"].startswith("hook-0-0-"), saved["request_id"])
+
     def test_dash_prefixed_query_and_fail_open_on_missing_or_corrupt_inputs(self):
         # 1. Query starting with '-' is treated as data, never a CLI flag
         dash_payload = json.dumps({

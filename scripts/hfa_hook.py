@@ -104,6 +104,16 @@ def _warn(message: str) -> None:
     # Fixed diagnostics only: never echo user text, paths, credentials or CLI output.
     print("[HFA] " + message, file=sys.stderr)
 
+def _host_text_id(payload: dict, keys: tuple[str, ...]) -> str | None:
+    """Host turn identity. JSON numbers count; booleans and other types do not."""
+    for key in keys:
+        value = payload.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+        if type(value) is int:
+            return str(value)
+    return None
+
 def _write_denied(payload: dict) -> bool:
     if "memoryWriteAllowed" in payload and type(payload["memoryWriteAllowed"]) is not bool:
         return True
@@ -377,8 +387,7 @@ def _pre_invocation_context(payload: dict) -> dict:
     """
     keys = ("lastUserInput", "userInput", "prompt")
     direct = next((payload[k] for k in keys if isinstance(payload.get(k), str) and payload[k].strip()), None)
-    has_turn = any(isinstance(payload.get(k), str) and payload[k].strip()
-                   for k in ("turnId", "requestId", "messageId"))
+    has_turn = _host_text_id(payload, ("turnId", "requestId", "messageId")) is not None
     if direct is not None and has_turn:
         return payload
     result = dict(payload)
@@ -406,8 +415,8 @@ def _extract_turn_decision(payload: dict, phase: str) -> dict | None:
     payload = _with_transcript_user(payload)
     if _write_denied(payload):
         return None
-    conv_id = _redact(str(payload.get("conversationId") or payload.get("sessionId") or "local")).strip()[:48]
-    turn_id = _redact(str(payload.get("turnId") or payload.get("requestId") or payload.get("messageId") or "")).strip()[:48]
+    conv_id = _redact(_host_text_id(payload, ("conversationId", "sessionId")) or "local").strip()[:48]
+    turn_id = _redact(_host_text_id(payload, ("turnId", "requestId", "messageId")) or "").strip()[:48]
     user_input = str(payload.get("lastUserInput") or payload.get("userInput") or payload.get("prompt") or "").strip()
 
     # 1. Explicit structured decision object in payload
@@ -763,7 +772,7 @@ def main() -> int:
         cmd = [sys.executable, "-B", str(CLI), "recall", str(root), f"--query={query}"]
         for flag, keys in (("conversation-id", ("conversationId", "sessionId")),
                            ("turn-id", ("turnId", "requestId", "messageId"))):
-            value = next((payload[k] for k in keys if isinstance(payload.get(k), str) and payload[k].strip()), None)
+            value = _host_text_id(payload, keys)
             if value:
                 cmd.append(f"--{flag}={value}")
         # Automatic pre-hooks run on every prompt; dinner does not need a retry hint.

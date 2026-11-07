@@ -1,4 +1,4 @@
 interface:
   display_name: "Hierarchical Attention Memory"
-  short_description: "可恢复文件记忆、主线约束与限额片段召回 (HFA 2.2)"
-  default_prompt: "使用 $hierarchical-attention-memory 初始化、路由或同步当前项目的分层文件夹注意力记忆中枢。"
+  short_description: "可恢复文件记忆、主线约束与限额片段召回 (HFA 3)"
+  default_prompt: "使用 $hierarchical-attention-memory 检查本地记忆（hfa doctor）、按当前问题召回，或在结论已核实时再写入。不要虚构不存在的同步或裁决命令。"

@@ -71,6 +71,23 @@ class NativePreHookTests(unittest.TestCase):
         self.assertIn('no older prompt',stderr)
         self.assertFalse((self.memory/'history/session-state.json').exists())
 
+    def test_numeric_host_ids_share_one_turn_including_zero(self):
+        self.write([{'type':'USER_INPUT','step_index':4,'content':'older prompt'}])
+        first,_=self.fire(conversationId=0, turnId=0, lastUserInput='之前的稀有术语是什么？')
+        second,_=self.fire(conversationId=0, turnId=0, lastUserInput='之前的稀有术语是什么？')
+        session=next(iter(self.ledger()['conversations'].values()))
+        self.assertEqual(session['count'],1)
+        self.assertEqual(next(iter(session['turns'].values()))['searches'],2)
+        self.assertIn('ONE follow-up', first['injectSteps'][0]['ephemeralMessage'])
+        self.assertNotIn('ONE follow-up', second['injectSteps'][0]['ephemeralMessage'])
+
+    def test_boolean_identity_is_not_a_turn_id(self):
+        self.write([{'type':'USER_INPUT','step_index':0,'content':'older prompt'}])
+        self.fire(conversationId=True, turnId=False, lastUserInput='之前的偏好是什么？')
+        ledger=self.ledger()
+        self.assertEqual(ledger['conversations'], {})
+        self.assertEqual(ledger['recall_count'], 1)
+
     def test_absent_transcript_does_not_use_invocation_number_as_turn(self):
         out,stderr=self.fire(invocationNum=20)
         self.assertEqual(out,{})
