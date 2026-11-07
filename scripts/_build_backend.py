@@ -101,12 +101,13 @@ def build_wheel(wheel_directory, config_settings=None, metadata_directory=None):
     files: dict[str, bytes] = {}
     for py_file in sorted((ROOT / "scripts").glob("*.py")):
         files[f"scripts/{py_file.name}"] = py_file.read_bytes()
-    template_dir = ROOT / "templates" / "memory"
-    if template_dir.is_dir():
-        for tmpl in sorted(template_dir.rglob("*")):
-            if tmpl.is_file() and not tmpl.name.startswith(".hfa") and "__pycache__" not in tmpl.parts:
-                rel = tmpl.relative_to(template_dir).as_posix()
-                files[f"scripts/templates/memory/{rel}"] = tmpl.read_bytes()
+    for template_name in ("memory", "minimal"):
+        template_dir = ROOT / "templates" / template_name
+        if template_dir.is_dir():
+            for tmpl in sorted(template_dir.rglob("*")):
+                if tmpl.is_file() and not tmpl.name.startswith(".hfa") and "__pycache__" not in tmpl.parts:
+                    rel = tmpl.relative_to(template_dir).as_posix()
+                    files[f"scripts/templates/{template_name}/{rel}"] = tmpl.read_bytes()
     wheel_path = wheel_dir / f"{DIST_NAME}-{VERSION}-py3-none-any.whl"
     return _write_wheel(wheel_path, files)
 
@@ -123,7 +124,8 @@ def build_sdist(sdist_directory, config_settings=None):
         info.size = len(pkg_info)
         tf.addfile(info, io.BytesIO(pkg_info))
         for rel_glob in ("pyproject.toml", "README.md", "SKILL.md", "hooks.json", "plugin.json",
-                         "scripts/*.py", "templates/memory/**/*", "docs/*.md", "tests/*.py",
+                         "scripts/*.py", "templates/memory/**/*", "templates/minimal/**/*",
+                         "benchmarks/scale-recall/*.py", "docs/*.md", "tests/*.py",
                          "experiments/quota/*.py", "experiments/quota/fixtures/*.json"):
             for path in sorted(ROOT.glob(rel_glob)):
                 if path.is_file() and not path.name.startswith(".hfa") and "__pycache__" not in path.parts:

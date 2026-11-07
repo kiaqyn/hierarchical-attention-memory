@@ -1,54 +1,50 @@
 # HFA 3：开始使用
 
-HFA为AI助手保存可复用的项目决定、找回相关记录，并限制送入模型的记忆正文大小。数据在本地，原始记录可审计。它不保证记住所有聊天或理解所有改写，旧记录仍需核对来源。
+HFA 把可复用的项目决定保存在本地，并限制送进模型的记忆正文。它不保证记住所有聊天，也不是语义理解。没找到只表示这次没找到。
 
-## 已经配置好的用户
+## 三步就够
 
-在原来的AI软件中继续工作。先问：“用HFA查一下，这个项目以前决定了什么？请给出来源；没找到就说没找到。”成功应有实际工具调用或自动注入证据，以及回答引用的真实来源；模型说“记得”不够。
+Python 3.10+。在项目目录：
 
-需要沉淀时说：“这个决定已经确认，请保存结论、原因和来源。”临时尝试说：“这轮不要保存。”不要保存密码、密钥或整段私人聊天。宿主不提供自动保存许可时，使用MCP明确保存已核实的决定。
+```powershell
+python -m pip install .
+hfa init ./my_memory
+hfa add-topic ./my_memory --title "发布规则" --hit-words "发布规则" --conclusion "发布前先确认。"
+hfa recall ./my_memory --query "发布规则"
+hfa doctor ./my_memory
+```
 
-查找不足时，助手应辨清歧义、生成临时用词、最多补查一次；多条证据分别查后合并。仍不够就说明缺口，不编造、不无限重试。
+`hfa init` 只建立一条主线、一份核心摘要和空的记录目录。保存和查找不需要先学纪元、分支锁或墓碑。记录多了会自动换纪元。核心摘要仍会在查找结果里出现，所以未命中不是零 Token。
 
-## 第一次安装
+`doctor` 只报告目录和依赖是否就绪，不打印记忆正文。`status --json` 同样默认不带 `summary.md`；要看摘要正文用 `status --json --include-text`。本地就绪不表示宿主已经接入，也不表示模型用了这些文字。
 
-Python 3.10+可用核心CLI，MCP需要Python 3.11+。在项目文件夹运行：
+## 接到 AI 软件
+
+MCP 需要 Python 3.11+。下面两条只打印配置，不改现有设置：
 
 ```powershell
 python -m pip install ".[all]"
-hfa --version
-hfa init ./my_memory
-hfa doctor ./my_memory --require-mcp
 hfa-mcp --memory-dir ./my_memory --compact --print-config
 hfa-hook --memory-dir ./my_memory --print-hooks
 ```
 
-最后两条只生成配置，不覆盖现有设置。把HFA条目合并进宿主，保留其他服务和钩子，再重载HFA。先用合成项目检查查找、保存、禁存，再接真实项目。已有记忆不要清空或重复初始化。
+把条目合并进宿主后重载。先用上面的合成目录试查、存、以及“这轮不要保存”，再接真实项目。
 
-仅用核心可执行 `python -m pip install .`，无第三方运行依赖。完整安装有可选依赖下载；缺少精确分词器时采用保守字节上界。工具正文计量不是完整模型账单。
-
-## 检查是否可用
-
-```powershell
-hfa doctor ./my_memory
-```
-
-显示版本、实际目录、查存状态、MCP依赖和处理建议，不显示记忆正文。加 `--json` 供程序读取；加 `--require-mcp` 可在MCP未就绪时返回失败。
-
-本地就绪不证明宿主注册、钩子执行或模型使用。检查沿用原有事务恢复机制，遇到未完成事务会恢复；不会自动重建过期索引或重置原始记录。
+普通助手回复默认不自动入库。宿主要在该轮传入 `memoryWriteAllowed: true`，或者你在 `config.json` 里把 `write_policy` 改成 `auto` 后再 `reindex`。`auto` 仍会拒绝“不要保存”、`memoryWriteAllowed: false`、闲聊和未验证文本。它不能证明结论属实。`explicit` 则只接受结构化决定。不改配置时行为与以前相同。
 
 ## 遇到问题
 
-- 索引过期：先备份，运行 `hfa reindex ./my_memory`，再运行doctor。
-- MCP未就绪：确认宿主使用安装了mcp依赖的同一Python，启动项使用绝对路径。
-- 找不到决定：核对项目范围，允许一次有针对性的补查；没找到不等于不存在。
-- 多条证据返回不全：检查deferred、条数和预算。默认最多2条，不允许模型自行提额或解锁其他项目。
-- 教学页没有真实记录：visualizer是独立沙盘，用CLI/MCP检查实际目录。
+- 索引过期：先备份，`hfa reindex ./my_memory`，再 `hfa doctor`。
+- 改了 `config.json` 之后也要 `reindex`，配置属于真源指纹。
+- 找不到决定：可以换一次说法。没找到不等于不存在。
+- 默认最多返回 2 条。支线需要明确的解锁理由，模型不能自己扩大范围。
 
-## 升级与回退
+## 进阶，默认用不到
 
-先备份安装和记忆目录，再更新代码并按宿主要求重载HFA。已有目录先检查，只按确认的过期索引提示重建；不默认迁移或重置原始记录。升级后先用合成数据验收，再检查真实数据完整性。
+`hfa init --example` 会放上教学用的分支、墓碑和示例记录，不要把它们当成你的项目事实。
 
-故障时保留原始记录和事务日志。可恢复旧代码，不能拿旧记忆备份覆盖升级后的新增记录。
+分支锁定、墓碑、替代链、回合次数和可选本地向量都还在。查找的热路径用文件大小和 mtime 跳过重复读盘；大小和 mtime 都被原样恢复的篡改要靠 `recall --full-verify` 或 `reindex --verify` 才会发现。新目录默认保留最近 200 个会话和 2000 条访问记录，带解锁理由的访问默认不删。旧目录没有这两项配置时仍不裁剪。
 
-详见 [AI接入](ai-integration.md)、[分方向补查](query-refinement.md) 和 [可选语义后端](local-semantic.md)。
+教学页 `visualizer/index.html` 不连接磁盘。
+
+详见 [AI 接入](ai-integration.md)、[分方向补查](query-refinement.md) 和 [可选语义后端](local-semantic.md)。

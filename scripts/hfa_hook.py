@@ -7,8 +7,9 @@
   injection containing the core summary, relevant memory and bounded notices.
   Unmatched turns still carry the summary; complete text is measured by the CLI.
 - PostInvocation / Stop (`--phase post` / `--phase stop` or auto-detected turn end):
-  Reads explicit structured decisions, or assistant prose only when the host sets
-  per-turn `memoryWriteAllowed: true`. User no-save requests take precedence.
+  Reads explicit structured decisions, or assistant prose when write_policy
+  allows it. The default policy still requires per-turn `memoryWriteAllowed: true`.
+  User no-save requests and `memoryWriteAllowed: false` take precedence.
   Filters noise and known secret formats, distills `title`, `hit_words` (file paths, technical
   identifiers, CJK terms), and `conclusion`, and idempotently persists a structured
   L1 `chunk_XXXX.json` via `hfa_manager.py add-topic --request-id ... --json`.
@@ -411,7 +412,30 @@ def _pre_invocation_context(payload: dict) -> dict:
     return result
 
 
-def _extract_turn_decision(payload: dict, phase: str) -> dict | None:
+def _read_write_policy(root: Path) -> str:
+    """Missing, unreadable, or unknown policy keeps the host-signal default."""
+    try:
+        data = json.loads((root / "config.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        _warn("Write policy unreadable; plain replies still require the host signal.")
+        return "host"
+    value = data.get("write_policy", "host") if isinstance(data, dict) else "host"
+    if value not in ("host", "explicit", "auto"):
+        _warn("Write policy invalid; plain replies still require the host signal.")
+        return "host"
+    return value
+
+
+def _plain_prose_allowed(payload: dict, policy: str) -> bool:
+    """host: current default. explicit: structured decisions only. auto: opt-in prose."""
+    if policy == "explicit":
+        return False
+    if policy == "auto":
+        return True
+    return payload.get("memoryWriteAllowed") is True
+
+
+def _extract_turn_decision(payload: dict, phase: str, policy: str = "host") -> dict | None:
     payload = _with_transcript_user(payload)
     if _write_denied(payload):
         return None
@@ -487,9 +511,9 @@ def _extract_turn_decision(payload: dict, phase: str) -> dict | None:
         source = _clean_line(str(structured.get("source") or f"hook:turn:{conv_id}"))[:240]
         explicit_req_id = _redact(str(structured.get("request_id") or structured.get("requestId") or "")).strip()
     else:
-        # Free-text capture requires a trusted, per-turn host permission. Merely
-        # containing "Fixed" or "Conclusion" does not make prose verified memory.
-        if payload.get("memoryWriteAllowed") is not True:
+        # Default host policy still requires memoryWriteAllowed. auto opts in;
+        # explicit never stores plain prose. Denial and no-save were already applied.
+        if not _plain_prose_allowed(payload, policy):
             return None
         if _UNVERIFIED.search(response_text):
             return None
@@ -745,14 +769,20 @@ def main() -> int:
     env_auto_init = os.environ.get("HFA_AUTO_INIT", "").strip().lower() in ("1", "true", "yes")
 
     if phase in ("post", "stop"):
-        decision = _extract_turn_decision(payload, phase)
+        # No-save and an explicit host denial win before init or policy lookup.
+        if _write_denied(payload):
+            return _empty_phase_response(phase, payload)
+        root = _resolve_memory_dir(args.memory_dir, payload, allow_auto_init=False)
+        policy = _read_write_policy(root) if root is not None else "host"
+        decision = _extract_turn_decision(payload, phase, policy)
         if decision is None:
             return _empty_phase_response(phase, payload)
-        root = _resolve_memory_dir(
-            args.memory_dir,
-            payload,
-            allow_auto_init=not args.no_auto_init,
-        )
+        if root is None:
+            root = _resolve_memory_dir(
+                args.memory_dir,
+                payload,
+                allow_auto_init=not args.no_auto_init,
+            )
         if root is None:
             _warn("Configured memory root unavailable; no fallback write was performed.")
             return _empty_phase_response(phase, payload)

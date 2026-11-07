@@ -1,5 +1,7 @@
 """Operational readiness must distinguish core, optional SDK and real host use."""
+import contextlib
 import importlib.util
+import io
 import json
 from pathlib import Path
 import subprocess
@@ -66,7 +68,16 @@ class DoctorChecks(unittest.TestCase):
     def test_status_structured_return_is_the_same_health_report(self):
         rc,text = invoke(hfa.cmd_status, self.root, True)
         self.assertEqual(rc, 0)
-        self.assertEqual(json.loads(text), hfa.cmd_status(self.root, return_result=True))
+        full = hfa.cmd_status(self.root, return_result=True)
+        public = json.loads(text)
+        self.assertNotIn('summary_text', public)
+        self.assertNotIn(full['summary_text'], text)
+        self.assertEqual(public, {k: v for k, v in full.items() if k != 'summary_text'})
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = hfa.cmd_status(self.root, True, include_text=True)
+        self.assertEqual(rc, 0)
+        self.assertEqual(json.loads(buf.getvalue())['summary_text'], full['summary_text'])
 
     def test_real_cli_version_doctor_and_exit_codes(self):
         def cli(*args):

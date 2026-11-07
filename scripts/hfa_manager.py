@@ -26,10 +26,10 @@ for _stream in (sys.stdout, sys.stderr):
         _stream.reconfigure(encoding="utf-8", errors="replace")
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
-TEMPLATE_MEMORY_DIR = (
-    ROOT_DIR / "templates/memory"
-    if (ROOT_DIR / "templates/memory").is_dir()
-    else Path(__file__).resolve().parent / "templates/memory"
+WRITE_POLICIES = ("host", "explicit", "auto")
+DERIVED_MANIFEST_FILES = (
+    "index/search.json", "index/hitwords.json", "index/projects.json",
+    "index/catalog.json", "index/fts.sqlite", "index/fts-integrity.json",
 )
 # One re-entrant thread lock per memory root: different memory directories in the
 # same process never serialize each other; the file lock handles other processes.
@@ -773,7 +773,93 @@ def _config(root):
                    or any(not isinstance(w, str) or not w.strip() or len(w) > 64
                           or "\n" in w or "\r" in w for w in group) for group in aliases)):
         raise MemoryError("retrieval_aliases must contain up to 64 groups of 2–8 short phrases")
+    _session_policy(config)
+    _access_policy(config)
+    _write_policy_name(config.get("write_policy", "host"), strict=True)
     return config
+
+def _write_policy_name(value, *, strict):
+    if value in WRITE_POLICIES:
+        return value
+    if strict:
+        raise MemoryError("write_policy must be host, explicit, or auto")
+    return "host"
+
+def read_write_policy(root):
+    """Hook helper. Unreadable or invalid policy stays on the host-signal default."""
+    path = Path(root) / "config.json"
+    try:
+        data = json.loads(_read_utf8(path))
+    except (OSError, ValueError):
+        return "host"
+    if not isinstance(data, dict):
+        return "host"
+    return _write_policy_name(data.get("write_policy", "host"), strict=False)
+
+def _session_policy(config):
+    policy = config.get("session_retention")
+    if policy is None:
+        return None
+    if (not isinstance(policy, dict) or set(policy) != {"max_conversations"}
+            or type(policy.get("max_conversations")) is not int or policy["max_conversations"] < 1):
+        raise MemoryError("session_retention must be {\"max_conversations\": <positive int>}")
+    return policy
+
+def _access_policy(config):
+    policy = config.get("access_retention")
+    if policy is None:
+        return None
+    if not isinstance(policy, dict) or set(policy) - {"max_events", "keep_unlocks"}:
+        raise MemoryError("access_retention accepts only max_events and keep_unlocks")
+    if type(policy.get("max_events")) is not int or policy["max_events"] < 1:
+        raise MemoryError("access_retention.max_events must be a positive integer")
+    keep = policy.get("keep_unlocks", True)
+    if type(keep) is not bool:
+        raise MemoryError("access_retention.keep_unlocks must be a boolean")
+    return {"max_events": policy["max_events"], "keep_unlocks": keep}
+
+def _prune_sessions(ledger, policy, active_key):
+    if not policy:
+        return
+    convs = ledger["conversations"]
+    limit = policy["max_conversations"]
+    if len(convs) <= limit:
+        return
+    ranked = sorted(convs.items(), key=lambda item: (
+        item[1].get("last_seen") is not None if isinstance(item[1], dict) else False,
+        (item[1].get("last_seen") or "") if isinstance(item[1], dict) else "",
+        item[0]))
+    for key, _conv in ranked:
+        if len(convs) <= limit:
+            break
+        if key == active_key:
+            continue
+        del convs[key]
+
+def _trim_access_log(text, policy):
+    if text and not text.endswith("\n"):
+        text += "\n"
+    if not policy:
+        return text
+    lines = [line for line in text.splitlines() if line]
+    if len(lines) <= policy["max_events"]:
+        return ("\n".join(lines) + "\n") if lines else ""
+    unlocks, ordinary = [], []
+    for index, line in enumerate(lines):
+        keep = False
+        if policy["keep_unlocks"]:
+            try:
+                obj = json.loads(line)
+            except ValueError:
+                obj = None
+            keep = isinstance(obj, dict) and bool(obj.get("unlock_reason"))
+        (unlocks if keep else ordinary).append(index)
+    # Unlock lines stay even if they alone exceed the cap. Ordinary lines fill the rest.
+    room = max(0, policy["max_events"] - len(unlocks))
+    kept = set(unlocks)
+    kept.update(ordinary[-room:])
+    chosen = [lines[i] for i in range(len(lines)) if i in kept]
+    return ("\n".join(chosen) + "\n") if chosen else ""
 
 def _active_epoch_label(text):
     """Prefer the explicit marker over any historical summaries path."""
@@ -887,11 +973,14 @@ def _chunks(root, state):
         status = value.get("status", "ACTIVE")
         if not isinstance(status, str) or not status.strip() or len(status) > 64:
             raise MemoryError(f"Invalid status: {path.name}")
-        output.append({"id": path.stem, "topic_id": f"Topic#{number:02d}", "number": number, "epoch": epoch,
-                       "project": project, "title": str(value.get("title", "")), "summary": body, "hitwords": words,
-                       "status": status, "file": path.relative_to(root).as_posix(),
-                       "source": value.get("source", ""), "supersedes": value.get("supersedes", []),
-                       "request_id": value.get("request_id"), "request_digest": value.get("request_digest")})
+        record = {"id": path.stem, "topic_id": f"Topic#{number:02d}", "number": number, "epoch": epoch,
+                  "project": project, "title": str(value.get("title", "")), "summary": body, "hitwords": words,
+                  "status": status, "file": path.relative_to(root).as_posix(),
+                  "source": value.get("source", ""), "supersedes": value.get("supersedes", []),
+                  "request_id": value.get("request_id"), "request_digest": value.get("request_digest")}
+        if "created_at" in value:
+            record["created_at"] = value.get("created_at")
+        output.append(record)
     identities = [(c["epoch"], c["number"]) for c in output]
     if len(identities) != len(set(identities)):
         raise MemoryError("Duplicate topic number within an epoch")
@@ -915,22 +1004,28 @@ def _chunks(root, state):
             replaced_ids.add(old_id)
     return output
 
-def _digest(root, overrides=None):
+def _source_inventory(root, overrides=None):
+    """SHA-256 of L0/L1 bytes, plus each file's own hash. Manifest mtimes are separate."""
     overrides = overrides or {}
     files = {"directory.md", "config.json"}
     files.update(p.relative_to(root).as_posix() for p in (root / "chunks").glob("*.json"))
-    files.update(k for k in overrides if k.startswith("chunks/") or k in files)
+    files.update(k for k in overrides if k.startswith("chunks/") or k in ("directory.md", "config.json"))
     digest = hashlib.sha256()
+    hashes = {}
     for relative in sorted(files):
         path = _safe_path(root, relative)
         if relative in overrides:
-            content = overrides[relative].encode("utf-8")
+            content = _to_bytes(overrides[relative])
         elif path.is_file():
             content = path.read_bytes()
         else:
             continue
         digest.update(relative.encode("utf-8") + b"\0" + content + b"\0")
-    return digest.hexdigest()
+        hashes[relative] = hashlib.sha256(content).hexdigest()
+    return digest.hexdigest(), hashes
+
+def _digest(root, overrides=None):
+    return _source_inventory(root, overrides)[0]
 
 def _inline(text):
     return re.sub(r"[\r\n`]+", " ", text).replace("[", "(").replace("]", ")").strip()
@@ -997,6 +1092,7 @@ def _derived(root, state, chunks, overrides=None, include_fts=True):
         "index/search.json": _json({"version": 1, "source_digest": digest, "documents": documents}),
         "index/hitwords.json": _json({"version": 1, "source_digest": digest, "entries": entries}),
         "index/projects.json": _json({"version": 1, "source_digest": digest, "entries": projects}),
+        "index/catalog.json": _json({"version": 1, "source_digest": digest, "chunks": chunks}),
     }
     if include_fts:
         fts = _build_fts_cached(digest, _json(documents))
@@ -1007,6 +1103,89 @@ def _derived(root, state, chunks, overrides=None, include_fts=True):
         _DERIVED_CACHE.clear()
     _DERIVED_CACHE[cache_key] = result.copy()
     return result.copy()
+
+def _refresh_manifest_locked(root):
+    """Record size and mtime for the hot path. Content hashes still live here.
+
+    Caller holds the memory lock. This file is derived and is not part of source_digest.
+    A later recall trusts it only when every source size and mtime still match;
+    any miss re-reads the bytes.
+    """
+    digest, hashes = _source_inventory(root)
+    sources = {}
+    for relative, sha in hashes.items():
+        path = _safe_path(root, relative)
+        st = path.stat()
+        sources[relative] = {"size": st.st_size, "mtime_ns": st.st_mtime_ns, "sha256": sha}
+    derived = {}
+    for relative in DERIVED_MANIFEST_FILES:
+        path = root / relative
+        if not path.is_file():
+            return
+        info = path.stat()
+        derived[relative] = {"size": info.st_size, "mtime_ns": info.st_mtime_ns,
+                             "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+    payload = {"version": 1, "source_digest": digest, "sources": sources, "derived": derived}
+    _commit(root, {"index/source-manifest.json": _json(payload)})
+
+def _source_paths(root):
+    files = {"directory.md", "config.json"}
+    files.update(p.relative_to(root).as_posix() for p in (root / "chunks").glob("*.json"))
+    return files
+
+def _fast_source_digest(root):
+    """Return the cached source digest when size and mtime still match.
+
+    This does not re-read L0/L1 or re-hash derived indexes. A same-size,
+    same-mtime content swap is not detected here. `full_verify` and
+    `reindex --verify` still compare bytes.
+    """
+    path = root / "index/source-manifest.json"
+    if not path.is_file():
+        return None
+    try:
+        manifest = json.loads(_read_utf8(path))
+    except (OSError, ValueError):
+        return None
+    sources = manifest.get("sources")
+    derived = manifest.get("derived")
+    if (manifest.get("version") != 1 or not isinstance(manifest.get("source_digest"), str)
+            or not isinstance(sources, dict) or not isinstance(derived, dict)):
+        return None
+    if set(sources) != _source_paths(root):
+        return None
+    for relative, meta in list(sources.items()) + [(name, derived.get(name)) for name in DERIVED_MANIFEST_FILES]:
+        if not isinstance(meta, dict):
+            return None
+        try:
+            st = _safe_path(root, relative).stat()
+        except OSError:
+            return None
+        if meta.get("size") != st.st_size or meta.get("mtime_ns") != st.st_mtime_ns:
+            return None
+    return manifest["source_digest"]
+
+def _catalog_chunks(root, digest):
+    data = json.loads(_read_utf8(root / "index/catalog.json"))
+    chunks = data.get("chunks") if isinstance(data, dict) else None
+    if data.get("source_digest") != digest or not isinstance(chunks, list):
+        raise MemoryError("Stale index: index/catalog.json; run reindex")
+    return chunks
+
+def _load_verified_chunks(root, state, *, full_verify=False):
+    """Hot path stats sources. A miss, or full_verify, re-reads and rebuilds."""
+    if not full_verify:
+        fast = _fast_source_digest(root)
+        if fast is not None:
+            return _catalog_chunks(root, fast)
+    chunks = _chunks(root, state)
+    expected = _derived(root, state, chunks, include_fts=False)
+    for relative, content in expected.items():
+        if not _file_matches(root / relative, content):
+            raise MemoryError(f"Stale index: {relative}; run reindex")
+    digest = json.loads(str(expected["index/search.json"]))["source_digest"]
+    _accept_fts_index(root, state, chunks, digest)
+    return chunks
 
 def _chunk_text(chunk):
     return (f"[{chunk['id']} | {chunk['topic_id']} | epoch_{chunk['epoch']:02d} | {chunk['project']}] "
@@ -1044,7 +1223,19 @@ def _framework_update(root, epoch, status):
         text = text.rstrip("\n") + f"\n\nStatus: {status}\n"
     return {relative: text}
 
-def cmd_init(target_dir, force=False, quiet=False):
+def _templates_root():
+    repo = ROOT_DIR / "templates"
+    packaged = Path(__file__).resolve().parent / "templates"
+    if (repo / "memory").is_dir():
+        return repo
+    return packaged
+
+def cmd_init(target_dir, force=False, quiet=False, profile="example"):
+    if profile not in ("minimal", "example"):
+        raise MemoryError("Init profile must be minimal or example")
+    template = _templates_root() / ("minimal" if profile == "minimal" else "memory")
+    if not template.is_dir():
+        raise MemoryError(f"Init template is missing: {profile}")
     target_dir = resolve_default_memory_dir(target_dir).resolve()
     if target_dir.exists() and not target_dir.is_dir():
         raise MemoryError("Initialization target must be a directory")
@@ -1052,17 +1243,17 @@ def cmd_init(target_dir, force=False, quiet=False):
         raise MemoryError("Target not empty; --force only fills missing files")
     target_dir.mkdir(parents=True, exist_ok=True)
     with _hfa_lock(target_dir):
-        updates = {p.relative_to(TEMPLATE_MEMORY_DIR).as_posix(): p.read_bytes()
-                   for p in TEMPLATE_MEMORY_DIR.rglob("*")
+        updates = {p.relative_to(template).as_posix(): p.read_bytes()
+                   for p in template.rglob("*")
                    if p.is_file() and not p.name.startswith(".hfa") and "__pycache__" not in p.parts
-                   and not (target_dir / p.relative_to(TEMPLATE_MEMORY_DIR)).exists()}
+                   and not (target_dir / p.relative_to(template)).exists()}
         _commit(target_dir, updates)
     cmd_reindex(target_dir, quiet=quiet)
     if not quiet:
         print(f"[OK] Initialized memory at {target_dir}")
     return 0
 
-def cmd_status(root, as_json=False, *, return_result=False):
+def cmd_status(root, as_json=False, *, return_result=False, include_text=False):
     with _hfa_lock(root):
         state = parse_directory_nodes(root / "directory.md")
         chunks = _chunks(root, state)
@@ -1089,7 +1280,9 @@ def cmd_status(root, as_json=False, *, return_result=False):
     if return_result:
         return state
     if as_json:
-        print(_json(state), end="")
+        # Health JSON omits summary.md. --include-text restores the previous payload.
+        payload = state if include_text else {k: v for k, v in state.items() if k != "summary_text"}
+        print(_json(payload), end="")
     else:
         print(f"HFA status: {'PASS' if not problems else 'FAIL'}")
         print(f"L0: {state['routing_tokens']}/{state['router_token_budget']} ({state['token_measurement']['method']})")
@@ -1112,6 +1305,7 @@ def cmd_reindex(root, verify=False, quiet=False):
             print(_json({"consistent": not differences, "differences": differences}), end="")
             return 1 if differences else 0
         _commit(root, updates)
+        _refresh_manifest_locked(root)
     if not quiet:
         print("[OK] Rebuilt indexes and Markdown views from L0/L1")
     return 0
@@ -1194,6 +1388,7 @@ def cmd_add_topic(root, title, hit_words, conclusion, milestone_log=None, projec
             updates["history/stream.md"] = (_read_utf8(log) if log.exists() else "") + f"- {now} [{chunk_id}] {_inline(milestone_log)}\n"
         updates.update(_derived(root, state, chunks, updates))
         _commit(root, updates)
+        _refresh_manifest_locked(root)
     if as_json:
         print(_json({"id": chunk_id, "path": relative, "duplicate": False, "supersedes": supersedes}), end="")
     else:
@@ -1231,10 +1426,11 @@ def cmd_tombstone(root, branch_id, hit_words=None, reason=None):
         state["nodes"]["TOMBSTONED"].append({**branch, "status": "TOMBSTONED", "hit_words": words, "raw": line})
         updates.update(_derived(root, state, _chunks(root, state), updates))
         _commit(root, updates)
+        _refresh_manifest_locked(root)
     print(f"[OK] Tombstoned {branch_id}; audit event committed")
     return 0
 
-def _next_turn(root, conversation_id, turn_id, interval):
+def _next_turn(root, conversation_id, turn_id, interval, session_policy=None):
     """IDs are host-supplied; missing IDs never masquerade as real chat turns."""
     for value in (conversation_id, turn_id):
         if value is not None and (not isinstance(value, str) or not value.strip() or len(value) > 256):
@@ -1264,6 +1460,8 @@ def _next_turn(root, conversation_id, turn_id, interval):
                 or type(turn.get("searches")) is not int or turn["number"] < 1 or turn["searches"] < 0):
             raise MemoryError("Invalid turn ledger")
         turn["searches"] += 1
+        conversation["last_seen"] = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
+        _prune_sessions(ledger, session_policy, conv_key)
         result.update(turn_count=turn["number"], turn_count_exact=True, turn_search_count=turn["searches"],
                       status_check_due=fresh and conversation["count"] % interval == 0)
     return ledger, result
@@ -1290,7 +1488,8 @@ def _checked_recall_turn(root, config, conversation_id, turn_id):
         return None
     if not conversation_id or not turn_id:
         raise MemoryError("Configured recall limit requires host-issued conversation_id and turn_id; do not invent IDs")
-    ledger, turn = _next_turn(root, conversation_id, turn_id, config["status_check_interval"])
+    ledger, turn = _next_turn(root, conversation_id, turn_id, config["status_check_interval"],
+                              _session_policy(config))
     if turn["turn_search_count"] > limit:
         raise RecallLimitError(limit, turn["turn_search_count"] - 1)
     return ledger, turn
@@ -1376,13 +1575,7 @@ def _semantic_snapshot_locked(root, active_mainline=None):
     _guard_mainline(state, mainline)
     if state["missing_targets"] or not state["within_budget"] or not state["summary_within_budget"] or state["missing_summary_sections"]:
         raise MemoryError("Memory health/budget validation failed before semantic inference; run status")
-    chunks = _chunks(root, state)
-    expected = _derived(root, state, chunks, include_fts=False)
-    for relative, content in expected.items():
-        if not _file_matches(root / relative, content):
-            raise MemoryError(f"Stale index: {relative}; run reindex")
-    source_digest = json.loads(str(expected["index/search.json"]))["source_digest"]
-    _accept_fts_index(root, state, chunks, source_digest)
+    chunks = _load_verified_chunks(root, state)
     return _semantic_module().snapshot(root, chunks, mainline), config
 
 
@@ -1461,7 +1654,7 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
               conversation_id=None, turn_id=None, allow_refinement=True,
               semantic_model=None, semantic_min_score=.875, semantic_min_margin=0,
               *, semantic_runtime=None, return_result=False, output="full", max_topics=None,
-              refinement_queries=None):
+              refinement_queries=None, full_verify=False):
     if not isinstance(query, str) or not query.strip() or len(query) > 8000:
         raise MemoryError("Query must contain 1–8000 characters")
     if max_topics is not None and (type(max_topics) is not int or max_topics < 1):
@@ -1472,6 +1665,8 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
         raise MemoryError("Unknown retrieval mode")
     if type(allow_refinement) is not bool:
         raise MemoryError("allow_refinement must be a boolean")
+    if type(full_verify) is not bool:
+        raise MemoryError("full_verify must be a boolean")
     refinements = validate_refinement_queries(query, refinement_queries)
     if refinements and not allow_refinement:
         raise MemoryError("Refinement queries are disabled by --no-refinement")
@@ -1503,14 +1698,8 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
             raise MemoryError("summary.md exceeds summary_token_budget; condense it or change config explicitly")
         if state["missing_summary_sections"]:
             raise MemoryError("summary.md missing required sections")
-        chunks = _chunks(root, state)
-        expected = _derived(root, state, chunks, include_fts=False)
-        for relative, content in expected.items():
-            if not _file_matches(root / relative, content):
-                raise MemoryError(f"Stale index: {relative}; run reindex")
+        chunks = _load_verified_chunks(root, state, full_verify=full_verify)
         fts_path = root / "index/fts.sqlite"
-        expected_digest = json.loads(str(expected["index/search.json"]))["source_digest"]
-        _accept_fts_index(root, state, chunks, expected_digest)
         checked_turn = _checked_recall_turn(root, config, conversation_id, turn_id)
         index = json.loads(_read_utf8(root / "index/hitwords.json"))["entries"]
         positive, refs, matched = _positive_query(query), [], []
@@ -1628,7 +1817,8 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
         query_terms = sorted(_search_terms(positive, config, query=True) - GENERIC_TERMS) if positive.strip() else []
         zero_hits = len(selected) == 0 and len(deferred) == 0
         interval = config["status_check_interval"]
-        ledger, turn = checked_turn or _next_turn(root, conversation_id, turn_id, interval)
+        ledger, turn = checked_turn or _next_turn(root, conversation_id, turn_id, interval,
+                                                                _session_policy(config))
         # A single retry suggestion for a known real turn. No IDs => no unbounded loop.
         search_feedback = (
             "Round-1 SQLite BM25 + token-split search returned 0 direct hits. "
@@ -1679,8 +1869,9 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
             event["lexical_directions"] = len(search_queries)  # Counts only; never store query hypotheses.
         access = _safe_path(root, "history/access.jsonl")
         prior = _read_utf8(access) if access.is_file() else ""
+        access_text = prior + ("" if not prior or prior.endswith("\n") else "\n") + json.dumps(event, ensure_ascii=False) + "\n"
         _commit(root, {"history/session-state.json": _json(ledger),
-                       "history/access.jsonl": prior + ("" if not prior or prior.endswith("\n") else "\n") + json.dumps(event, ensure_ascii=False) + "\n"})
+                       "history/access.jsonl": _trim_access_log(access_text, _access_policy(config))})
     if output == "compact":
         result = _delivery_module().compact_recall(result)
     if return_result:
@@ -1694,7 +1885,7 @@ def _ensure_memory_dir(explicit: Path | None, auto_init: bool = False) -> Path:
     should_init = auto_init or os.environ.get("HFA_AUTO_INIT", "").strip().lower() in ("1", "true", "yes")
     if should_init and not (target / "directory.md").is_file():
         if not target.exists() or (target.is_dir() and not any(target.iterdir())):
-            cmd_init(target, force=True, quiet=True)
+            cmd_init(target, force=True, quiet=True, profile="minimal")
     return target
 
 def main():
@@ -1718,9 +1909,13 @@ def main():
     init = subs.add_parser("init", help="Initialize; --force preserves existing files and fills gaps")
     init.add_argument("memory_dir", nargs="?", type=Path, default=None, help="Target memory directory (defaults to HFA_MEMORY_DIR or ./memory)")
     init.add_argument("--force", action="store_true")
+    init.add_argument("--example", action="store_true",
+                      help="Install the teaching tree with a sample branch, tombstone, and chunk. Default is minimal.")
     status = subs.add_parser("status", help="Audit L0, L1, views and full-text token budget")
     status.add_argument("memory_dir", nargs="?", type=Path, default=None, help="Target memory directory (defaults to HFA_MEMORY_DIR or ./memory)")
     status.add_argument("--json", action="store_true")
+    status.add_argument("--include-text", action="store_true",
+                        help="Include summary.md text in JSON. Default health JSON omits it, matching doctor.")
     status.add_argument("--auto-init", action="store_true", help="Initialize memory directory if not yet initialized")
     topic = subs.add_parser("add-topic", help="Transactionally store L1 and rebuild views")
     topic.add_argument("memory_dir", nargs="?", type=Path, default=None, help="Target memory directory (defaults to HFA_MEMORY_DIR or ./memory)")
@@ -1758,6 +1953,8 @@ def main():
         route.add_argument("--semantic-min-margin", type=float, default=0)
         route.add_argument("--unlock", help="Explicit reason for reading non-mainline or tombstoned memory")
         route.add_argument("--auto-init", action="store_true", help="Initialize memory directory if not yet initialized")
+        route.add_argument("--full-verify", action="store_true",
+                           help="Re-read every L0/L1 byte instead of trusting the size/mtime manifest")
     for name in ("reindex", "summarize"):
         rebuild = subs.add_parser(name, help="Rebuild indexes and Markdown views from L0/L1")
         rebuild.add_argument("memory_dir", nargs="?", type=Path, default=None, help="Target memory directory (defaults to HFA_MEMORY_DIR or ./memory)")
@@ -1769,13 +1966,14 @@ def main():
     args = parser.parse_args()
     try:
         if args.command == "init":
-            return cmd_init(resolve_default_memory_dir(args.memory_dir), args.force)
+            return cmd_init(resolve_default_memory_dir(args.memory_dir), args.force,
+                            profile="example" if args.example else "minimal")
         if args.command == "doctor":
             return doctor_module().run(resolve_default_memory_dir(args.memory_dir), cmd_status,
                                      args.json, args.require_mcp)
         target_dir = _ensure_memory_dir(args.memory_dir, getattr(args, "auto_init", False))
         if args.command == "status":
-            return cmd_status(target_dir, args.json)
+            return cmd_status(target_dir, args.json, include_text=args.include_text)
         if args.command == "add-topic":
             return cmd_add_topic(target_dir, args.title, args.hit_words, args.conclusion, args.milestone, args.project,
                                  args.source, args.supersedes, args.request_id, args.json)
@@ -1785,7 +1983,8 @@ def main():
             return cmd_route(target_dir, args.query, args.mainline, args.unlock, args.mode,
                              args.conversation_id, args.turn_id, not args.no_refinement,
                              args.semantic_model, args.semantic_min_score, args.semantic_min_margin,
-                             output=args.output, max_topics=args.max_topics, refinement_queries=args.refine_query)
+                             output=args.output, max_topics=args.max_topics, refinement_queries=args.refine_query,
+                             full_verify=args.full_verify)
         if args.command == "semantic-index":
             return cmd_semantic_index(target_dir, args.model_dir, args.verify)
         return cmd_reindex(target_dir, args.verify)

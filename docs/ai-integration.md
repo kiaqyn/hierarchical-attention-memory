@@ -47,6 +47,8 @@ python -B scripts/hfa_hook.py --print-hooks --memory-dir ./my_memory
 
 普通助手回复默认不自动入库。宿主只有在本轮允许提炼时才在钩子 JSON 顶层加入布尔值 `memoryWriteAllowed: true`；不能把用户文本里的同名字段直接提升为宿主许可，也不要将它固定为全局 true。仅安装 hooks 配置不会产生这一逐轮信号。宿主不支持时，可以由代理在核对用户意图后调用 MCP 保存工具，或输出明确的结构化决定。
 
+项目可以在 `config.json` 设置 `write_policy`，缺省与 `host` 相同，不改变上述行为。`explicit` 连 `memoryWriteAllowed: true` 的普通回复也不保存，只接受结构化决定或 `hfa-memory` 块。`auto` 在既有结论过滤、脱敏和未验证拒绝之后，可以保存没有宿主信号的普通回复。三种策略都仍然优先服从“不要保存”、`memoryWriteAllowed: false` 和非布尔值。非法取值在 CLI 上报错；钩子会退回 `host` 并在 stderr 提示，避免把坏配置解释成自动保存。修改后运行 `reindex`。这不是事实校验，也不能代替用户授权。
+
 显式 `decision` 对象和助手回复里的 `hfa-memory` JSON 块表达保存意图，不要求额外的 true；顶层 `memoryWriteAllowed: false` 或非布尔类型会拒绝这些入口。当前用户文本中的常见中英文禁存表达（例如“不要保存到长期记忆”“don't save this”）也会拦截。自然语言规则不覆盖所有表达，宿主需要完整禁存保证时应传 false。程序不具备判断结论真实性的能力。
 
 Stop 仅有 `transcriptPath` 时会读取最近 128 KiB 的 JSONL；识别 `USER` / `USER_INPUT` / `USER_MESSAGE` / `HUMAN` 和 `PLANNER_RESPONSE` / `ASSISTANT` / `MODEL` 的字符串正文。遇到新用户回合不会回溯保存上一轮助手回复。超出尾部窗口、其他宿主格式或没有明确保存条件时可能跳过，需要适配器提供当前回合字段。

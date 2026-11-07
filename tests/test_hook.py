@@ -22,7 +22,7 @@ class HookIntegrationTests(unittest.TestCase):
         self.workspace = Path(self.temp.name).resolve()
         self.mem = self.workspace / "memory"
         proc = subprocess.run(
-            [sys.executable, "-B", str(CLI), "init", str(self.mem)],
+            [sys.executable, "-B", str(CLI), "init", "--example", str(self.mem)],
             capture_output=True,
             encoding="utf-8",
             timeout=30,
@@ -209,8 +209,8 @@ class HookIntegrationTests(unittest.TestCase):
         })
         proc_fresh = self.run_hook(structured_payload)
         self.assertEqual(proc_fresh.returncode, 0, proc_fresh.stderr)
-        self.assertEqual(json.loads(proc_fresh.stdout)["saved"]["id"], "chunk_0002")
-        self.assertTrue((fresh_ws / "memory" / "chunks" / "chunk_0002.json").is_file())
+        self.assertEqual(json.loads(proc_fresh.stdout)["saved"]["id"], "chunk_0001")
+        self.assertTrue((fresh_ws / "memory" / "chunks" / "chunk_0001.json").is_file())
 
     def test_numeric_zero_identity_is_kept_on_save(self):
         payload = json.dumps({
