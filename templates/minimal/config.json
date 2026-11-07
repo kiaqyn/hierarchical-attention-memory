@@ -1,0 +1,14 @@
+{
+  "active_mainline": "M1",
+  "context_token_budget": 1600,
+  "max_recall_topics": 2,
+  "max_topics_per_epoch": 50,
+  "recall_token_budget": 600,
+  "router_token_budget": 600,
+  "status_check_interval": 20,
+  "summary_token_budget": 800,
+  "version": "3.0",
+  "write_policy": "host",
+  "session_retention": {"max_conversations": 200},
+  "access_retention": {"max_events": 2000, "keep_unlocks": true}
+}

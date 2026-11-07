@@ -1,6 +1,6 @@
 # Hierarchical Attention Memory · HFA 3
 
-第一次使用请看 [五分钟上手](docs/quickstart.md)。已安装可运行 `hfa --version` 查看代码版本，或 `hfa doctor <记忆目录>` 检查本地查存与MCP依赖状态；本地就绪不等于宿主已接入。
+第一次使用请看 [五分钟上手](docs/quickstart.md)。`hfa init` 只建一条主线和一份摘要；`hfa init --example` 才安装教学用的分支和墓碑。已安装可运行 `hfa --version` 查看代码版本，或 `hfa doctor <记忆目录>` 检查本地查存与 MCP 依赖状态；本地就绪不等于宿主已接入。
 
 > **本地事务型 AI 代理分层记忆系统**：以 `L0 (directory.md)` 主线专注锁隔离跨分支噪声，以 `L1 (chunks/*.json)` 作为 Git 可审计唯一真源，通过 Python 标准库内置 `sqlite3 (FTS5)` 提供零外部依赖的混合检索加速，并配备 `PreInvocation / PostInvocation / Stop` 全生命周期钩子与 `MCP` 服务端。
 >
@@ -140,15 +140,19 @@ memory/
 ```
 
 - **全局唯一身份**：L1 文件 ID (`chunk_XXXX`) 在整棵记忆树内单调递增，跨纪元永不重置；`Topic#01` 仅作为所属纪元内的展示编号。
-- **纪元自动滚动**：默认每纪元最多 50 条（`max_topics_per_epoch` 可配）。超出时自动封存旧纪元（`SEALED`）、开启新纪元并切换 L0 指针，旧 L1 文件与旧摘要完整保留。
+- **纪元自动滚动**：默认每纪元最多 50 条（`max_topics_per_epoch` 可配）。超出时自动封存旧纪元（`SEALED`）、开启新纪元并只改写标题中的活跃纪元指针。其他 `history/epoch_*` 链接保持原样，旧 L1 文件与旧摘要完整保留。
 
 ---
 
 ## 混合检索（SQLite FTS5 + 词法守卫）与主线专注锁
 
-`route` 和 `recall` 是同一个命令。每次召回先校验主线文件、L0/L1 SHA-256 指纹 (`source_digest`) 与索引一致性，再从 L1 返回受预算约束的片段；篡改生成的 Markdown 摘要不会改变召回结果。
+`route` 和 `recall` 是同一个命令。默认召回只对照 `index/source-manifest.json` 里的大小和 mtime，不逐份重读 L0/L1，也不重算 SHA-256。内容改了、但大小不变且 mtime 被设回原值时，普通召回发现不了；整文件字节校验要加 `--full-verify`，或运行 `reindex --verify`。大小或 mtime 有变化时才退回全量读取。篡改生成的 Markdown 摘要不会改变召回结果。
 
-查询还会核对磁盘 SQLite 的内容 SHA-256。损坏或缺少完整性记录会报错要求 `reindex`，不会当作正常未命中。校验用于发现损坏/过期，不防御有权限同时改写真源和所有校验文件的攻击者。查询不会重建 SQLite，但仍有真源校验与文件读取成本。
+清单吻合时从 `index/catalog.json` 和现有索引取字段。catalog 是派生缓存，不是第二真源。页内容变化、缺少完整性记录或结构校验失败会报错要求 `reindex`，不会当作正常未命中。SQLite 文件头 92–99 字节的版本字段与 `status` 一样不算损坏，且不会回写文件。校验用于发现损坏或过期，不防御有权限同时改写真源和所有校验文件的攻击者。健康索引上的查询仍要读取目录、摘要，以及本次命中的索引。
+
+`status --json` 与 `doctor` 一样默认不返回 `summary.md` 正文。需要旧的完整状态时加 `--include-text`。
+
+会话账本和 `history/access.jsonl` 可以在 `config.json` 里用 `session_retention.max_conversations` 与 `access_retention.max_events` 限制长度。`keep_unlocks: true` 时带解锁理由的行继续保留，因此条数可能超过上限。未配置的旧目录不裁剪。裁剪和当次写入在同一事务里。
 
 - **主线专注锁**：L0 必须恰好有一个 `ACTIVE` 的 `M<n>` 主线。同主线 L1 片段可直接返回；非主线、支线和 `TOMBSTONED` 节点命中时仅进入 `deferred` 提示，必须显式传入 `--unlock "原因"` 才会展开正文并记录到 `history/access.jsonl`。
 - **SQLite FTS5 + 词法混合检索**：
@@ -198,7 +202,7 @@ python scripts/hfa_manager.py add-topic ./my_memory \
 
 ## 诚实能力边界声明（Scope & Limitations）
 
-1. **默认词法与可选语义的边界**：HFA 的默认混合检索基于精确命中词、`sqlite3` FTS5 倒排索引、中文双字切分与可配置同义词表。它具有确定性和可解释的匹配词（`selected[].match`），但默认路径不是 Embedding 向量模型，对于完全无词汇重叠且未配置同义词的跨领域隐喻不会强行召回。可选本地语义模式另见 [后端说明](docs/local-semantic.md)，其相似度不保证事实正确，也不涵盖任意隐喻。查询时在校验 `source_digest` 与表完整性后直接以只读方式查询磁盘 `index/fts.sqlite`（不重建 SQLite FTS5 表），但新 CLI 进程仍会读取并校验 L0/L1 JSON 真源，不能据此宣称零冷启动延迟或大规模性能已验证。
+1. **默认词法与可选语义的边界**：HFA 的默认混合检索基于精确命中词、`sqlite3` FTS5 倒排索引、中文双字切分与可配置同义词表。它具有确定性和可解释的匹配词（`selected[].match`），但默认路径不是 Embedding 向量模型，对于完全无词汇重叠且未配置同义词的跨领域隐喻不会强行召回。可选本地语义模式另见 [后端说明](docs/local-semantic.md)，其相似度不保证事实正确，也不涵盖任意隐喻。查询时在清单通过后以只读方式查询磁盘 `index/fts.sqlite`。内容哈希一致时不重建表；只有哈希不一致时才在内存中对照期望映像，且不把结果写回磁盘。默认热路径不是每次全量 SHA-256：同样大小且 mtime 被恢复的修改，要 `--full-verify` 或 `reindex --verify` 才查得出。不能据此宣称零冷启动延迟或大规模性能已验证。
 2. **评估集性质透明**：`tests/evaluate_memory.py` 包含 32 个公开可见的人工构造检索案例（混合模式正向召回 `23/23`，负向拒识 `9/9`，零误报）与 1,000 次工具读写/重试/替代操作回放。它是确定性工程回归基准，不代表独立盲测或千轮真实大模型对话的认知表现证明。
 3. **进程级崩溃恢复而非断电级存储引擎**：`.hfa-transaction.json` 保障进程异常退出或普通 I/O 错误时的多文件回滚一致性；直接绕过 CLI 手动乱改文件不参与事务保护。
 

@@ -47,6 +47,8 @@ python -B scripts/hfa_hook.py --print-hooks --memory-dir ./my_memory
 
 普通助手回复默认不自动入库。宿主只有在本轮允许提炼时才在钩子 JSON 顶层加入布尔值 `memoryWriteAllowed: true`；不能把用户文本里的同名字段直接提升为宿主许可，也不要将它固定为全局 true。仅安装 hooks 配置不会产生这一逐轮信号。宿主不支持时，可以由代理在核对用户意图后调用 MCP 保存工具，或输出明确的结构化决定。
 
+项目可以在 `config.json` 设置 `write_policy`，缺省与 `host` 相同，不改变上述行为。`explicit` 连 `memoryWriteAllowed: true` 的普通回复也不保存，只接受结构化决定或 `hfa-memory` 块。`auto` 在既有结论过滤、脱敏和未验证拒绝之后，可以保存没有宿主信号的普通回复。三种策略都仍然优先服从“不要保存”、`memoryWriteAllowed: false` 和非布尔值。非法取值在 CLI 上报错；钩子会退回 `host` 并在 stderr 提示，避免把坏配置解释成自动保存。修改后运行 `reindex`。这不是事实校验，也不能代替用户授权。
+
 显式 `decision` 对象和助手回复里的 `hfa-memory` JSON 块表达保存意图，不要求额外的 true；顶层 `memoryWriteAllowed: false` 或非布尔类型会拒绝这些入口。当前用户文本中的常见中英文禁存表达（例如“不要保存到长期记忆”“don't save this”）也会拦截。自然语言规则不覆盖所有表达，宿主需要完整禁存保证时应传 false。程序不具备判断结论真实性的能力。
 
 Stop 仅有 `transcriptPath` 时会读取最近 128 KiB 的 JSONL；识别 `USER` / `USER_INPUT` / `USER_MESSAGE` / `HUMAN` 和 `PLANNER_RESPONSE` / `ASSISTANT` / `MODEL` 的字符串正文。遇到新用户回合不会回溯保存上一轮助手回复。超出尾部窗口、其他宿主格式或没有明确保存条件时可能跳过，需要适配器提供当前回合字段。
@@ -128,7 +130,7 @@ python scripts/hfa_mcp.py --memory-dir ./my_memory --compact --recall-text-only 
 
 Windows原子替换对访问/共享冲突（WinError 5/32）最多额外重试3次，等待总计175毫秒；持续失败仍报错并走既有恢复流程，不修改权限，也不保证所有拒绝访问都能恢复。实际临时共享句柄测试验证了短暂占用恢复和持续占用时旧内容保留；偶发系统失败的具体占用者未确认。
 
-升级已有目录先 `reindex` 再 `status --json`，生成 SQLite 内容完整性记录。索引损坏会明确报错，不作为正常未命中。教学仿真页面使用静态预设案例，没有连接真实记忆或聊天宿主。
+升级已有目录先 `reindex` 再 `status --json`，生成 SQLite 内容完整性记录。索引损坏会明确报错，不作为正常未命中。默认召回只核对大小和 mtime；同样大小且 mtime 被设回原值的改动，普通召回发现不了，要 `--full-verify` 或 `reindex --verify` 才做整文件字节校验。教学仿真页面使用静态预设案例，没有连接真实记忆或聊天宿主。
 
 把以下工作约定加入使用该工具的项目说明，或使用本项目的 SKILL.md：
 

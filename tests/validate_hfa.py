@@ -131,6 +131,35 @@ class HfaTests(unittest.TestCase):
         self.assertEqual(result["selected"][0]["id"], "chunk_0002")
         self.assertIn("EPOCH-ONE-SENTINEL", result["recall_text"])
 
+    def test_epoch_rollover_keeps_historical_summary_links(self):
+        directory = self.mem / "directory.md"
+        history_line = "* **[H1]** [`H1`](history/epoch_01/summaries.md) ➔ `HISTORY` | `[命中词: 历史纪元指针]`\n"
+        directory.write_text(read(directory) + history_line, encoding="utf-8")
+        config_path = self.mem / "config.json"
+        cfg = json.loads(read(config_path))
+        cfg["router_token_budget"] = 2000
+        cfg["max_topics_per_epoch"] = 1
+        config_path.write_text(json.dumps(cfg), encoding="utf-8")
+        invoke(hfa.cmd_reindex, self.mem)
+        sealed = read(self.mem / "history/epoch_01/summaries.md")
+        self.add("Rollover keeps history", "rollover-history-key", "new epoch fact")
+        updated = read(directory)
+        self.assertIn("history/epoch_02/summaries.md", updated.splitlines()[0])
+        self.assertIn("活跃纪元: `epoch_02`", updated)
+        self.assertIn(history_line.strip(), updated)
+        self.assertEqual(updated.count("history/epoch_01/summaries.md"), 1)
+        self.assertEqual(read(self.mem / "history/epoch_01/summaries.md"), sealed)
+        self.assertEqual(hfa.parse_directory_nodes(directory)["active_epoch"], "epoch_02")
+        self.assertEqual(hfa._active_epoch_label(history_line + updated), "epoch_02")
+        missed = self.route("历史纪元指针", "try to read the sealed summary")
+        self.assertEqual(missed["selected"], [])
+        self.assertNotIn("# HFA epoch_01", missed["recall_text"])
+        directory.write_text(updated + "活跃纪元: `epoch_01`\n", encoding="utf-8")
+        before = snapshot(self.mem)
+        with self.assertRaises(hfa.MemoryError):
+            self.add("Must not retarget history", "no-rewrite-key", "blocked")
+        self.assertEqual(snapshot(self.mem), before)
+
     def test_64_real_CLI_writers_across_epoch_boundary(self):
         def writer(i):
             return self.cli("add-topic", str(self.mem), "--title", f"Concurrent {i}",
@@ -515,11 +544,20 @@ hfa.cmd_add_topic(Path(sys.argv[2]),"Committed","committed-key","fact")
         finally:
             conn.close()
         saved_bytes = fts_path.read_bytes()
-        # Different SQLite C library minor versions at header offset 96..100 must not trigger false staleness
+        # Different SQLite C library minor versions at header offset 96..99 must not
+        # look healthy in status while recall refuses the same file.
         diff_ver = bytearray(saved_bytes)
         diff_ver[96:100] = b"\x00\x2e\x76\xab"
         fts_path.write_bytes(bytes(diff_ver))
         self.assertEqual(invoke(hfa.cmd_status, self.mem, True)[0], 0)
+        self.assertEqual(self.route("fts5-engine")["selected"][0]["id"], "chunk_0002")
+        self.assertEqual(fts_path.read_bytes(), bytes(diff_ver))
+        body = bytearray(diff_ver)
+        body[200] ^= 0x5A
+        fts_path.write_bytes(bytes(body))
+        self.assertEqual(invoke(hfa.cmd_status, self.mem, True)[0], 1)
+        with self.assertRaises(hfa.MemoryError):
+            self.route("fts5-engine")
         # Actual corruption or page tampering must be rejected and rebuilt
         fts_path.write_bytes(b"corrupted-sqlite")
         self.assertEqual(invoke(hfa.cmd_status, self.mem, True)[0], 1)
@@ -542,7 +580,7 @@ hfa.cmd_add_topic(Path(sys.argv[2]),"Committed","committed-key","fact")
         added = self.cli("add-topic", "--title", "零配置写入", "--hit-words", "zero-cfg-key",
                          "--conclusion", "省略 memory_dir 时默认解析 HFA_MEMORY_DIR 或 ./memory。", "--json", env=env)
         self.assertEqual(added.returncode, 0, added.stdout + added.stderr)
-        self.assertEqual(json.loads(added.stdout)["id"], "chunk_0002")
+        self.assertEqual(json.loads(added.stdout)["id"], "chunk_0001")
         recalled = self.cli("recall", "--query", "zero-cfg-key", env=env)
         self.assertEqual(recalled.returncode, 0, recalled.stdout + recalled.stderr)
         self.assertIn("零配置写入", json.loads(recalled.stdout)["recall_text"])
@@ -561,6 +599,7 @@ hfa.cmd_add_topic(Path(sys.argv[2]),"Committed","committed-key","fact")
             names = set(zf.namelist())
             self.assertIn("scripts/hfa_manager.py", names)
             self.assertIn("scripts/templates/memory/directory.md", names)
+            self.assertIn("scripts/templates/minimal/directory.md", names)
             self.assertIn("scripts/templates/memory/index/fts.sqlite", names)
             ep = zf.read("hierarchical_attention_memory-3.0.0.dist-info/entry_points.txt").decode("utf-8")
             self.assertIn("hfa = scripts.hfa_manager:main", ep)

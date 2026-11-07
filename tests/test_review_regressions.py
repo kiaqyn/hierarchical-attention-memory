@@ -58,7 +58,7 @@ class ReviewRegressions(HookIntegrationTests):
         proc,result = self.fire(self.payload(), '--phase','post','--memory-dir',str(chosen),
                                 env={'HFA_MEMORY_DIR':str(self.mem)})
         self.assertIn('saved',result)
-        self.assertTrue((chosen/'chunks/chunk_0002.json').is_file())
+        self.assertTrue((chosen/'chunks/chunk_0001.json').is_file())
         self.assertEqual(snapshot(self.mem),before)
 
     def test_broken_explicit_root_refuses_write_instead_of_switching_projects(self):
@@ -74,7 +74,7 @@ class ReviewRegressions(HookIntegrationTests):
         before = snapshot(self.mem)
         _,result = self.fire(self.payload(), '--phase','post',env={'HFA_MEMORY_DIR':str(chosen)})
         self.assertIn('saved',result)
-        self.assertTrue((chosen/'chunks/chunk_0002.json').is_file())
+        self.assertTrue((chosen/'chunks/chunk_0001.json').is_file())
         _,result = self.fire(self.payload(workspacePaths=[str(self.workspace),str(chosen)]),
                             '--phase','post',env={'HFA_MEMORY_DIR':''})
         self.assertEqual(result,{})
