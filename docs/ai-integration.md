@@ -33,6 +33,10 @@ python -B scripts/hfa_hook.py --print-hooks --memory-dir ./my_memory
 
 倒数第二条命令输出包含绝对路径的 `mcpServers` JSON；最后一条命令输出包含绝对路径的 `hooks.json` 配置（注册 `PreInvocation` 自动按需检索，以及 `PostInvocation` / `Stop` 受控提炼与幂等保存）。把其中的服务启动项或钩子配置放进所用软件的配置；不同软件可能使用不同外层配置格式。本项目不会覆盖应用现有配置。已有记忆目录不重复初始化，升级时先运行 `reindex`，再检查 `status`。
 
+安装后的导入包名仍是 `scripts`，入口是 `scripts.hfa_manager:main`、`scripts.hfa_hook:main` 和 `scripts.hfa_mcp:main`。模板只从包目录解析，`site-packages/templates` 不能盖过它。版本字符串只写在 `scripts/__init__.py`。
+
+每次保存都会重建派生索引，耗时随 L1 条数增长，不是固定的几毫秒。钩子里的 init、recall 和 add-topic 默认等 120 秒；`HFA_HOOK_TIMEOUT` 改成秒数，小于 1 会提到 1。`--print-hooks` 写入同一个数。宿主自己的超时仍可能更短。这不是性能承诺。
+
 应用实际执行的命令相当于：
 
 ```powershell

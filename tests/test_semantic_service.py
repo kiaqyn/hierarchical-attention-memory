@@ -100,7 +100,7 @@ class ServiceChecks(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory(prefix='hfa-semantic-service-')
         self.root=Path(self.temp.name)/'memory'
-        invoke(hfa.cmd_init,self.root)
+        hfa.cmd_init(self.root,quiet=True,profile="example")
         self.passages=[]
         owner=self
         class Encoder:

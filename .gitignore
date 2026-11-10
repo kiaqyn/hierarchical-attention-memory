@@ -5,6 +5,7 @@ __pycache__/
 venv/
 .hfa-stage-*
 .hfa-transaction.json
+.hfa-prior/
 .hfa.lock
 access.jsonl
 build/

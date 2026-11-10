@@ -112,9 +112,32 @@ def _atomic_write(path, content):
     finally:
         temp.unlink(missing_ok=True)
 
+PRIOR_DIR = ".hfa-prior"
+
+def _is_sqlite_payload(blob):
+    return bool(blob) and blob.startswith(b"SQLite format 3\x00")
+
+def _discard_priors(root):
+    prior = root / PRIOR_DIR
+    if not prior.exists():
+        return
+    for path in sorted(prior.rglob("*"), reverse=True):
+        if path.is_file():
+            path.unlink()
+        elif path.is_dir():
+            path.rmdir()
+    if prior.is_dir():
+        prior.rmdir()
+
 def _restore(root, entries):
     for entry in reversed(entries):
         target = _safe_path(root, entry["path"])
+        backup = entry.get("backup")
+        if backup:
+            src = _safe_path(root, backup)
+            if src.is_file():
+                _atomic_write(target, src.read_bytes())
+                continue
         if entry["before"] is None:
             if target.exists():
                 if not target.is_file():
@@ -126,6 +149,7 @@ def _restore(root, entries):
 def _recover(root):
     journal = root / JOURNAL
     if not journal.exists():
+        _discard_priors(root)
         return False
     try:
         state = json.loads(_read_utf8(journal))
@@ -134,6 +158,7 @@ def _recover(root):
         if state["state"] == "prepared":
             _restore(root, state["entries"])
         journal.unlink()
+        _discard_priors(root)
     except Exception as exc:
         raise MemoryError(f"Transaction recovery failed; reads remain blocked: {exc}") from exc
     return True
@@ -222,16 +247,30 @@ def _commit(root, updates):
 
     Raw filesystem readers do not participate in multi-file transactions.
     The journal supports process-crash recovery, not a power-loss guarantee.
+    SQLite files are copied aside instead of base64'd into the journal: the
+    database grows with the number of L1 records, and embedding it would make
+    every write pay that cost twice.
     """
     entries = []
+    payloads = {}
     for relative, content in updates.items():
         target = _safe_path(root, relative)
         if target.exists() and not target.is_file():
             raise MemoryError(f"Write target is not a file: {relative}")
         old = target.read_bytes() if target.exists() else None
-        if old == _to_bytes(content):
+        raw = _to_bytes(content)
+        if old == raw:
             continue
-        entries.append({"path": relative, "before": base64.b64encode(old).decode("ascii") if old is not None else None})
+        payloads[relative] = raw
+        if _is_sqlite_payload(old) or _is_sqlite_payload(raw):
+            entry = {"path": relative, "before": None}
+            if old is not None:
+                backup = f"{PRIOR_DIR}/{relative}"
+                _atomic_write(_safe_path(root, backup), old)
+                entry["backup"] = backup
+            entries.append(entry)
+        else:
+            entries.append({"path": relative, "before": base64.b64encode(old).decode("ascii") if old is not None else None})
     if not entries:
         return
     state = {"version": 1, "state": "prepared", "entries": entries}
@@ -239,18 +278,20 @@ def _commit(root, updates):
     _atomic_write(journal, _json(state).encode("utf-8"))
     try:
         for entry in entries:
-            _atomic_write(_safe_path(root, entry["path"]), _to_bytes(updates[entry["path"]]))
+            _atomic_write(_safe_path(root, entry["path"]), payloads[entry["path"]])
         state["state"] = "committed"
         _atomic_write(journal, _json(state).encode("utf-8"))
     except BaseException:
         # A failed rollback leaves a prepared journal, blocking subsequent readers.
         _restore(root, entries)
         journal.unlink()
+        _discard_priors(root)
         raise
     try:
         journal.unlink()
     except OSError:
         pass  # A completed commit must not be reported as a failed operation.
+    _discard_priors(root)
 
 @functools.lru_cache(maxsize=1)
 def _encoder():
@@ -368,8 +409,16 @@ def _fts5_supported() -> bool:
         return False
 
 @functools.lru_cache(maxsize=16)
-def _build_fts_cached(digest: str, docs_json: str) -> bytes:
-    documents = json.loads(docs_json)
+def _build_fts_cached(digest: str, bundle_json: str) -> bytes:
+    bundle = json.loads(bundle_json)
+    # Older callers passed the documents object alone. New indexes also store
+    # hit words, per-term rows, and chunk metadata so recall can avoid the JSON files.
+    if isinstance(bundle, dict) and "documents" in bundle and "hitwords" in bundle:
+        documents = bundle["documents"]
+        hitwords = bundle["hitwords"]
+        chunk_rows = bundle["chunks"]
+    else:
+        documents, hitwords, chunk_rows = bundle, {}, []
     df_counts: dict[str, int] = {}
     for doc in documents.values():
         for term in set(doc["terms"]):
@@ -382,20 +431,45 @@ def _build_fts_cached(digest: str, docs_json: str) -> bytes:
         conn.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT)")
         conn.execute("INSERT INTO meta VALUES ('version', '1'), ('source_digest', ?)", (digest,))
         conn.execute("CREATE TABLE term_df (term TEXT PRIMARY KEY, df INTEGER)")
-        for term in sorted(df_counts):
-            conn.execute("INSERT INTO term_df VALUES (?, ?)", (term, df_counts[term]))
+        conn.executemany("INSERT INTO term_df VALUES (?, ?)",
+                         [(term, df_counts[term]) for term in sorted(df_counts)])
+        conn.execute(
+            "CREATE TABLE hitword (word TEXT NOT NULL, kind TEXT NOT NULL, ref_id TEXT NOT NULL, seq INTEGER NOT NULL)")
+        hit_rows, seq = [], 0
+        for word in sorted(hitwords):
+            for ref in hitwords[word]:
+                hit_rows.append((word, ref["kind"], ref["id"], seq))
+                seq += 1
+        conn.executemany("INSERT INTO hitword VALUES (?, ?, ?, ?)", hit_rows)
+        conn.execute(
+            "CREATE TABLE doc_term (chunk_id TEXT NOT NULL, term TEXT NOT NULL, in_heading INTEGER NOT NULL)")
+        conn.execute(
+            "CREATE TABLE chunk_meta (chunk_id TEXT PRIMARY KEY, project TEXT, status TEXT, epoch INTEGER, "
+            "number INTEGER, topic_id TEXT, title TEXT, summary_json TEXT, source TEXT, supersedes_json TEXT, "
+            "file TEXT, hitwords_json TEXT)")
+        conn.executemany(
+            "INSERT INTO chunk_meta VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [(chunk["id"], chunk["project"], chunk["status"], int(chunk["epoch"]), int(chunk["number"]),
+              chunk["topic_id"], chunk["title"], json.dumps(chunk["summary"], ensure_ascii=False),
+              chunk.get("source") or "", json.dumps(chunk.get("supersedes") or [], ensure_ascii=False),
+              chunk["file"], json.dumps(chunk.get("hitwords") or [], ensure_ascii=False))
+             for chunk in sorted(chunk_rows, key=lambda item: item["id"])])
+        term_rows = []
+        for chunk_id in sorted(documents):
+            doc = documents[chunk_id]
+            heading = set(doc["heading"])
+            term_rows.extend((chunk_id, term, 1 if term in heading else 0) for term in doc["terms"])
+        conn.executemany("INSERT INTO doc_term VALUES (?, ?, ?)", term_rows)
         if _fts5_supported():
             conn.execute(
                 "CREATE VIRTUAL TABLE chunks_fts USING fts5("
                 "chunk_id UNINDEXED, heading, body, "
                 "tokenize=\"unicode61 tokenchars ':_.-'\")"
             )
-            for chunk_id in sorted(documents):
-                doc = documents[chunk_id]
-                conn.execute(
-                    "INSERT INTO chunks_fts VALUES (?, ?, ?)",
-                    (chunk_id, " ".join(doc["heading"]), " ".join(doc["terms"])),
-                )
+            conn.executemany(
+                "INSERT INTO chunks_fts VALUES (?, ?, ?)",
+                [(chunk_id, " ".join(documents[chunk_id]["heading"]), " ".join(documents[chunk_id]["terms"]))
+                 for chunk_id in sorted(documents)])
         conn.commit()
 
     conn = sqlite3.connect(":memory:")
@@ -420,10 +494,25 @@ def _build_fts_cached(digest: str, docs_json: str) -> bytes:
 _FTS_THREAD_LOCAL = threading.local()
 
 def _open_readonly_sqlite(path: Path) -> sqlite3.Connection:
+    """Open an existing database read-only. Never create or write it.
+
+    Path.resolve().as_uri() percent-encodes '?', '#', '%', and spaces so they
+    cannot be read as URI query or fragment syntax.
+    """
+    target = path.resolve()
+    if not target.is_file():
+        raise MemoryError(f"SQLite index is missing: {path.name}")
+    uri = target.as_uri() + "?mode=ro"
     try:
-        return sqlite3.connect(f"file:{path.resolve().as_posix()}?mode=ro", uri=True)
-    except Exception:
-        return sqlite3.connect(str(path))
+        conn = sqlite3.connect(uri, uri=True)
+    except sqlite3.Error as exc:
+        raise MemoryError(f"Cannot open SQLite read-only: {path.name}") from exc
+    try:
+        conn.execute("PRAGMA query_only=ON")
+    except sqlite3.Error as exc:
+        conn.close()
+        raise MemoryError(f"Cannot open SQLite read-only: {path.name}") from exc
+    return conn
 
 def _verify_fts_file(fts_path: Path, expected_digest: str, expected_doc_count: int) -> bool:
     try:
@@ -539,7 +628,9 @@ def _fts_search(terms: set[str], fts_bytes: Path | bytes | None) -> tuple[dict[s
             (match_expr,),
         ).fetchall()
         return {str(cid): float(bm25_val) for cid, bm25_val in rows}, df_map
-    except Exception:
+    except MemoryError:
+        raise
+    except sqlite3.Error:
         return None, None
     finally:
         if temp_conn is not None:
@@ -572,6 +663,42 @@ def _separate_cjk_clues(words):
     return count
 
 
+def _sql_term_candidates(documents, terms):
+    """Match query terms through term_df and doc_term. Never walk every chunk."""
+    conn = documents.conn
+    try:
+        names = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    except sqlite3.Error as exc:
+        raise MemoryError("SQLite recall index is unreadable.") from exc
+    if "term_df" not in names or "doc_term" not in names:
+        raise MemoryError(
+            "FTS5 is unavailable and this index has no term_df table, so recall will not scan every chunk. "
+            "Use a Python build with FTS5 and run reindex, or pass --index-source json.")
+    term_list = sorted(terms)
+    placeholders = ",".join("?" for _ in term_list)
+    try:
+        df_rows = conn.execute(
+            f"SELECT term, df FROM term_df WHERE term IN ({placeholders})", term_list).fetchall()
+        rows = conn.execute(
+            f"SELECT chunk_id, term, in_heading FROM doc_term WHERE term IN ({placeholders})",
+            term_list).fetchall()
+    except sqlite3.Error as exc:
+        raise MemoryError(
+            "FTS5 is unavailable and term_df cannot answer this recall. "
+            "Use a Python build with FTS5 and run reindex, or pass --index-source json.") from exc
+    frequency = {term: 0 for term in terms}
+    for term, df in df_rows:
+        frequency[str(term)] = int(df)
+    grouped = {}
+    for chunk_id, term, in_heading in rows:
+        if chunk_id not in documents:
+            continue
+        doc = grouped.setdefault(str(chunk_id), {"heading": [], "terms": []})
+        doc["terms"].append(str(term))
+        if in_heading:
+            doc["heading"].append(str(term))
+    return frequency, list(grouped.items())
+
 def _rank_content_exact(query, documents, config, fts_bytes=None):
     # Filler words may still match documents, but never count as evidence on their own,
     # never dilute coverage and never count as "unexplained" query concepts.
@@ -588,6 +715,10 @@ def _rank_content_exact(query, documents, config, fts_bytes=None):
     if fts_df is not None:
         frequency = fts_df
         candidate_items = [(cid, documents[cid]) for cid in fts_candidates if cid in documents]
+    elif isinstance(documents, _SqlDocs):
+        # FTS5 is missing or did not answer. term_df/doc_term answer the same
+        # terms without reading every chunk. A full scan is not a fallback.
+        frequency, candidate_items = _sql_term_candidates(documents, terms)
     else:
         frequency = {t: sum(t in d["terms"] for d in documents.values()) for t in terms}
         candidate_items = list(documents.items())
@@ -682,10 +813,11 @@ def _short_literal_matches(query, documents, literal_documents):
     return matches
 
 
-def _rank_content(query, documents, config, fts_bytes=None, *, literal_documents=None):
+def _rank_content(query, documents, config, fts_bytes=None, *, literal_documents=None, vocabulary=None):
     """Bounded query normalization and conjunctive subqueries; same source/budgets."""
     baseline = _rank_content_exact(query, documents, config, fts_bytes)
-    vocabulary = set().union(*(set(doc["terms"]) for doc in documents.values())) if documents else set()
+    if vocabulary is None:
+        vocabulary = set().union(*(set(doc["terms"]) for doc in documents.values())) if documents else set()
     alternative = _query_spelling_variant(query, vocabulary)
     merged = {cid: (score, set(terms)) for cid, score, terms in baseline}
     ceiling = min((score for _, score, _ in baseline), default=1.0) * .8
@@ -797,12 +929,17 @@ def read_write_policy(root):
     return _write_policy_name(data.get("write_policy", "host"), strict=False)
 
 def _session_policy(config):
+    """Absent object means unlimited. Each cap is optional so older configs stay valid."""
     policy = config.get("session_retention")
     if policy is None:
         return None
-    if (not isinstance(policy, dict) or set(policy) != {"max_conversations"}
-            or type(policy.get("max_conversations")) is not int or policy["max_conversations"] < 1):
-        raise MemoryError("session_retention must be {\"max_conversations\": <positive int>}")
+    allowed = {"max_conversations", "max_turns_per_conversation"}
+    if not isinstance(policy, dict) or not set(policy) or set(policy) - allowed:
+        raise MemoryError(
+            "session_retention accepts max_conversations and max_turns_per_conversation")
+    for key in allowed:
+        if key in policy and (type(policy[key]) is not int or policy[key] < 1):
+            raise MemoryError(f"session_retention.{key} must be a positive integer")
     return policy
 
 def _access_policy(config):
@@ -821,6 +958,8 @@ def _access_policy(config):
 def _prune_sessions(ledger, policy, active_key):
     if not policy:
         return
+    if "max_conversations" not in policy:
+        return
     convs = ledger["conversations"]
     limit = policy["max_conversations"]
     if len(convs) <= limit:
@@ -835,6 +974,25 @@ def _prune_sessions(ledger, policy, active_key):
         if key == active_key:
             continue
         del convs[key]
+
+def _prune_turns(conversation, policy, active_turn):
+    """Drop the oldest turn hashes inside one conversation. Never drop the active turn."""
+    if not policy or "max_turns_per_conversation" not in policy:
+        return
+    turns = conversation.get("turns")
+    if not isinstance(turns, dict):
+        return
+    limit = policy["max_turns_per_conversation"]
+    if len(turns) <= limit:
+        return
+    ranked = sorted(turns.items(), key=lambda item: (
+        item[1].get("number", 0) if isinstance(item[1], dict) else 0, item[0]))
+    for key, _turn in ranked:
+        if len(turns) <= limit:
+            break
+        if key == active_turn:
+            continue
+        del turns[key]
 
 def _trim_access_log(text, policy):
     if text and not text.endswith("\n"):
@@ -857,7 +1015,11 @@ def _trim_access_log(text, policy):
     # Unlock lines stay even if they alone exceed the cap. Ordinary lines fill the rest.
     room = max(0, policy["max_events"] - len(unlocks))
     kept = set(unlocks)
-    kept.update(ordinary[-room:])
+    # ordinary[-0:] is the whole list; a zero room must keep no older ordinary lines.
+    if room:
+        kept.update(ordinary[-room:])
+    if lines:
+        kept.add(len(lines) - 1)  # The event just appended is always retained.
     chosen = [lines[i] for i in range(len(lines)) if i in kept]
     return ("\n".join(chosen) + "\n") if chosen else ""
 
@@ -1095,7 +1257,7 @@ def _derived(root, state, chunks, overrides=None, include_fts=True):
         "index/catalog.json": _json({"version": 1, "source_digest": digest, "chunks": chunks}),
     }
     if include_fts:
-        fts = _build_fts_cached(digest, _json(documents))
+        fts = _build_fts_cached(digest, _json({"documents": documents, "hitwords": entries, "chunks": chunks}))
         result["index/fts.sqlite"] = fts
         result["index/fts-integrity.json"] = _json({"version": 1, "source_digest": digest,
                                                   "sha256": hashlib.sha256(fts).hexdigest()})
@@ -1134,11 +1296,12 @@ def _source_paths(root):
     return files
 
 def _fast_source_digest(root):
-    """Return the cached source digest when size and mtime still match.
+    """Return the cached source digest when size, mtime, and the SQLite digest match.
 
-    This does not re-read L0/L1 or re-hash derived indexes. A same-size,
-    same-mtime content swap is not detected here. `full_verify` and
-    `reindex --verify` still compare bytes.
+    This does not re-read L0/L1 or re-hash every derived file. A same-size,
+    same-mtime edit is still invisible unless it also changes
+    `meta.source_digest` in `fts.sqlite`. `full_verify` and `reindex --verify`
+    still compare bytes.
     """
     path = root / "index/source-manifest.json"
     if not path.is_file():
@@ -1163,7 +1326,10 @@ def _fast_source_digest(root):
             return None
         if meta.get("size") != st.st_size or meta.get("mtime_ns") != st.st_mtime_ns:
             return None
-    return manifest["source_digest"]
+    digest = manifest["source_digest"]
+    if not _sqlite_meta_matches(root / "index/fts.sqlite", digest):
+        return None
+    return digest
 
 def _catalog_chunks(root, digest):
     data = json.loads(_read_utf8(root / "index/catalog.json"))
@@ -1223,14 +1389,26 @@ def _framework_update(root, epoch, status):
         text = text.rstrip("\n") + f"\n\nStatus: {status}\n"
     return {relative: text}
 
-def _templates_root():
-    repo = ROOT_DIR / "templates"
-    packaged = Path(__file__).resolve().parent / "templates"
-    if (repo / "memory").is_dir():
+def _resolve_templates(package_dir: Path, parent: Path) -> Path:
+    """Templates ship inside the package. A checkout may keep them beside it.
+
+    An installed copy lives in site-packages/scripts/. A directory named
+    site-packages/templates must not override the packaged templates.
+    """
+    packaged = package_dir / "templates"
+    if (packaged / "minimal").is_dir() or (packaged / "memory").is_dir():
+        return packaged
+    if parent.name in {"site-packages", "dist-packages"}:
+        return packaged
+    repo = parent / "templates"
+    if (repo / "minimal").is_dir() or (repo / "memory").is_dir():
         return repo
     return packaged
 
-def cmd_init(target_dir, force=False, quiet=False, profile="example"):
+def _templates_root():
+    return _resolve_templates(Path(__file__).resolve().parent, ROOT_DIR)
+
+def cmd_init(target_dir, force=False, quiet=False, profile="minimal"):
     if profile not in ("minimal", "example"):
         raise MemoryError("Init profile must be minimal or example")
     template = _templates_root() / ("minimal" if profile == "minimal" else "memory")
@@ -1248,20 +1426,53 @@ def cmd_init(target_dir, force=False, quiet=False, profile="example"):
                    if p.is_file() and not p.name.startswith(".hfa") and "__pycache__" not in p.parts
                    and not (target_dir / p.relative_to(template)).exists()}
         _commit(target_dir, updates)
-    cmd_reindex(target_dir, quiet=quiet)
+        # Stay inside this lock until the derived index exists. Releasing it
+        # first lets a concurrent recall observe L1 with no index and report
+        # "Stale index".
+        _reindex_locked(target_dir, quiet=quiet)
     if not quiet:
         print(f"[OK] Initialized memory at {target_dir}")
     return 0
 
-def cmd_status(root, as_json=False, *, return_result=False, include_text=False):
+def _sqlite_meta_matches(path: Path, digest: str) -> bool:
+    try:
+        conn = _open_readonly_sqlite(path)
+    except MemoryError:
+        return False
+    try:
+        row = conn.execute("SELECT value FROM meta WHERE key = 'source_digest'").fetchone()
+        return bool(row and row[0] == digest)
+    except sqlite3.Error:
+        return False
+    finally:
+        conn.close()
+
+def _fts_quick_ok(path: Path) -> bool:
+    try:
+        conn = _open_readonly_sqlite(path)
+    except MemoryError:
+        return False
+    try:
+        quick = conn.execute("PRAGMA quick_check").fetchone()
+        return bool(quick and quick[0] == "ok")
+    except sqlite3.Error:
+        return False
+    finally:
+        conn.close()
+
+def cmd_status(root, as_json=False, *, return_result=False, include_text=False, full_verify=False):
     with _hfa_lock(root):
         state = parse_directory_nodes(root / "directory.md")
         chunks = _chunks(root, state)
         epoch = int(state["active_epoch"].split("_")[1])
         state["topic_count"] = sum(c["epoch"] == epoch for c in chunks)
         state["total_topics"] = len(chunks)
-        expected = _derived(root, state, chunks)
-        state["stale_indexes"] = [p for p, content in expected.items() if not _file_matches(root / p, content)]
+        fast = None if full_verify else _fast_source_digest(root)
+        if fast is not None and _fts_quick_ok(root / "index/fts.sqlite"):
+            state["stale_indexes"] = []
+        else:
+            expected = _derived(root, state, chunks)
+            state["stale_indexes"] = [p for p, content in expected.items() if not _file_matches(root / p, content)]
         state["stale_summaries"] = [f"history/epoch_{e:02d}/summaries.md" for e in sorted({c["epoch"] for c in chunks})
                                     if not (root / f"history/epoch_{e:02d}/summaries.md").is_file()
                                     or _read_utf8(root / f"history/epoch_{e:02d}/summaries.md") != _render_summaries(chunks, e)]
@@ -1292,23 +1503,27 @@ def cmd_status(root, as_json=False, *, return_result=False, include_text=False):
             print(f"[ERROR] {problem}")
     return 1 if problems else 0
 
-def cmd_reindex(root, verify=False, quiet=False):
-    with _hfa_lock(root):
-        state = parse_directory_nodes(root / "directory.md")
-        chunks = _chunks(root, state)
-        updates = {"config.json": _json(_config(root))}
-        updates.update(_derived(root, state, chunks, updates))
-        for epoch in sorted({c["epoch"] for c in chunks}):
-            updates.update(_summary_updates(root, chunks, epoch))
-        differences = [p for p, content in updates.items() if not _file_matches(root / p, content)]
-        if verify:
-            print(_json({"consistent": not differences, "differences": differences}), end="")
-            return 1 if differences else 0
-        _commit(root, updates)
-        _refresh_manifest_locked(root)
+def _reindex_locked(root, verify=False, quiet=False):
+    """Rebuild derived indexes. Caller must already hold _hfa_lock."""
+    state = parse_directory_nodes(root / "directory.md")
+    chunks = _chunks(root, state)
+    updates = {"config.json": _json(_config(root))}
+    updates.update(_derived(root, state, chunks, updates))
+    for epoch in sorted({c["epoch"] for c in chunks}):
+        updates.update(_summary_updates(root, chunks, epoch))
+    differences = [p for p, content in updates.items() if not _file_matches(root / p, content)]
+    if verify:
+        print(_json({"consistent": not differences, "differences": differences}), end="")
+        return 1 if differences else 0
+    _commit(root, updates)
+    _refresh_manifest_locked(root)
     if not quiet:
         print("[OK] Rebuilt indexes and Markdown views from L0/L1")
     return 0
+
+def cmd_reindex(root, verify=False, quiet=False):
+    with _hfa_lock(root):
+        return _reindex_locked(root, verify=verify, quiet=quiet)
 
 def cmd_add_topic(root, title, hit_words, conclusion, milestone_log=None, project=None,
                   source="", supersedes=None, request_id=None, as_json=False):
@@ -1461,6 +1676,7 @@ def _next_turn(root, conversation_id, turn_id, interval, session_policy=None):
             raise MemoryError("Invalid turn ledger")
         turn["searches"] += 1
         conversation["last_seen"] = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
+        _prune_turns(conversation, session_policy, turn_key)
         _prune_sessions(ledger, session_policy, conv_key)
         result.update(turn_count=turn["number"], turn_count_exact=True, turn_search_count=turn["searches"],
                       status_check_due=fresh and conversation["count"] % interval == 0)
@@ -1650,11 +1866,128 @@ def validate_refinement_queries(query, refinement_queries):
     return result
 
 
+class _SqlDocs:
+    """Term sets for ranking, loaded per chunk from SQLite instead of search.json."""
+
+    def __init__(self, conn):
+        self.conn = conn
+        self.ids = {row[0] for row in conn.execute("SELECT chunk_id FROM chunk_meta")}
+        self.cache = {}
+
+    def __contains__(self, chunk_id):
+        return chunk_id in self.ids
+
+    def __len__(self):
+        return len(self.ids)
+
+    def __getitem__(self, chunk_id):
+        if chunk_id not in self.cache:
+            heading, terms = [], []
+            for term, in_heading in self.conn.execute(
+                    "SELECT term, in_heading FROM doc_term WHERE chunk_id=? ORDER BY term", (chunk_id,)):
+                terms.append(term)
+                if in_heading:
+                    heading.append(term)
+            self.cache[chunk_id] = {"heading": heading, "terms": terms}
+        return self.cache[chunk_id]
+
+    def items(self):
+        for chunk_id in sorted(self.ids):
+            yield chunk_id, self[chunk_id]
+
+    def values(self):
+        for _chunk_id, doc in self.items():
+            yield doc
+
+
+def _require_term_index(conn):
+    """FTS5 may be absent. term_df still has to answer; do not scan every chunk."""
+    try:
+        names = {row[0] for row in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type IN ('table', 'view')")}
+    except sqlite3.Error as exc:
+        raise MemoryError("SQLite recall index is unreadable.") from exc
+    if any(name not in names for name in ("hitword", "term_df", "doc_term", "chunk_meta")):
+        raise MemoryError(
+            "FTS5 is unavailable and this index has no term_df table, so recall will not scan every chunk. "
+            "Use a Python build with FTS5 and run reindex, or pass --index-source json.")
+
+def _sqlite_has_recall_tables(path: Path) -> bool:
+    if not path.is_file():
+        return False
+    conn = _open_readonly_sqlite(path)
+    try:
+        row = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='hitword'").fetchone()
+        return bool(row)
+    except sqlite3.Error:
+        return False
+    finally:
+        conn.close()
+
+
+def _chunks_from_sqlite(conn):
+    records = []
+    for row in conn.execute(
+            "SELECT chunk_id, project, status, epoch, number, topic_id, title, summary_json, source, "
+            "supersedes_json, file, hitwords_json FROM chunk_meta ORDER BY chunk_id"):
+        records.append({
+            "id": row[0], "project": row[1], "status": row[2], "epoch": row[3], "number": row[4],
+            "topic_id": row[5], "title": row[6], "summary": json.loads(row[7]), "source": row[8],
+            "supersedes": json.loads(row[9]), "file": row[10], "hitwords": json.loads(row[11]),
+            "request_id": None, "request_digest": None,
+        })
+    return records
+
+
+def _iter_hitwords(store, query):
+    """Yield (word, references) in the same order as the sorted hit-word JSON."""
+    if isinstance(store, dict):
+        for word, references in store.items():
+            if _keyword_matches(word, query):
+                yield word, references
+        return
+    norm = _normalize_for_match(query)
+    rows = store.execute(
+        "SELECT word, kind, ref_id FROM hitword WHERE word != '' AND instr(?, word) > 0 ORDER BY word, seq",
+        (norm,),
+    ).fetchall()
+    grouped, order = {}, []
+    for word, kind, ref_id in rows:
+        if word not in grouped:
+            grouped[word] = []
+            order.append(word)
+        grouped[word].append({"kind": kind, "id": ref_id})
+    for word in order:
+        if _keyword_matches(word, query):
+            yield word, grouped[word]
+
+
+def _chunk_text_from_l1(root, record):
+    """Selected chunk text is read from L1. Identity fields stay from the index."""
+    try:
+        value = json.loads(_read_utf8(_safe_path(root, record["file"])))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(value, dict):
+        return None
+    body = value.get("summary", value.get("conclusion", []))
+    if isinstance(body, str):
+        body = [body]
+    if not isinstance(body, list) or not all(isinstance(line, str) for line in body):
+        return None
+    fresh = dict(record)
+    fresh["title"] = str(value.get("title", ""))
+    fresh["summary"] = body
+    fresh["source"] = value.get("source") or ""
+    return _chunk_text(fresh)
+
+
 def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
               conversation_id=None, turn_id=None, allow_refinement=True,
               semantic_model=None, semantic_min_score=.875, semantic_min_margin=0,
               *, semantic_runtime=None, return_result=False, output="full", max_topics=None,
-              refinement_queries=None, full_verify=False):
+              refinement_queries=None, full_verify=False, index_source="auto"):
     if not isinstance(query, str) or not query.strip() or len(query) > 8000:
         raise MemoryError("Query must contain 1–8000 characters")
     if max_topics is not None and (type(max_topics) is not int or max_topics < 1):
@@ -1667,6 +2000,8 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
         raise MemoryError("allow_refinement must be a boolean")
     if type(full_verify) is not bool:
         raise MemoryError("full_verify must be a boolean")
+    if index_source not in ("auto", "json", "sqlite"):
+        raise MemoryError("index_source must be auto, json, or sqlite")
     refinements = validate_refinement_queries(query, refinement_queries)
     if refinements and not allow_refinement:
         raise MemoryError("Refinement queries are disabled by --no-refinement")
@@ -1698,21 +2033,41 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
             raise MemoryError("summary.md exceeds summary_token_budget; condense it or change config explicitly")
         if state["missing_summary_sections"]:
             raise MemoryError("summary.md missing required sections")
-        chunks = _load_verified_chunks(root, state, full_verify=full_verify)
         fts_path = root / "index/fts.sqlite"
-        checked_turn = _checked_recall_turn(root, config, conversation_id, turn_id)
-        index = json.loads(_read_utf8(root / "index/hitwords.json"))["entries"]
-        positive, refs, matched = _positive_query(query), [], []
-        scores, kw_terms, content_terms = {}, {}, {}
-        query_matches = {}
-        search_queries = [positive] + [_positive_query(q) for q in refinements]
-        if mode in ("hybrid", "semantic"):
-            documents = json.loads(_read_utf8(root / "index/search.json"))["documents"]
-            literal_documents = {c["id"]: c["title"] + "\n" + "\n".join(c["summary"]) for c in chunks}
-        for query_number, search_query in enumerate(search_queries):
-            local_scores = {}
-            for word, references in index.items():
-                if _keyword_matches(word, search_query):
+        tables = _sqlite_has_recall_tables(fts_path)
+        if index_source == "sqlite" and not tables:
+            raise MemoryError("SQLite recall tables are missing; run reindex")
+        use_sqlite = index_source != "json" and tables
+        fast_digest = None if full_verify else _fast_source_digest(root)
+        recall_conn = _open_readonly_sqlite(fts_path) if use_sqlite else None
+        try:
+            if use_sqlite:
+                _require_term_index(recall_conn)
+            if use_sqlite and fast_digest is not None:
+                chunks = _chunks_from_sqlite(recall_conn)
+            elif fast_digest is not None:
+                chunks = _catalog_chunks(root, fast_digest)
+            else:
+                chunks = _load_verified_chunks(root, state, full_verify=True)
+            checked_turn = _checked_recall_turn(root, config, conversation_id, turn_id)
+            positive, refs, matched = _positive_query(query), [], []
+            scores, kw_terms, content_terms = {}, {}, {}
+            query_matches = {}
+            search_queries = [positive] + [_positive_query(q) for q in refinements]
+            vocabulary = None
+            if use_sqlite:
+                hit_store = recall_conn
+                documents = _SqlDocs(recall_conn)
+                vocabulary = {row[0] for row in recall_conn.execute("SELECT term FROM term_df")}
+            else:
+                hit_store = json.loads(_read_utf8(root / "index/hitwords.json"))["entries"]
+                documents = (json.loads(_read_utf8(root / "index/search.json"))["documents"]
+                             if mode in ("hybrid", "semantic") else None)
+            if mode in ("hybrid", "semantic"):
+                literal_documents = {c["id"]: c["title"] + "\n" + "\n".join(c["summary"]) for c in chunks}
+            for query_number, search_query in enumerate(search_queries):
+                local_scores = {}
+                for word, references in _iter_hitwords(hit_store, search_query):
                     refs.extend(references)
                     entry = {"word": word, "references": references}
                     if entry not in matched:
@@ -1721,22 +2076,26 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
                         key = (ref["kind"], ref["id"])
                         local_scores[key] = local_scores.get(key, 0) + 100
                         kw_terms.setdefault(key, set()).add(word)
-            if mode in ("hybrid", "semantic"):
-                for chunk_id, score, terms in _rank_content(search_query, documents, config, fts_bytes=fts_path,
-                                                           literal_documents=literal_documents):
-                    key = ("chunk", chunk_id)
-                    local_scores[key] = local_scores.get(key, 0) + score
-                    content_terms.setdefault(key, set()).update(terms)
-                    refs.append({"kind": "chunk", "id": chunk_id})
-            if not refinements:
-                scores = local_scores  # Preserve the existing single-query profile exactly.
-            else:
-                # Scores from different questions are not comparable. Reciprocal
-                # rank fusion is deterministic; one document occupies one slot.
-                ordered = sorted(local_scores, key=lambda key: (-local_scores[key], key))
-                for rank, key in enumerate(ordered, 1):
-                    scores[key] = scores.get(key, 0) + 1 / (60 + rank)
-                    query_matches.setdefault(key, []).append(query_number)
+                if mode in ("hybrid", "semantic"):
+                    for chunk_id, score, terms in _rank_content(
+                            search_query, documents, config, fts_bytes=fts_path,
+                            literal_documents=literal_documents, vocabulary=vocabulary):
+                        key = ("chunk", chunk_id)
+                        local_scores[key] = local_scores.get(key, 0) + score
+                        content_terms.setdefault(key, set()).update(terms)
+                        refs.append({"kind": "chunk", "id": chunk_id})
+                if not refinements:
+                    scores = local_scores  # Preserve the existing single-query profile exactly.
+                else:
+                    # Scores from different questions are not comparable. Reciprocal
+                    # rank fusion is deterministic; one document occupies one slot.
+                    ordered = sorted(local_scores, key=lambda key: (-local_scores[key], key))
+                    for rank, key in enumerate(ordered, 1):
+                        scores[key] = scores.get(key, 0) + 1 / (60 + rank)
+                        query_matches.setdefault(key, []).append(query_number)
+        finally:
+            if recall_conn is not None:
+                recall_conn.close()
         nodes = {n["id"]: (tier, n) for tier, group in state["nodes"].items() for n in group}
         by_id = {c["id"]: c for c in chunks}
         replaced = {old for c in chunks for old in c["supersedes"]}
@@ -1798,6 +2157,11 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
                 if candidate["path"].startswith("history/"):
                     continue
                 candidate["text"] = _read_utf8(_safe_path(root, candidate["path"]))
+            elif candidate["kind"] == "chunk":
+                fresh = _chunk_text_from_l1(root, by_id[candidate["id"]])
+                if fresh is None or fresh != candidate["text"]:
+                    raise MemoryError(f"Stale index: {candidate['path']}; run reindex")
+                candidate["text"] = fresh
             addition = payload + ("\n\n" if payload else "") + candidate["text"]
             if len(selected) >= topic_limit or measure_tokens(addition)["count"] > config["recall_token_budget"]:
                 deferred.append({"id": candidate["id"], "reason": "recall budget or item limit"})
@@ -1916,6 +2280,8 @@ def main():
     status.add_argument("--json", action="store_true")
     status.add_argument("--include-text", action="store_true",
                         help="Include summary.md text in JSON. Default health JSON omits it, matching doctor.")
+    status.add_argument("--full-verify", action="store_true",
+                        help="Rebuild the derived image and compare bytes. Default checks the manifest and SQLite quick_check.")
     status.add_argument("--auto-init", action="store_true", help="Initialize memory directory if not yet initialized")
     topic = subs.add_parser("add-topic", help="Transactionally store L1 and rebuild views")
     topic.add_argument("memory_dir", nargs="?", type=Path, default=None, help="Target memory directory (defaults to HFA_MEMORY_DIR or ./memory)")
@@ -1973,7 +2339,7 @@ def main():
                                      args.json, args.require_mcp)
         target_dir = _ensure_memory_dir(args.memory_dir, getattr(args, "auto_init", False))
         if args.command == "status":
-            return cmd_status(target_dir, args.json, include_text=args.include_text)
+            return cmd_status(target_dir, args.json, include_text=args.include_text, full_verify=args.full_verify)
         if args.command == "add-topic":
             return cmd_add_topic(target_dir, args.title, args.hit_words, args.conclusion, args.milestone, args.project,
                                  args.source, args.supersedes, args.request_id, args.json)

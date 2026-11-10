@@ -127,12 +127,15 @@ class ReviewRegressions(HookIntegrationTests):
         for text in ('结论：已修复 app.py 的超时问题。',):
             _,result=self.fire(self.payload(decision=None,lastAssistantResponse=text),'--phase','post')
             self.assertEqual(result,{})
-        example='示例：\n```hfa-memory\n'+json.dumps(self.payload()['decision'])+'\n```'
         for text in ('假设：已修复 app.py 的超时问题，测试通过。仅用于举例，未执行。',
-                     'The bug in app.py has never been fixed; this is only a proposed solution.',example):
+                     'The bug in app.py has never been fixed; this is only a proposed solution.'):
             _,result=self.fire(self.payload(decision=None,memoryWriteAllowed=True,lastAssistantResponse=text),'--phase','post')
             self.assertEqual(result,{})
         self.assertFalse((self.mem/'chunks/chunk_0002.json').exists())
+        # Words such as 示例 outside the fence do not reject the fenced fields.
+        example='示例：\n```hfa-memory\n'+json.dumps(self.payload()['decision'])+'\n```'
+        _,result=self.fire(self.payload(decision=None,lastAssistantResponse=example),'--phase','post')
+        self.assertEqual(result['saved']['id'],'chunk_0002')
 
     def test_missing_transcript_and_failed_write_emit_sanitized_diagnostics(self):
         proc,result=self.fire({'transcriptPath':str(self.workspace/'missing'),'terminationReason':'completed'},

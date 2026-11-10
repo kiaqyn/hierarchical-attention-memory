@@ -132,7 +132,7 @@ def run(fixture_path=FIXTURE):
             'scope':'CLI tool JSON only; fixed oracle driver; no model/account/competitor claim',
             'generative_model_requests':0,'profiles':{}}
     with tempfile.TemporaryDirectory(prefix='hfa-cost-gate-') as temp:
-        seed=Path(temp)/'seed';hfa.cmd_init(seed,quiet=True)
+        seed=Path(temp)/'seed';hfa.cmd_init(seed,quiet=True,profile='example')
         example=seed/'chunks/chunk_0001.json';data=json.loads(example.read_text(encoding='utf8'));data['status']='ARCHIVED'
         example.write_text(json.dumps(data,ensure_ascii=False),encoding='utf8')
         (seed/'summary.md').write_text(fixture['core_summary'],encoding='utf8')
