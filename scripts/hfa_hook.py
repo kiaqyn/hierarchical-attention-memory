@@ -34,6 +34,22 @@ for _stream in (sys.stdin, sys.stdout, sys.stderr):
 CLI = Path(__file__).with_name("hfa_manager.py")
 
 
+def _hook_timeout() -> float:
+    """Seconds for init, recall, and add-topic subprocesses.
+
+    A save rebuilds derived indexes, so the cost grows with the number of L1
+    records. HFA_HOOK_TIMEOUT overrides the default of 120. Values below 1
+    are raised to 1. The printed hooks.json uses the same number; a host may
+    still impose its own cap.
+    """
+    raw = os.environ.get("HFA_HOOK_TIMEOUT", "").strip()
+    try:
+        value = float(raw) if raw else 120.0
+    except ValueError:
+        value = 120.0
+    return max(1.0, value)
+
+
 def _windows_command_token(value: str) -> bool:
     return re.fullmatch(r"[A-Za-z0-9_./:\\\-]+", value) is not None
 
@@ -224,7 +240,7 @@ def _resolve_memory_dir(explicit: Path | None, payload: dict, allow_auto_init: b
                     [sys.executable, "-B", str(CLI), "init", str(resolved), "--force"],
                     capture_output=True,
                     encoding="utf-8",
-                    timeout=10,
+                    timeout=_hook_timeout(),
                 )
                 if proc.returncode == 0 and (resolved / "directory.md").is_file():
                     return resolved
@@ -254,10 +270,11 @@ def _detect_phase(explicit_phase: str, payload: dict) -> str:
         return "stop"
     if event.startswith("pre") or event in ("before_invocation", "user_prompt_submit", "userpromptsubmit"):
         return "pre"
+    # Generic leftovers such as response/output/modelOutput appear on pre
+    # payloads too. Only an explicit save object or a turn-end field infers post.
     turn_end_keys = (
         "decision", "hfaRemember", "memoryDecision", "remember",
-        "lastAssistantResponse", "lastModelOutput", "assistantResponse",
-        "modelOutput", "response", "output", "stopResponse", "assistantMessage",
+        "lastAssistantResponse", "stopResponse", "assistantMessage",
     )
     if any(payload.get(k) for k in turn_end_keys):
         return "post"
@@ -444,6 +461,25 @@ def _plain_prose_allowed(payload: dict, policy: str) -> bool:
     return payload.get("memoryWriteAllowed") is True
 
 
+def _fenced_memory_dict(response_text: str) -> dict | None:
+    """Parse one ```hfa-memory / ```hfa fence. An extra info token is allowed.
+
+    JSON is decoded from the first '{', so the closing fence may sit on the
+    same line as the final brace.
+    """
+    opener = re.search(r"```(?:hfa-memory|hfa)\b[^\n`]*", response_text)
+    if not opener:
+        return None
+    brace = response_text.find("{", opener.end())
+    if brace < 0:
+        return None
+    try:
+        parsed, _end = json.JSONDecoder().raw_decode(response_text, brace)
+    except json.JSONDecodeError:
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
 def _extract_turn_decision(payload: dict, phase: str, policy: str = "host") -> dict | None:
     payload = _with_transcript_user(payload)
     if _write_denied(payload):
@@ -477,18 +513,9 @@ def _extract_turn_decision(payload: dict, phase: str, policy: str = "host") -> d
 
     # 2. Check for fenced ```hfa-memory JSON block inside response_text
     if not isinstance(structured, dict) and response_text:
-        fenced = re.search(
-            r"```(?:hfa-memory|hfa)\s*\r?\n\s*(\{.*?\})\s*\r?\n\s*```",
-            response_text,
-            re.S,
-        )
-        if fenced:
-            try:
-                parsed = json.loads(fenced.group(1))
-                if isinstance(parsed, dict):
-                    structured = parsed
-            except Exception:
-                pass
+        parsed = _fenced_memory_dict(response_text)
+        if isinstance(parsed, dict):
+            structured = parsed
         elif _UNVERIFIED.search(response_text):
             # Surrounding prose can mention 尚未/示例. Only an unfenced reply is rejected here.
             # Fenced fields are checked on their own below.
@@ -670,7 +697,7 @@ def _handle_post_or_stop(root: Path, decision: dict, phase: str = "post", payloa
     for old_id in decision.get("supersedes") or []:
         cmd.append(f"--supersedes={old_id}")
     try:
-        proc = subprocess.run(cmd, capture_output=True, encoding="utf-8", timeout=10)
+        proc = subprocess.run(cmd, capture_output=True, encoding="utf-8", timeout=_hook_timeout())
     except Exception:
         _warn("Memory write interrupted; retry the same event after checking store health.")
         return _empty_phase_response(phase, payload)
@@ -744,21 +771,21 @@ def main() -> int:
                     {
                         "type": "command",
                         "command": f"{base_cmd} --phase pre",
-                        "timeout": 10,
+                        "timeout": int(_hook_timeout()),
                     }
                 ],
                 "PostInvocation": [
                     {
                         "type": "command",
                         "command": f"{base_cmd} --phase post",
-                        "timeout": 10,
+                        "timeout": int(_hook_timeout()),
                     }
                 ],
                 "Stop": [
                     {
                         "type": "command",
                         "command": f"{base_cmd} --phase stop",
-                        "timeout": 10,
+                        "timeout": int(_hook_timeout()),
                     }
                 ],
             }
@@ -823,7 +850,7 @@ def main() -> int:
             cmd,
             capture_output=True,
             encoding="utf-8",
-            timeout=10,
+            timeout=_hook_timeout(),
         )
     except Exception:
         return _emit({"injectSteps": [{"ephemeralMessage": UNHEALTHY_WARNING}]})

@@ -612,6 +612,9 @@ hfa.cmd_add_topic(Path(sys.argv[2]),"Committed","committed-key","fact")
             sdist_names = set(tf.getnames())
             self.assertIn("hierarchical_attention_memory-3.0.0/PKG-INFO", sdist_names)
             self.assertIn("hierarchical_attention_memory-3.0.0/pyproject.toml", sdist_names)
+            self.assertIn("hierarchical_attention_memory-3.0.0/LICENSE", sdist_names)
+            init_text = (ROOT / "scripts" / "__init__.py").read_text(encoding="utf-8")
+            self.assertIn(f'__version__ = "{backend.VERSION}"', init_text)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

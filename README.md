@@ -146,11 +146,11 @@ memory/
 
 ## 混合检索（SQLite FTS5 + 词法守卫）与主线专注锁
 
-`route` 和 `recall` 是同一个命令。默认召回只对照 `index/source-manifest.json` 里的大小和 mtime，不逐份重读 L0/L1，也不重算 SHA-256。内容改了、但大小不变且 mtime 被设回原值时，没被打开的文件普通召回发现不了；被选中的 L1 会按文件现读，对不上索引就报过期。整库字节校验要加 `--full-verify`，或运行 `reindex --verify`。大小或 mtime 有变化时才退回全量读取。篡改生成的 Markdown 摘要不会改变召回结果。
+`route` 和 `recall` 是同一个命令。默认召回只对照 `index/source-manifest.json` 里的大小和 mtime，并核对 `fts.sqlite` 里的 `meta.source_digest`，不逐份重读 L0/L1，也不重算 SHA-256。内容改了、但大小不变且 mtime 被设回原值时，没被打开的文件普通召回发现不了；被选中的 L1 会按文件现读，对不上索引就报过期。库里的摘要和清单不一致时，普通召回会退回全量校验。整库字节校验要加 `--full-verify`，或运行 `reindex --verify`。大小或 mtime 有变化时也会退回全量读取。没有 FTS5 时改查 `term_df`，不再逐条扫描；`term_df` 也没有就直接报错。篡改生成的 Markdown 摘要不会改变召回结果。
 
 清单吻合时从 `index/catalog.json` 和现有索引取字段。catalog 是派生缓存，不是第二真源。页内容变化、缺少完整性记录或结构校验失败会报错要求 `reindex`，不会当作正常未命中。SQLite 文件头 92–99 字节的版本字段与 `status` 一样不算损坏，且不会回写文件。校验用于发现损坏或过期，不防御有权限同时改写真源和所有校验文件的攻击者。健康索引上的查询仍要读取目录、摘要，以及本次命中的索引。
 
-`status --json` 与 `doctor` 一样默认不返回 `summary.md` 正文。需要旧的完整状态时加 `--include-text`。
+`status --json` 与 `doctor` 一样默认不返回 `summary.md` 正文。需要旧的完整状态时加 `--include-text`。健康的 `status` 先看清单、`meta.source_digest` 和 `PRAGMA quick_check`，不重建整份全文索引。`--full-verify` 才对照重建后的字节。
 
 会话账本和 `history/access.jsonl` 可以在 `config.json` 里用 `session_retention.max_conversations`、`session_retention.max_turns_per_conversation` 与 `access_retention.max_events` 限制长度。缺省某一项表示该项不限制；旧目录没有 `session_retention` 时整本都不裁剪。`keep_unlocks: true` 时带解锁理由的行继续保留，刚写入的那一条访问也总是留下，因此条数可能超过上限。裁剪和当次写入在同一事务里。
 

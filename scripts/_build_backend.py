@@ -10,14 +10,28 @@ import base64
 import csv
 import hashlib
 import io
+import re
 import tarfile
 import zipfile
 from pathlib import Path
 
 NAME = "hierarchical-attention-memory"
 DIST_NAME = "hierarchical_attention_memory"
-VERSION = "3.0.0"
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def _package_version() -> str:
+    """scripts/__init__.py is the only version string. pyproject.toml must match it."""
+    text = (ROOT / "scripts" / "__init__.py").read_text(encoding="utf-8")
+    match = re.search(r'''(?m)^__version__\s*=\s*["']([^"']+)["']''', text)
+    if not match:
+        raise RuntimeError("scripts/__init__.py is missing __version__")
+    return match.group(1)
+
+
+VERSION = _package_version()
+# The import package stays `scripts`. Entry points are scripts.hfa_*:main.
+# Renaming it would break installed consoles, so the old name remains.
 
 METADATA = f"""Metadata-Version: 2.1
 Name: {NAME}
@@ -123,7 +137,7 @@ def build_sdist(sdist_directory, config_settings=None):
         info = tarfile.TarInfo(f"{base_prefix}/PKG-INFO")
         info.size = len(pkg_info)
         tf.addfile(info, io.BytesIO(pkg_info))
-        for rel_glob in ("pyproject.toml", "README.md", "SKILL.md", "CHANGELOG.md", "hooks.json", "plugin.json",
+        for rel_glob in ("pyproject.toml", "README.md", "LICENSE", "SKILL.md", "CHANGELOG.md", "hooks.json", "plugin.json",
                          "scripts/*.py", "templates/memory/**/*", "templates/minimal/**/*",
                          "benchmarks/scale-recall/*.py", "docs/*.md", "tests/*.py",
                          "experiments/quota/*.py", "experiments/quota/fixtures/*.json"):
