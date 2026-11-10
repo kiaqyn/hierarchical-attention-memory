@@ -123,7 +123,7 @@ python scripts/hfa_manager.py summarize ./memory --check
 
 旧版目录升级到 3.0 后先重建新增的正文检索索引，再使用。升级后若 `status` 提示缺少 `index/catalog.json` 或 `index/source-manifest.json`，运行 `reindex`。CLI 支持的命令有 `init`、`doctor`、`status`、`add-topic`、`tombstone`、`route`、`recall`、`reindex`、`summarize`、`semantic-index`。`doctor` 和默认的 `status --json` 都不返回 `summary.md` 正文；`status --json --include-text` 才包含它。`doctor` 不证明宿主已接入。`semantic-index` 只维护可删除的本地向量缓存，需要显式模型目录，默认召回不会调用它。不要虚构 `evidence`、`lock promote`、`lint`、`gc` 或裁决 API 已经存在。
 
-`config.json` 的 `write_policy` 默认或缺省都是 `host`：普通回复仍要宿主本轮的 `memoryWriteAllowed: true`。`explicit` 只收结构化决定。`auto` 才允许在既有过滤之后保存普通回复，且“不要保存”和 `false` 仍然优先。改配置后运行 `reindex`。`session_retention` 与 `access_retention` 缺省表示不裁剪；新的最小模板才带上限。默认召回只看大小和 mtime。同样大小、并把 mtime 设回原值的修改，普通召回发现不了；字节校验用 `recall --full-verify` 或 `reindex --verify`。
+`config.json` 的 `write_policy` 默认或缺省都是 `host`：普通回复仍要宿主本轮的 `memoryWriteAllowed: true`。`explicit` 只收结构化决定。`auto` 才允许在既有过滤之后保存普通回复，且“不要保存”和 `false` 仍然优先。改配置后运行 `reindex`。`session_retention` 与 `access_retention` 缺省表示不裁剪。最小模板默认最多 200 个会话、每个会话 50 个回合、2000 条访问记录。带解锁理由的行和刚写入的那一条访问会留下，所以条数可以超过上限。默认召回只看大小和 mtime，并在清单命中时走 SQLite，不解析整份检索 JSON。同样大小、并把 mtime 设回原值的修改，普通召回发现不了；字节校验用 `recall --full-verify` 或 `reindex --verify`。
 
 所有 CLI 请求先持锁并恢复未提交事务。恢复失败时停止使用该记忆，保留 `.hfa-transaction.json` 及现有文件供核对，不删除日志或强行宣布成功。
 

@@ -50,11 +50,11 @@ def build(root: Path, count: int) -> None:
     hfa.cmd_reindex(root, quiet=True)
 
 
-def time_recall(root: Path, query: str, full_verify: bool, repeats: int) -> dict:
+def time_recall(root: Path, query: str, repeats: int, **kwargs) -> dict:
     samples = []
     for _ in range(repeats):
         started = time.perf_counter()
-        result = hfa.cmd_route(root, query, return_result=True, full_verify=full_verify)
+        result = hfa.cmd_route(root, query, return_result=True, **kwargs)
         samples.append((time.perf_counter() - started) * 1000)
         if not result["selected"]:
             raise SystemExit(f"Synthetic query missed during timing: {query}")
@@ -80,14 +80,14 @@ def main() -> int:
             build(root, count)
             setup_s = round(time.perf_counter() - started, 3)
             query = f"synthetic-fact-{count}"
-            full = time_recall(root, query, True, args.repeats)
-            fast = time_recall(root, query, False, args.repeats)
+            before = time_recall(root, query, args.repeats, index_source="json")
+            after = time_recall(root, query, args.repeats, index_source="sqlite")
             report["runs"].append({
                 "chunks": count,
                 "setup_reindex_seconds": setup_s,
-                "full_verify": full,
-                "stat_cache": fast,
-                "note": "full_verify re-reads L0/L1; stat_cache trusts size and mtime for sources and derived indexes",
+                "json_index": before,
+                "sqlite_index": after,
+                "note": "json_index parses search.json, hitwords.json, and catalog.json; sqlite_index queries FTS and hit words and reads only selected chunk files. Synthetic, not an SLA.",
             })
             print(json.dumps(report["runs"][-1], ensure_ascii=False), flush=True)
     print(json.dumps(report, ensure_ascii=False, indent=2))

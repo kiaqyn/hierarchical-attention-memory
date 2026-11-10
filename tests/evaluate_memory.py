@@ -57,7 +57,8 @@ def evaluate():
                 _, output = invoke(hfa.cmd_route, memory, query, None, None, mode)
                 result = json.loads(output)
                 ids = [c["id"] for c in result["selected"]]
-                expected_id = f"chunk_{expected + 2:04d}" if expected is not None else None
+                # cmd_init() is minimal: the first added record is chunk_0001.
+                expected_id = f"chunk_{expected + 1:04d}" if expected is not None else None
                 cases.append({"query": query, "expected": expected_id, "actual": ids,
                               "pass": expected_id in ids if expected_id else not ids,
                               "budget_ok": result["recall_tokens"]["count"] <= result["recall_token_budget"]})
@@ -124,11 +125,14 @@ if __name__ == "__main__":
         args.output.write_text(text, encoding="utf-8")
     print(text, end="")
     hybrid = result["retrieval"]["modes"]["hybrid"]
-    # Keyword mode is a weaker comparison and is not part of this gate.
-    # The published contract is hybrid recall of every positive case, zero
-    # negative false hits, and budgets held. A printed report alone would
-    # hide a regression.
+    keyword = result["retrieval"]["modes"]["keyword"]
+    # Hybrid must hit every positive case. Keyword is a weaker lexical mode;
+    # 9/23 with zero false hits is the recorded floor, so a drop fails the process.
     if (hybrid["hits"] != hybrid["positive_cases"] or hybrid["false_hits"]
             or not hybrid["budget_ok"]):
         print("Hybrid retrieval regressed against the published synthetic contract.", file=sys.stderr)
+        raise SystemExit(1)
+    if keyword["hits"] < 9 or keyword["false_hits"] or not keyword["budget_ok"]:
+        print("Keyword retrieval regressed: hits=%s false_hits=%s budget_ok=%s" % (
+            keyword["hits"], keyword["false_hits"], keyword["budget_ok"]), file=sys.stderr)
         raise SystemExit(1)

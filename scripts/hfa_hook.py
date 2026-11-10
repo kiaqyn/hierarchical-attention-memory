@@ -412,6 +412,15 @@ def _pre_invocation_context(payload: dict) -> dict:
     return result
 
 
+def write_policies():
+    """Same allowlist as the manager. Imported, not copied."""
+    try:
+        from hfa_manager import WRITE_POLICIES
+    except ImportError:
+        from scripts.hfa_manager import WRITE_POLICIES
+    return WRITE_POLICIES
+
+
 def _read_write_policy(root: Path) -> str:
     """Missing, unreadable, or unknown policy keeps the host-signal default."""
     try:
@@ -420,7 +429,7 @@ def _read_write_policy(root: Path) -> str:
         _warn("Write policy unreadable; plain replies still require the host signal.")
         return "host"
     value = data.get("write_policy", "host") if isinstance(data, dict) else "host"
-    if value not in ("host", "explicit", "auto"):
+    if value not in write_policies():
         _warn("Write policy invalid; plain replies still require the host signal.")
         return "host"
     return value
@@ -468,8 +477,6 @@ def _extract_turn_decision(payload: dict, phase: str, policy: str = "host") -> d
 
     # 2. Check for fenced ```hfa-memory JSON block inside response_text
     if not isinstance(structured, dict) and response_text:
-        if _UNVERIFIED.search(response_text):
-            return None
         fenced = re.search(
             r"```(?:hfa-memory|hfa)\s*\r?\n\s*(\{.*?\})\s*\r?\n\s*```",
             response_text,
@@ -482,6 +489,10 @@ def _extract_turn_decision(payload: dict, phase: str, policy: str = "host") -> d
                     structured = parsed
             except Exception:
                 pass
+        elif _UNVERIFIED.search(response_text):
+            # Surrounding prose can mention 尚未/示例. Only an unfenced reply is rejected here.
+            # Fenced fields are checked on their own below.
+            return None
 
     if isinstance(structured, dict):
         raw_title = _clean_line(str(structured.get("title") or ""))[:120]

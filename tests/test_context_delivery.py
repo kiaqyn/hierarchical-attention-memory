@@ -18,7 +18,7 @@ class ContextDeliveryTests(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory(prefix='hfa-context-')
         self.mem=Path(self.temp.name).resolve()/'memory'
-        invoke(hfa.cmd_init,self.mem)
+        hfa.cmd_init(self.mem,quiet=True,profile="example")
 
     def tearDown(self):
         self.temp.cleanup()

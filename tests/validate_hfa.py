@@ -44,7 +44,8 @@ class HfaTests(unittest.TestCase):
         self.path = Path(self.temp.name).resolve()
         assert self.path.is_relative_to(TMP_ROOT.resolve())
         self.mem = self.path / "memory"
-        invoke(hfa.cmd_init, self.mem)
+        with contextlib.redirect_stdout(io.StringIO()):
+            hfa.cmd_init(self.mem, profile="example")
 
     def tearDown(self):
         # Verified absolute, task-owned temporary directory only.

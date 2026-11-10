@@ -14,7 +14,7 @@ class QueryBoundaryTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix="hfa-query-boundaries-")
         self.mem = Path(self.temp.name).resolve()/"memory"
-        invoke(hfa.cmd_init, self.mem)
+        hfa.cmd_init(self.mem, quiet=True, profile="example")
         rc, output = invoke(hfa.cmd_add_topic, self.mem, "加载停滞修复", "boot-ticket",
                             "将 Renderer 依赖固定为 4.2，清理本地缓存后验证启动通过。")
         self.assertEqual(rc, 0, output)

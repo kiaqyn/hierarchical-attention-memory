@@ -19,7 +19,7 @@ class CompactChecks(unittest.TestCase):
         self.temp=tempfile.TemporaryDirectory(prefix='hfa-compact-')
         self.addCleanup(self.temp.cleanup)
         self.root=Path(self.temp.name)/'memory'
-        invoke(hfa.cmd_init,self.root)
+        hfa.cmd_init(self.root,quiet=True,profile="example")
         self.delivery=hfa._delivery_module()
 
     def add(self,word='quota-fixture',body='UNIQUE_EVIDENCE_731 budget rule',supersedes=None,project=None):

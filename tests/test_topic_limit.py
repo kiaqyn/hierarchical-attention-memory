@@ -19,7 +19,7 @@ worker=importlib.util.module_from_spec(spec);spec.loader.exec_module(worker)
 class TopicLimitChecks(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory(prefix='hfa-topic-limit-');self.addCleanup(self.temp.cleanup)
-        self.root=Path(self.temp.name)/'memory';invoke(hfa.cmd_init,self.root)
+        self.root=Path(self.temp.name)/'memory';hfa.cmd_init(self.root,quiet=True,profile="example")
         invoke(hfa.cmd_add_topic,self.root,'first','topic-fixture','FACT_A')
         invoke(hfa.cmd_add_topic,self.root,'second','topic-fixture','FACT_B')
 

@@ -16,7 +16,7 @@ class QueryPlanChecks(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(prefix='hfa-plan-')
         self.root = Path(self.tmp.name).resolve()/'memory'
-        invoke(hfa.cmd_init, self.root)
+        hfa.cmd_init(self.root, quiet=True, profile="example")
         self.cipher = self.add('Cipher suite', 'suite-reference', 'TLS cipher suite is AES256.')
         self.renewal = self.add('Renewal window', 'renewal-reference', 'Certificate renewal happens every thirty days.')
 

@@ -123,7 +123,7 @@ def build_sdist(sdist_directory, config_settings=None):
         info = tarfile.TarInfo(f"{base_prefix}/PKG-INFO")
         info.size = len(pkg_info)
         tf.addfile(info, io.BytesIO(pkg_info))
-        for rel_glob in ("pyproject.toml", "README.md", "SKILL.md", "hooks.json", "plugin.json",
+        for rel_glob in ("pyproject.toml", "README.md", "SKILL.md", "CHANGELOG.md", "hooks.json", "plugin.json",
                          "scripts/*.py", "templates/memory/**/*", "templates/minimal/**/*",
                          "benchmarks/scale-recall/*.py", "docs/*.md", "tests/*.py",
                          "experiments/quota/*.py", "experiments/quota/fixtures/*.json"):

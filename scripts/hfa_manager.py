@@ -368,8 +368,16 @@ def _fts5_supported() -> bool:
         return False
 
 @functools.lru_cache(maxsize=16)
-def _build_fts_cached(digest: str, docs_json: str) -> bytes:
-    documents = json.loads(docs_json)
+def _build_fts_cached(digest: str, bundle_json: str) -> bytes:
+    bundle = json.loads(bundle_json)
+    # Older callers passed the documents object alone. New indexes also store
+    # hit words, per-term rows, and chunk metadata so recall can avoid the JSON files.
+    if isinstance(bundle, dict) and "documents" in bundle and "hitwords" in bundle:
+        documents = bundle["documents"]
+        hitwords = bundle["hitwords"]
+        chunk_rows = bundle["chunks"]
+    else:
+        documents, hitwords, chunk_rows = bundle, {}, []
     df_counts: dict[str, int] = {}
     for doc in documents.values():
         for term in set(doc["terms"]):
@@ -384,6 +392,32 @@ def _build_fts_cached(digest: str, docs_json: str) -> bytes:
         conn.execute("CREATE TABLE term_df (term TEXT PRIMARY KEY, df INTEGER)")
         for term in sorted(df_counts):
             conn.execute("INSERT INTO term_df VALUES (?, ?)", (term, df_counts[term]))
+        conn.execute(
+            "CREATE TABLE hitword (word TEXT NOT NULL, kind TEXT NOT NULL, ref_id TEXT NOT NULL, seq INTEGER NOT NULL)")
+        seq = 0
+        for word in sorted(hitwords):
+            for ref in hitwords[word]:
+                conn.execute("INSERT INTO hitword VALUES (?, ?, ?, ?)", (word, ref["kind"], ref["id"], seq))
+                seq += 1
+        conn.execute(
+            "CREATE TABLE doc_term (chunk_id TEXT NOT NULL, term TEXT NOT NULL, in_heading INTEGER NOT NULL)")
+        conn.execute(
+            "CREATE TABLE chunk_meta (chunk_id TEXT PRIMARY KEY, project TEXT, status TEXT, epoch INTEGER, "
+            "number INTEGER, topic_id TEXT, title TEXT, summary_json TEXT, source TEXT, supersedes_json TEXT, "
+            "file TEXT, hitwords_json TEXT)")
+        for chunk in sorted(chunk_rows, key=lambda item: item["id"]):
+            conn.execute(
+                "INSERT INTO chunk_meta VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (chunk["id"], chunk["project"], chunk["status"], int(chunk["epoch"]), int(chunk["number"]),
+                 chunk["topic_id"], chunk["title"], json.dumps(chunk["summary"], ensure_ascii=False),
+                 chunk.get("source") or "", json.dumps(chunk.get("supersedes") or [], ensure_ascii=False),
+                 chunk["file"], json.dumps(chunk.get("hitwords") or [], ensure_ascii=False)))
+        for chunk_id in sorted(documents):
+            doc = documents[chunk_id]
+            heading = set(doc["heading"])
+            for term in doc["terms"]:
+                conn.execute("INSERT INTO doc_term VALUES (?, ?, ?)",
+                             (chunk_id, term, 1 if term in heading else 0))
         if _fts5_supported():
             conn.execute(
                 "CREATE VIRTUAL TABLE chunks_fts USING fts5("
@@ -682,10 +716,11 @@ def _short_literal_matches(query, documents, literal_documents):
     return matches
 
 
-def _rank_content(query, documents, config, fts_bytes=None, *, literal_documents=None):
+def _rank_content(query, documents, config, fts_bytes=None, *, literal_documents=None, vocabulary=None):
     """Bounded query normalization and conjunctive subqueries; same source/budgets."""
     baseline = _rank_content_exact(query, documents, config, fts_bytes)
-    vocabulary = set().union(*(set(doc["terms"]) for doc in documents.values())) if documents else set()
+    if vocabulary is None:
+        vocabulary = set().union(*(set(doc["terms"]) for doc in documents.values())) if documents else set()
     alternative = _query_spelling_variant(query, vocabulary)
     merged = {cid: (score, set(terms)) for cid, score, terms in baseline}
     ceiling = min((score for _, score, _ in baseline), default=1.0) * .8
@@ -797,12 +832,17 @@ def read_write_policy(root):
     return _write_policy_name(data.get("write_policy", "host"), strict=False)
 
 def _session_policy(config):
+    """Absent object means unlimited. Each cap is optional so older configs stay valid."""
     policy = config.get("session_retention")
     if policy is None:
         return None
-    if (not isinstance(policy, dict) or set(policy) != {"max_conversations"}
-            or type(policy.get("max_conversations")) is not int or policy["max_conversations"] < 1):
-        raise MemoryError("session_retention must be {\"max_conversations\": <positive int>}")
+    allowed = {"max_conversations", "max_turns_per_conversation"}
+    if not isinstance(policy, dict) or not set(policy) or set(policy) - allowed:
+        raise MemoryError(
+            "session_retention accepts max_conversations and max_turns_per_conversation")
+    for key in allowed:
+        if key in policy and (type(policy[key]) is not int or policy[key] < 1):
+            raise MemoryError(f"session_retention.{key} must be a positive integer")
     return policy
 
 def _access_policy(config):
@@ -821,6 +861,8 @@ def _access_policy(config):
 def _prune_sessions(ledger, policy, active_key):
     if not policy:
         return
+    if "max_conversations" not in policy:
+        return
     convs = ledger["conversations"]
     limit = policy["max_conversations"]
     if len(convs) <= limit:
@@ -835,6 +877,25 @@ def _prune_sessions(ledger, policy, active_key):
         if key == active_key:
             continue
         del convs[key]
+
+def _prune_turns(conversation, policy, active_turn):
+    """Drop the oldest turn hashes inside one conversation. Never drop the active turn."""
+    if not policy or "max_turns_per_conversation" not in policy:
+        return
+    turns = conversation.get("turns")
+    if not isinstance(turns, dict):
+        return
+    limit = policy["max_turns_per_conversation"]
+    if len(turns) <= limit:
+        return
+    ranked = sorted(turns.items(), key=lambda item: (
+        item[1].get("number", 0) if isinstance(item[1], dict) else 0, item[0]))
+    for key, _turn in ranked:
+        if len(turns) <= limit:
+            break
+        if key == active_turn:
+            continue
+        del turns[key]
 
 def _trim_access_log(text, policy):
     if text and not text.endswith("\n"):
@@ -857,7 +918,11 @@ def _trim_access_log(text, policy):
     # Unlock lines stay even if they alone exceed the cap. Ordinary lines fill the rest.
     room = max(0, policy["max_events"] - len(unlocks))
     kept = set(unlocks)
-    kept.update(ordinary[-room:])
+    # ordinary[-0:] is the whole list; a zero room must keep no older ordinary lines.
+    if room:
+        kept.update(ordinary[-room:])
+    if lines:
+        kept.add(len(lines) - 1)  # The event just appended is always retained.
     chosen = [lines[i] for i in range(len(lines)) if i in kept]
     return ("\n".join(chosen) + "\n") if chosen else ""
 
@@ -1095,7 +1160,7 @@ def _derived(root, state, chunks, overrides=None, include_fts=True):
         "index/catalog.json": _json({"version": 1, "source_digest": digest, "chunks": chunks}),
     }
     if include_fts:
-        fts = _build_fts_cached(digest, _json(documents))
+        fts = _build_fts_cached(digest, _json({"documents": documents, "hitwords": entries, "chunks": chunks}))
         result["index/fts.sqlite"] = fts
         result["index/fts-integrity.json"] = _json({"version": 1, "source_digest": digest,
                                                   "sha256": hashlib.sha256(fts).hexdigest()})
@@ -1230,7 +1295,7 @@ def _templates_root():
         return repo
     return packaged
 
-def cmd_init(target_dir, force=False, quiet=False, profile="example"):
+def cmd_init(target_dir, force=False, quiet=False, profile="minimal"):
     if profile not in ("minimal", "example"):
         raise MemoryError("Init profile must be minimal or example")
     template = _templates_root() / ("minimal" if profile == "minimal" else "memory")
@@ -1461,6 +1526,7 @@ def _next_turn(root, conversation_id, turn_id, interval, session_policy=None):
             raise MemoryError("Invalid turn ledger")
         turn["searches"] += 1
         conversation["last_seen"] = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
+        _prune_turns(conversation, session_policy, turn_key)
         _prune_sessions(ledger, session_policy, conv_key)
         result.update(turn_count=turn["number"], turn_count_exact=True, turn_search_count=turn["searches"],
                       status_check_due=fresh and conversation["count"] % interval == 0)
@@ -1650,11 +1716,116 @@ def validate_refinement_queries(query, refinement_queries):
     return result
 
 
+class _SqlDocs:
+    """Term sets for ranking, loaded per chunk from SQLite instead of search.json."""
+
+    def __init__(self, conn):
+        self.conn = conn
+        self.ids = {row[0] for row in conn.execute("SELECT chunk_id FROM chunk_meta")}
+        self.cache = {}
+
+    def __contains__(self, chunk_id):
+        return chunk_id in self.ids
+
+    def __len__(self):
+        return len(self.ids)
+
+    def __getitem__(self, chunk_id):
+        if chunk_id not in self.cache:
+            heading, terms = [], []
+            for term, in_heading in self.conn.execute(
+                    "SELECT term, in_heading FROM doc_term WHERE chunk_id=? ORDER BY term", (chunk_id,)):
+                terms.append(term)
+                if in_heading:
+                    heading.append(term)
+            self.cache[chunk_id] = {"heading": heading, "terms": terms}
+        return self.cache[chunk_id]
+
+    def items(self):
+        for chunk_id in sorted(self.ids):
+            yield chunk_id, self[chunk_id]
+
+    def values(self):
+        for _chunk_id, doc in self.items():
+            yield doc
+
+
+def _sqlite_has_recall_tables(path: Path) -> bool:
+    if not path.is_file():
+        return False
+    conn = _open_readonly_sqlite(path)
+    try:
+        row = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='hitword'").fetchone()
+        return bool(row)
+    except sqlite3.Error:
+        return False
+    finally:
+        conn.close()
+
+
+def _chunks_from_sqlite(conn):
+    records = []
+    for row in conn.execute(
+            "SELECT chunk_id, project, status, epoch, number, topic_id, title, summary_json, source, "
+            "supersedes_json, file, hitwords_json FROM chunk_meta ORDER BY chunk_id"):
+        records.append({
+            "id": row[0], "project": row[1], "status": row[2], "epoch": row[3], "number": row[4],
+            "topic_id": row[5], "title": row[6], "summary": json.loads(row[7]), "source": row[8],
+            "supersedes": json.loads(row[9]), "file": row[10], "hitwords": json.loads(row[11]),
+            "request_id": None, "request_digest": None,
+        })
+    return records
+
+
+def _iter_hitwords(store, query):
+    """Yield (word, references) in the same order as the sorted hit-word JSON."""
+    if isinstance(store, dict):
+        for word, references in store.items():
+            if _keyword_matches(word, query):
+                yield word, references
+        return
+    norm = _normalize_for_match(query)
+    rows = store.execute(
+        "SELECT word, kind, ref_id FROM hitword WHERE word != '' AND instr(?, word) > 0 ORDER BY word, seq",
+        (norm,),
+    ).fetchall()
+    grouped, order = {}, []
+    for word, kind, ref_id in rows:
+        if word not in grouped:
+            grouped[word] = []
+            order.append(word)
+        grouped[word].append({"kind": kind, "id": ref_id})
+    for word in order:
+        if _keyword_matches(word, query):
+            yield word, grouped[word]
+
+
+def _chunk_text_from_l1(root, record):
+    """Selected chunk text is read from L1. Identity fields stay from the index."""
+    try:
+        value = json.loads(_read_utf8(_safe_path(root, record["file"])))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(value, dict):
+        return None
+    body = value.get("summary", value.get("conclusion", []))
+    if isinstance(body, str):
+        body = [body]
+    if not isinstance(body, list) or not all(isinstance(line, str) for line in body):
+        return None
+    fresh = dict(record)
+    fresh["title"] = str(value.get("title", ""))
+    fresh["summary"] = body
+    fresh["source"] = value.get("source") or ""
+    return _chunk_text(fresh)
+
+
 def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
               conversation_id=None, turn_id=None, allow_refinement=True,
               semantic_model=None, semantic_min_score=.875, semantic_min_margin=0,
               *, semantic_runtime=None, return_result=False, output="full", max_topics=None,
-              refinement_queries=None, full_verify=False):
+              refinement_queries=None, full_verify=False, index_source="auto"):
     if not isinstance(query, str) or not query.strip() or len(query) > 8000:
         raise MemoryError("Query must contain 1–8000 characters")
     if max_topics is not None and (type(max_topics) is not int or max_topics < 1):
@@ -1667,6 +1838,8 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
         raise MemoryError("allow_refinement must be a boolean")
     if type(full_verify) is not bool:
         raise MemoryError("full_verify must be a boolean")
+    if index_source not in ("auto", "json", "sqlite"):
+        raise MemoryError("index_source must be auto, json, or sqlite")
     refinements = validate_refinement_queries(query, refinement_queries)
     if refinements and not allow_refinement:
         raise MemoryError("Refinement queries are disabled by --no-refinement")
@@ -1698,21 +1871,39 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
             raise MemoryError("summary.md exceeds summary_token_budget; condense it or change config explicitly")
         if state["missing_summary_sections"]:
             raise MemoryError("summary.md missing required sections")
-        chunks = _load_verified_chunks(root, state, full_verify=full_verify)
         fts_path = root / "index/fts.sqlite"
-        checked_turn = _checked_recall_turn(root, config, conversation_id, turn_id)
-        index = json.loads(_read_utf8(root / "index/hitwords.json"))["entries"]
-        positive, refs, matched = _positive_query(query), [], []
-        scores, kw_terms, content_terms = {}, {}, {}
-        query_matches = {}
-        search_queries = [positive] + [_positive_query(q) for q in refinements]
-        if mode in ("hybrid", "semantic"):
-            documents = json.loads(_read_utf8(root / "index/search.json"))["documents"]
-            literal_documents = {c["id"]: c["title"] + "\n" + "\n".join(c["summary"]) for c in chunks}
-        for query_number, search_query in enumerate(search_queries):
-            local_scores = {}
-            for word, references in index.items():
-                if _keyword_matches(word, search_query):
+        tables = _sqlite_has_recall_tables(fts_path)
+        if index_source == "sqlite" and not tables:
+            raise MemoryError("SQLite recall tables are missing; run reindex")
+        use_sqlite = index_source != "json" and tables
+        fast_digest = None if full_verify else _fast_source_digest(root)
+        recall_conn = _open_readonly_sqlite(fts_path) if use_sqlite else None
+        try:
+            if use_sqlite and fast_digest is not None:
+                chunks = _chunks_from_sqlite(recall_conn)
+            elif fast_digest is not None:
+                chunks = _catalog_chunks(root, fast_digest)
+            else:
+                chunks = _load_verified_chunks(root, state, full_verify=True)
+            checked_turn = _checked_recall_turn(root, config, conversation_id, turn_id)
+            positive, refs, matched = _positive_query(query), [], []
+            scores, kw_terms, content_terms = {}, {}, {}
+            query_matches = {}
+            search_queries = [positive] + [_positive_query(q) for q in refinements]
+            vocabulary = None
+            if use_sqlite:
+                hit_store = recall_conn
+                documents = _SqlDocs(recall_conn)
+                vocabulary = {row[0] for row in recall_conn.execute("SELECT term FROM term_df")}
+            else:
+                hit_store = json.loads(_read_utf8(root / "index/hitwords.json"))["entries"]
+                documents = (json.loads(_read_utf8(root / "index/search.json"))["documents"]
+                             if mode in ("hybrid", "semantic") else None)
+            if mode in ("hybrid", "semantic"):
+                literal_documents = {c["id"]: c["title"] + "\n" + "\n".join(c["summary"]) for c in chunks}
+            for query_number, search_query in enumerate(search_queries):
+                local_scores = {}
+                for word, references in _iter_hitwords(hit_store, search_query):
                     refs.extend(references)
                     entry = {"word": word, "references": references}
                     if entry not in matched:
@@ -1721,22 +1912,26 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
                         key = (ref["kind"], ref["id"])
                         local_scores[key] = local_scores.get(key, 0) + 100
                         kw_terms.setdefault(key, set()).add(word)
-            if mode in ("hybrid", "semantic"):
-                for chunk_id, score, terms in _rank_content(search_query, documents, config, fts_bytes=fts_path,
-                                                           literal_documents=literal_documents):
-                    key = ("chunk", chunk_id)
-                    local_scores[key] = local_scores.get(key, 0) + score
-                    content_terms.setdefault(key, set()).update(terms)
-                    refs.append({"kind": "chunk", "id": chunk_id})
-            if not refinements:
-                scores = local_scores  # Preserve the existing single-query profile exactly.
-            else:
-                # Scores from different questions are not comparable. Reciprocal
-                # rank fusion is deterministic; one document occupies one slot.
-                ordered = sorted(local_scores, key=lambda key: (-local_scores[key], key))
-                for rank, key in enumerate(ordered, 1):
-                    scores[key] = scores.get(key, 0) + 1 / (60 + rank)
-                    query_matches.setdefault(key, []).append(query_number)
+                if mode in ("hybrid", "semantic"):
+                    for chunk_id, score, terms in _rank_content(
+                            search_query, documents, config, fts_bytes=fts_path,
+                            literal_documents=literal_documents, vocabulary=vocabulary):
+                        key = ("chunk", chunk_id)
+                        local_scores[key] = local_scores.get(key, 0) + score
+                        content_terms.setdefault(key, set()).update(terms)
+                        refs.append({"kind": "chunk", "id": chunk_id})
+                if not refinements:
+                    scores = local_scores  # Preserve the existing single-query profile exactly.
+                else:
+                    # Scores from different questions are not comparable. Reciprocal
+                    # rank fusion is deterministic; one document occupies one slot.
+                    ordered = sorted(local_scores, key=lambda key: (-local_scores[key], key))
+                    for rank, key in enumerate(ordered, 1):
+                        scores[key] = scores.get(key, 0) + 1 / (60 + rank)
+                        query_matches.setdefault(key, []).append(query_number)
+        finally:
+            if recall_conn is not None:
+                recall_conn.close()
         nodes = {n["id"]: (tier, n) for tier, group in state["nodes"].items() for n in group}
         by_id = {c["id"]: c for c in chunks}
         replaced = {old for c in chunks for old in c["supersedes"]}
@@ -1798,6 +1993,11 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
                 if candidate["path"].startswith("history/"):
                     continue
                 candidate["text"] = _read_utf8(_safe_path(root, candidate["path"]))
+            elif candidate["kind"] == "chunk":
+                fresh = _chunk_text_from_l1(root, by_id[candidate["id"]])
+                if fresh is None or fresh != candidate["text"]:
+                    raise MemoryError(f"Stale index: {candidate['path']}; run reindex")
+                candidate["text"] = fresh
             addition = payload + ("\n\n" if payload else "") + candidate["text"]
             if len(selected) >= topic_limit or measure_tokens(addition)["count"] > config["recall_token_budget"]:
                 deferred.append({"id": candidate["id"], "reason": "recall budget or item limit"})

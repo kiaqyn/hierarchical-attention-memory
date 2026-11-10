@@ -9,6 +9,6 @@
   "summary_token_budget": 800,
   "version": "3.0",
   "write_policy": "host",
-  "session_retention": {"max_conversations": 200},
+  "session_retention": {"max_conversations": 200, "max_turns_per_conversation": 50},
   "access_retention": {"max_events": 2000, "keep_unlocks": true}
 }

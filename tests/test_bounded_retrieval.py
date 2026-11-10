@@ -7,7 +7,7 @@ from validate_hfa import hfa,invoke
 class BoundedRetrievalTests(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory(prefix="hfa-bounded-retrieval-")
-        self.mem=Path(self.temp.name)/"memory";invoke(hfa.cmd_init,self.mem)
+        self.mem=Path(self.temp.name)/"memory";hfa.cmd_init(self.mem,quiet=True,profile="example")
     def tearDown(self):self.temp.cleanup()
     def add(self,title,body,project=None):
         capture=__import__('io').StringIO()
