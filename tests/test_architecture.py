@@ -65,7 +65,7 @@ class ArchitectureTests(unittest.TestCase):
         self.assertIn("CACHE_FACT_ORIGINAL", text)
         swapped = text.replace("CACHE_FACT_ORIGINAL", "CACHE_FACT_SWAPPED!")
         self.assertEqual(len(swapped.encode("utf-8")), len(text.encode("utf-8")))
-        path.write_text(swapped, encoding="utf-8")
+        path.write_text(swapped, encoding="utf-8", newline="\n")
         os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns))
         trusted = hfa.cmd_route(self.mem, "cache-fact", return_result=True)
         self.assertIn("CACHE_FACT_ORIGINAL", trusted["recall_text"])

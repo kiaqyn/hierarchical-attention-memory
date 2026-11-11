@@ -69,11 +69,13 @@ def _default_memory_dir(explicit: Path | None = None) -> Path:
 
 def create_server(memory_dir: Path | None = None, auto_init: bool = True,
                   semantic_model: Path | None = None, compact: bool = False,
-                  recall_text_only: bool = False):
+                  recall_text_only: bool = False, semantic_reranker: Path | None = None):
     from mcp.server import MCPServer
     from anyio import to_thread
     from mcp.server.mcpserver.exceptions import ToolError
 
+    if semantic_reranker is not None and semantic_model is None:
+        raise ValueError("--semantic-reranker requires --semantic-model")
     target = _default_memory_dir(memory_dir)
     if auto_init and not (target / "directory.md").is_file():
         if not target.exists() or (target.is_dir() and not any(target.iterdir())):
@@ -91,7 +93,7 @@ def create_server(memory_dir: Path | None = None, auto_init: bool = True,
             from .hfa_worker import RecallWorker, WorkerError
         else:
             from hfa_worker import RecallWorker, WorkerError
-        worker = RecallWorker(root, semantic_model)
+        worker = RecallWorker(root, semantic_model, reranker_model=semantic_reranker)
 
     @asynccontextmanager
     async def lifespan(_server):
@@ -109,7 +111,7 @@ def create_server(memory_dir: Path | None = None, auto_init: bool = True,
                       "Only save reusable, user-authorized facts after work is verified. "
                       "Include an evidence pointer and a stable event request_id. "
                       "Only use supersedes when the user or verified evidence explicitly changes a decision. "
-                      "Do not store secrets or entire chats. This server never calls a hosted or generative model API. Explicitly enabled local embedding inference only ranks candidates; similarity does not prove factual support. After the first recall (including an automatic hook), assess whether evidence answers the question. If absent, irrelevant, incomplete or conflicting, identify the gap. Resolve materially different interpretations using current authorized context; if still ambiguous, ask one focused clarification before proposing terms. Do not ask again when context is clear. Propose 3-5 temporary search terms. Translate paraphrased symptoms into likely technical vocabulary. For multiple missing facts use at most 3 short refinement_queries in ONE follow-up recall, keeping query faithful to the original question. Do not mix separate evidence facets into one bag of words. All directions share scope, record limit, payload budget and real turn identity; they are lexical hypotheses, not verified facts. Never persist these terms or search until a preferred answer appears; if evidence remains insufficient, state what is unknown. Failed retrieval means not found, not proof that no record exists."),
+                      "Do not store secrets or entire chats. This server never calls a hosted or generative model API. Explicitly enabled local embedding inference only ranks candidates; similarity does not prove factual support. After the first recall (including an automatic hook), assess whether evidence answers the question. If absent, irrelevant, incomplete or conflicting, identify the gap. Resolve materially different interpretations using current authorized context; if still ambiguous, ask one focused clarification before proposing terms. Do not ask again when context is clear. Propose 3-5 temporary search terms. Translate paraphrased symptoms into likely technical vocabulary. For multiple missing facts use at most 3 short refinement_queries in ONE follow-up recall, keeping query faithful to the original question. Do not mix separate evidence facets into one bag of words. All directions share scope, record limit, payload budget and real turn identity; they are retrieval hypotheses, not verified facts. Never persist these terms or search until a preferred answer appears; if evidence remains insufficient, state what is unknown. Failed retrieval means not found, not proof that no record exists."),
     )
 
     def call(command, *args, allow_unhealthy=False):
@@ -159,6 +161,8 @@ def create_server(memory_dir: Path | None = None, auto_init: bool = True,
         facets into a bag of words: each direction is searched separately, deduplicated
         and merged under the SAME scope, record limit and complete payload budget.
         These are caller hypotheses, not diagnoses; this server generates no terms.
+        query_plan.coverage reports returned candidates per direction, not answer
+        completeness. Uncovered directions do not authorize extra calls.
         First resolve ambiguity from current authorized context; if materially different
         meanings remain, ask ONE focused clarification instead of guessing. Do not ask
         again when the phenomenon is clear. No hit means not found, not nonexistent.
@@ -294,11 +298,15 @@ def main():
                         help="Print a launch entry with verified absolute paths, then exit")
     parser.add_argument("--semantic-model", type=Path,
                         help="Opt in to local semantic backfill with this pinned model directory; no automatic download")
+    parser.add_argument("--semantic-reranker", type=Path,
+                        help="Opt in to pinned local pair-relevance fallback; requires --semantic-model")
     parser.add_argument("--compact", action="store_true",
                         help="Opt in to smaller recall metadata; preserve complete memory_text")
     parser.add_argument("--recall-text-only", action="store_true",
                         help="Opt in to one JSON text block for recall_memory; no structuredContent for this tool")
     args = parser.parse_args()
+    if args.semantic_reranker is not None and args.semantic_model is None:
+        parser.error("--semantic-reranker requires --semantic-model")
     if args.print_config:
         try:
             resolved_dir = _default_memory_dir(args.memory_dir).resolve()
@@ -308,6 +316,8 @@ def main():
         launch_args = ["-B", str(Path(__file__).resolve()), "--memory-dir", str(resolved_dir)]
         if args.semantic_model is not None:
             launch_args.extend(["--semantic-model", str(args.semantic_model.resolve())])
+        if args.semantic_reranker is not None:
+            launch_args.extend(["--semantic-reranker", str(args.semantic_reranker.resolve())])
         if args.compact:
             launch_args.append("--compact")
         if args.recall_text_only:
@@ -320,7 +330,7 @@ def main():
         return 0
     try:
         server = create_server(args.memory_dir, auto_init=not args.no_auto_init,
-                               semantic_model=args.semantic_model, compact=args.compact,
+                               semantic_model=args.semantic_model, semantic_reranker=args.semantic_reranker, compact=args.compact,
                                recall_text_only=args.recall_text_only)
     except ImportError:
         print("Install requirements-mcp.txt in your project virtual environment first.", file=sys.stderr)

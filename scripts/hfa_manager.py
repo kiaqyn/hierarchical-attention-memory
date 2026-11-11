@@ -19,6 +19,7 @@ import sys
 import tempfile
 import threading
 import time
+from collections import deque
 from pathlib import Path
 
 for _stream in (sys.stdout, sys.stderr):
@@ -1569,6 +1570,15 @@ def _semantic_module():
     return module
 
 
+@functools.lru_cache(maxsize=1)
+def _rerank_module():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("hfa_local_rerank", Path(__file__).with_name("hfa_rerank.py"))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def _semantic_snapshot_locked(root, active_mainline=None):
     state, config = parse_directory_nodes(root / "directory.md"), _config(root)
     mainline = active_mainline or config["active_mainline"]
@@ -1580,7 +1590,8 @@ def _semantic_snapshot_locked(root, active_mainline=None):
 
 
 def _prepare_semantic(root, model_dir, active_mainline=None, query=None,
-                      min_score=.875, min_margin=0, verify=False, runtime=None):
+                      min_score=.875, min_margin=0, verify=False, runtime=None,
+                      *, refinement_queries=None, reranker_model=None, reranker_runtime=None):
     if model_dir is None:
         raise MemoryError("Explicit local --semantic-model/--model-dir is required")
     if (type(min_score) not in (int, float) or not math.isfinite(min_score) or not -1 <= min_score <= 1
@@ -1589,6 +1600,13 @@ def _prepare_semantic(root, model_dir, active_mainline=None, query=None,
     module = _semantic_module()
     # Model hashing and inference never hold the memory transaction lock.
     identity = module.model_identity(model_dir)
+    pair_module = pair_identity = pair_runtime = None
+    if reranker_model is not None:
+        pair_module = _rerank_module()
+        pair_identity = pair_module.model_identity(reranker_model)
+        pair_runtime = reranker_runtime or pair_module.PairSession(reranker_model)
+        if pair_runtime.directory != Path(reranker_model).resolve():
+            raise MemoryError("Reranker runtime is bound to a different model directory")
     with _hfa_lock(root):
         state, config = _semantic_snapshot_locked(root, active_mainline)
         relative = f"index/semantic-{state['mainline']}.json"
@@ -1605,12 +1623,66 @@ def _prepare_semantic(root, model_dir, active_mainline=None, query=None,
     reused = runtime.loaded
     encode = runtime.encode
     cache, info = module.prepare_cache(state, previous, identity, encode)
-    ranked = module.rank(cache, encode([query], "query")[0], min_score, min_margin,
-                         max(8, config["max_recall_topics"])) if query else []
+    queries = [query] + (refinement_queries or []) if query else []
+    ranked, query_matches, rerank_matches, rerank_info = [], {}, {}, {}
+    if queries:
+        # At most four validated directions share one encoder call and cache.
+        # A direction must clear its own threshold/margin before rank fusion.
+        vectors = encode(queries, "query")
+        if len(vectors) != len(queries):
+            raise MemoryError("Semantic encoder returned the wrong number of query vectors")
+        rankings = [module.rank(cache, vector, min_score, min_margin,
+                               max(8, config["max_recall_topics"])) for vector in vectors]
+        if pair_module is not None:
+            # Preserve dense-gated hits. Only an empty direction can receive a
+            # separately gated pair-relevance candidate. Explicit refinements
+            # take precedence over rechecking a possibly vague original query.
+            texts = {doc["id"]: doc["text"] for doc in state["documents"]}
+            pairs, locations = [], []
+            for index in (range(1, len(queries)) if len(queries) > 1 else range(1)):
+                if rankings[index]:
+                    continue
+                pool = module.rank(cache, vectors[index], pair_module.MIN_DENSE_SCORE, 0, pair_module.CANDIDATES_PER_QUERY)
+                for key, similarity in pool:
+                    pairs.append((queries[index], texts[key]))
+                    locations.append((index, key, similarity))
+            pair_reused = pair_runtime.loaded
+            pair_scores = pair_runtime.score_pairs(pairs)
+            if len(pair_scores) != len(pairs):
+                raise MemoryError("Reranker returned the wrong pair count")
+            grouped = {}
+            for (index, key, similarity), score in zip(locations, pair_scores):
+                grouped.setdefault(index, []).append({"id": key, "text": texts[key],
+                                                       "pair_score": score, "similarity": similarity})
+            accepted = []
+            for index, candidates in grouped.items():
+                best = pair_module.select_candidate(queries[index], candidates)
+                if best is not None:
+                    rankings[index] = [(best["id"], best["similarity"])]
+                    rerank_matches.setdefault(best["id"], []).append({"query_index": index,
+                                                                       "pair_score": best["pair_score"]})
+                    accepted.append(index)
+            rerank_info = {"reranker": {"model": pair_identity["model"], "revision": pair_identity["revision"],
+                          "pairs_scored": len(pairs), "candidate_limit_per_query": pair_module.CANDIDATES_PER_QUERY,
+                          "dense_floor": pair_module.MIN_DENSE_SCORE, "score_threshold": pair_module.MIN_SCORE,
+                          "margin_threshold": pair_module.MIN_MARGIN, "accepted_query_indices": accepted,
+                          "model_reused": pair_reused, "model_loads": pair_runtime.loads,
+                          "meaning": "candidate_relevance_not_answer_verification"}}
+        fused, similarities = {}, {}
+        for query_index, ranking in enumerate(rankings):
+            for rank, (chunk_id, similarity) in enumerate(ranking, 1):
+                fused[chunk_id] = fused.get(chunk_id, 0) + 1 / (60 + rank)
+                similarities[chunk_id] = max(similarities.get(chunk_id, -1.), similarity)
+                query_matches.setdefault(chunk_id, []).append(query_index)
+        # Preserve the existing single-query ordering and scores exactly.
+        ranked = (rankings[0] if len(queries) == 1 else
+                  [(key, similarities[key]) for key in sorted(fused, key=lambda key: (-fused[key], key))])
     return {"state": state, "relative": relative, "cache": cache, "ranked": ranked,
+            "query_matches": query_matches, "rerank_matches": rerank_matches,
             "info": {**info, "model": identity["model"], "revision": identity["revision"],
                      "strategy": "lexical_first_dense_backfill", "min_score": min_score, "min_margin": min_margin,
-                     "encoder_reused": reused, "encoder_loads": runtime.loads}}
+                     "semantic_queries": len(queries), "query_batches": int(bool(queries)),
+                     "encoder_reused": reused, "encoder_loads": runtime.loads, **rerank_info}}
 
 
 def _publish_semantic_locked(root, prepared, chunks, mainline):
@@ -1650,11 +1722,57 @@ def validate_refinement_queries(query, refinement_queries):
     return result
 
 
+def _coverage_candidate_order(candidates, selected, topic_limit, refinement_count, unlocked):
+    """Keep the strongest first hit, then cover unserved explicit directions.
+
+    Inspect the actual accepted list after each yield: oversized/deferred records
+    cannot consume a direction's slot. Queue entries are visited at most once per
+    direction, so a broad hitword does not turn selection into a quadratic scan.
+    Single-query/one-refinement behavior retains its original relevance order.
+    """
+    if refinement_count < 2:
+        yield from candidates
+        return
+    directions = {}
+    for index, candidate in enumerate(candidates):
+        if ((not candidate["permitted"] and not unlocked)
+                or (candidate["kind"] == "node" and candidate["permitted"])):
+            continue
+        for direction in candidate["match"].get("query_indices", []):
+            if direction > 0:
+                directions.setdefault(direction, deque()).append(index)
+    pending = deque(range(len(candidates)))
+    visited, covered = set(), set()
+    accepted = 0
+    while pending:
+        while pending and pending[0] in visited:
+            pending.popleft()
+        if not pending:
+            break
+        while accepted < len(selected):
+            covered.update(selected[accepted]["match"].get("query_indices", []))
+            accepted += 1
+        index = pending[0]
+        if selected and len(selected) < topic_limit:
+            heads = []
+            for direction, queue in directions.items():
+                if direction in covered:
+                    continue
+                while queue and queue[0] in visited:
+                    queue.popleft()
+                if queue:
+                    heads.append(queue[0])
+            if heads:
+                index = min(heads)  # Existing relevance order among unserved facets.
+        visited.add(index)
+        yield candidates[index]
+
+
 def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
               conversation_id=None, turn_id=None, allow_refinement=True,
               semantic_model=None, semantic_min_score=.875, semantic_min_margin=0,
               *, semantic_runtime=None, return_result=False, output="full", max_topics=None,
-              refinement_queries=None, full_verify=False):
+              refinement_queries=None, full_verify=False, semantic_reranker=None, reranker_runtime=None):
     if not isinstance(query, str) or not query.strip() or len(query) > 8000:
         raise MemoryError("Query must contain 1–8000 characters")
     if max_topics is not None and (type(max_topics) is not int or max_topics < 1):
@@ -1670,6 +1788,8 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
     refinements = validate_refinement_queries(query, refinement_queries)
     if refinements and not allow_refinement:
         raise MemoryError("Refinement queries are disabled by --no-refinement")
+    if semantic_reranker is not None and (mode != "semantic" or semantic_model is None):
+        raise MemoryError("--semantic-reranker requires explicit semantic mode and model")
     if semantic_model is not None and mode != "semantic":
         raise MemoryError("--semantic-model requires --mode semantic")
     if mode == "semantic" and semantic_model is None:
@@ -1683,7 +1803,9 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
             _recall_topic_limit(preflight, max_topics)
             _checked_recall_turn(root, preflight, conversation_id, turn_id)
     semantic_prepared = (_prepare_semantic(root, semantic_model, active_mainline, _positive_query(query),
-                                         semantic_min_score, semantic_min_margin, runtime=semantic_runtime)
+                                         semantic_min_score, semantic_min_margin, runtime=semantic_runtime,
+                                         refinement_queries=[_positive_query(q) for q in refinements],
+                                         reranker_model=semantic_reranker, reranker_runtime=reranker_runtime)
                          if mode == "semantic" and _positive_query(query).strip() else None)
     with _hfa_lock(root):
         state, config = parse_directory_nodes(root / "directory.md"), _config(root)
@@ -1748,6 +1870,9 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
                 key = ("chunk", chunk_id)
                 if key not in scores:
                     scores[key] = .001 / rank  # lexical evidence retains precedence
+                if refinements:
+                    query_matches[key] = sorted(set(query_matches.get(key, [])) |
+                                                set(semantic_prepared["query_matches"][chunk_id]))
                 refs.append({"kind": "chunk", "id": chunk_id})
         candidates, selected, deferred, seen = [], [], [], set()
         for ref in refs:
@@ -1763,6 +1888,12 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
                 match_info["semantic_similarity"] = dense_scores[ref["id"]]
                 if identity not in kw_terms and identity not in content_terms:
                     match_info["method"] = "semantic"
+                support = semantic_prepared.get("rerank_matches", {}).get(ref["id"], [])
+                if support:
+                    match_info["rerank_support"] = support
+                    dense_indices = set(semantic_prepared["query_matches"].get(ref["id"], [])) - {x["query_index"] for x in support}
+                    if match_info["method"] == "semantic" and not dense_indices:
+                        match_info["method"] = "semantic_rerank"
             if ref["kind"] == "chunk":
                 c = by_id[ref["id"]]
                 if c["id"] in replaced:
@@ -1788,7 +1919,8 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
         # Higher relevance first; newer records win ties, never file/index order.
         candidates.sort(key=lambda c: (c.get("score", 0), c.get("epoch", 0), c.get("number", 0)), reverse=True)
         payload = ""
-        for candidate in candidates:
+        for candidate in _coverage_candidate_order(candidates, selected, topic_limit, len(refinements),
+                                                    bool(unlock and unlock.strip())):
             if candidate["kind"] == "node" and candidate["permitted"]:
                 continue  # Main/summary are resident references, not silently injected text.
             if not candidate["permitted"] and not (unlock and unlock.strip()):
@@ -1851,14 +1983,35 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
                                    **(semantic_prepared["info"] if semantic_prepared else {"cache_status": "skipped_no_positive_query"})}
         if refinements:
             result["query_plan"] = {"origin": "caller_supplied", "refinement_queries": refinements,
+                                    "refinement_input_indices": [next(index for index, text in enumerate(refinement_queries)
+                                                                       if text.strip() == direction)
+                                                                 for direction in refinements],
                                     "lexical_queries": len(search_queries), "fusion": "reciprocal_rank_60",
+                                    "selection": "first_relevance_then_uncovered_direction" if len(refinements) >= 2 else "relevance",
                                     "shared_scope_and_budget": True,
-                                    "semantic_query": "original_only" if mode == "semantic" else None}
+                                    "semantic_query": "all_directions" if mode == "semantic" else None,
+                                    "semantic_queries": semantic_prepared["info"]["semantic_queries"] if semantic_prepared else 0}
         if checked_turn is not None:
             limit = config["max_recalls_per_turn"]
             result["turn_budget"] = {"limit": limit, "used": turn["turn_search_count"],
                                      "remaining": limit - turn["turn_search_count"]}
         _context_payload(result, config)
+        if refinements:
+            # Compute after complete-context trimming. A hit that did not fit
+            # must not look like evidence delivered to the caller. Coverage is
+            # provenance of candidates, never a claim of answer sufficiency.
+            coverage = []
+            for index in range(len(search_queries)):
+                selected_ids = [item["id"] for item in result["selected"]
+                                if index in item["match"]["query_indices"]]
+                matching_ids = {key[1] for key, indices in query_matches.items() if index in indices}
+                deferred_ids = list(dict.fromkeys(item["id"] for item in result["deferred"]
+                                                 if item["id"] in matching_ids))
+                coverage.append({"query_index": index, "selected_ids": selected_ids,
+                                 "deferred_ids": deferred_ids[:5], "deferred_total": len(deferred_ids)})
+            result["query_plan"].update(coverage=coverage, coverage_means="returned_candidates_only",
+                                         uncovered_query_indices=[item["query_index"] for item in coverage
+                                                                  if not item["selected_ids"]])
         event = {"ts": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"), **turn,
                  "selected": [s["id"] for s in result["selected"]], "unlock_reason": unlock,
                  "profile_drift": profile_drift, "status_check_due": status_check_due,
@@ -1867,6 +2020,8 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
             event["max_topics"] = max_topics
         if refinements:
             event["lexical_directions"] = len(search_queries)  # Counts only; never store query hypotheses.
+            if semantic_prepared is not None:
+                event["semantic_directions"] = semantic_prepared["info"]["semantic_queries"]
         access = _safe_path(root, "history/access.jsonl")
         prior = _read_utf8(access) if access.is_file() else ""
         access_text = prior + ("" if not prior or prior.endswith("\n") else "\n") + json.dumps(event, ensure_ascii=False) + "\n"
@@ -1949,6 +2104,7 @@ def main():
         route.add_argument("--mainline")
         route.add_argument("--mode", choices=("hybrid", "keyword", "semantic"), default="hybrid")
         route.add_argument("--semantic-model", type=Path, help="Explicit local pinned E5 model directory; no download")
+        route.add_argument("--semantic-reranker", type=Path, help="Opt-in pinned local pair-relevance fallback; no download")
         route.add_argument("--semantic-min-score", type=float, default=.875)
         route.add_argument("--semantic-min-margin", type=float, default=0)
         route.add_argument("--unlock", help="Explicit reason for reading non-mainline or tombstoned memory")
@@ -1984,7 +2140,7 @@ def main():
                              args.conversation_id, args.turn_id, not args.no_refinement,
                              args.semantic_model, args.semantic_min_score, args.semantic_min_margin,
                              output=args.output, max_topics=args.max_topics, refinement_queries=args.refine_query,
-                             full_verify=args.full_verify)
+                             full_verify=args.full_verify, semantic_reranker=args.semantic_reranker)
         if args.command == "semantic-index":
             return cmd_semantic_index(target_dir, args.model_dir, args.verify)
         return cmd_reindex(target_dir, args.verify)

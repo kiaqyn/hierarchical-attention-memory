@@ -96,6 +96,8 @@ python scripts/hfa_mcp.py --memory-dir ./my_memory --compact --print-config
 
 CLI 仍默认 `--output full`，MCP 不带 `--compact` 时保留现有字段。生成配置不会修改全局服务。精简响应的 `memory_text` 与完整响应的 `context_text` 相同，保留完整摘要、已选决定、来源和预算内的补查/状态提示；`matches` 保留 ID 与文件路径，另保留延后原因、实际回合、预算及传递状态。它删除正文副本、细粒度排序调试数据和重复提示，没有截短事实，也没有改变召回范围与排序。需要详细匹配词时使用完整模式。
 
+附带补查方向时，精简结果在 `query_plan.refinement_queries` 和 `refinement_input_indices` 中保留序列化UTF8字节更短的一种，避免把调用者刚提交的长假设原样再传回。位置从原输入列表的0开始计数，并保留去重后的对应关系；短词或没有位置映射的旧处理器结果继续回显查询正文。完整模式保留正文和映射。覆盖、来源及完整记忆正文均不因此裁剪，具体映射见[补查说明](query-refinement.md)。此选择比较JSON字节数，不宣称所有模型的分词成本同比例减少。
+
 `payload_tokens` 继续只计完整记忆正文，不包含 JSON 或宿主封装。精简字段减少工具返回体积，不等于保证按同比例减少输入 token、账单或五小时额度。宿主可能以自己的格式同时传入文本和结构化内容；缓存命中、额外调用及返工也影响净成本。`experiments/quota/evaluate_delivery.py` 在指定记忆的临时副本上比较同一次召回的输出字节数、正文和来源一致性，不修改原目录，也不调用语言模型。
 
 #### 可选的 MCP 单份文本传递

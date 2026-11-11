@@ -30,7 +30,7 @@ def model_identity(directory):
         if hashlib.sha256((directory/name).read_bytes()).hexdigest()!=expected:
             raise ValueError('Semantic model checksum mismatch: '+name)
     return {'model':MODEL,'revision':REVISION,'files':PINNED.copy(),
-            'pipeline':'e5-query-passage-mean-l2-512-v1','dimensions':DIMENSIONS}
+            'pipeline':'e5-query-passage-mean-l2-512-singleton-v2','dimensions':DIMENSIONS}
 
 
 def snapshot(root, chunks, mainline):
@@ -179,8 +179,12 @@ class LocalEncoder:
         np=self.np
         result=[]
         try:
-            for start in range(0,len(texts),8):
-                encoded=self.tokenizer.encode_batch([kind+': '+x for x in texts[start:start+8]])
+            # The pinned quantized model's output varies with batch companions.
+            # Encode each text alone so incremental/full caches and query plans
+            # produce the same vector for the same content. Keep the outer API
+            # batched to reuse the model; no hosted calls or query cache are added.
+            for text in texts:
+                encoded=self.tokenizer.encode_batch([kind+': '+text])
                 ids=np.asarray([x.ids for x in encoded],dtype=np.int64)
                 mask=np.asarray([x.attention_mask for x in encoded],dtype=np.int64)
                 available={'input_ids':ids,'attention_mask':mask,'token_type_ids':np.zeros_like(ids)}

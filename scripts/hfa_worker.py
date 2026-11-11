@@ -46,9 +46,10 @@ class WorkerError(RuntimeError):
 
 class RecallWorker:
     """Lazy child with bounded queue/execution wait; no shell or shared stdout."""
-    def __init__(self, root, model, timeout=120):
+    def __init__(self, root, model, timeout=120, *, reranker_model=None):
         self.root = Path(root).resolve()
         self.model = Path(model).resolve()
+        self.reranker_model = Path(reranker_model).resolve() if reranker_model is not None else None
         self.timeout = timeout
         self._process = None
         self._lock = threading.Lock()
@@ -59,7 +60,7 @@ class RecallWorker:
         env = {**os.environ, "PYTHONUTF8": "1", "PYTHONDONTWRITEBYTECODE": "1"}
         self._process = subprocess.Popen(
             [sys.executable, "-B", str(Path(__file__).resolve()), "--memory-dir", str(self.root),
-             "--model-dir", str(self.model)],
+             "--model-dir", str(self.model)] + (["--reranker-model", str(self.reranker_model)] if self.reranker_model is not None else []),
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
             env=env, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
@@ -138,10 +139,11 @@ class RecallWorker:
             self._lock.release()
 
 
-def serve(root, model):
+def serve(root, model, reranker_model=None):
     # Script execution resolves these siblings in source and installed wheels.
     import hfa_manager as manager
     runtime = manager._semantic_module().EncoderSession(model)
+    pair_runtime = manager._rerank_module().PairSession(reranker_model) if reranker_model is not None else None
     while True:
         line = sys.stdin.buffer.readline(MAX_REQUEST + 1)
         if not line:
@@ -156,7 +158,8 @@ def serve(root, model):
             request_id = request["id"]
             validate_request(request["arguments"])
             result = manager.cmd_route(root, mode="semantic", semantic_model=model,
-                                       semantic_runtime=runtime, return_result=True, **request["arguments"])
+                                       semantic_runtime=runtime, semantic_reranker=reranker_model,
+                                       reranker_runtime=pair_runtime, return_result=True, **request["arguments"])
             response = {"id": request_id, "ok": True, "result": result}
         except (manager.MemoryError, OSError, ValueError, KeyError) as exc:
             response = {"id": request_id, "ok": False, "error": str(exc)}
@@ -174,8 +177,10 @@ def main():
     parser = argparse.ArgumentParser(description="Private HFA semantic recall worker")
     parser.add_argument("--memory-dir", required=True, type=Path)
     parser.add_argument("--model-dir", required=True, type=Path)
+    parser.add_argument("--reranker-model", type=Path)
     args = parser.parse_args()
-    return serve(args.memory_dir.resolve(strict=True), args.model_dir.resolve(strict=True))
+    return serve(args.memory_dir.resolve(strict=True), args.model_dir.resolve(strict=True),
+                 args.reranker_model.resolve(strict=True) if args.reranker_model is not None else None)
 
 
 if __name__ == "__main__":
