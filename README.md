@@ -6,7 +6,7 @@
 >
 > *本项目不自行调用生成式大模型 API、不上传对话数据。默认检索与提炼使用本地规则；可显式启用本地 embedding 候选补位。相似度不等于事实充分性。*
 
-可选预览：[本地语义后端](docs/local-semantic.md) 已接入 CLI/MCP 与安装包，支持增量向量缓存、有效记录过滤、并发快照复核，以及 MCP 常驻编码器复用和超时恢复。默认关闭；不改变标准库核心依赖。需要 Python 3.12+ 及单独的 `semantic` 依赖，模型必须显式下载/指定。实验目录里的重排和数值绑定尚未默认接入此后端。
+可选预览：[本地语义后端](docs/local-semantic.md) 已接入 CLI/MCP 与安装包，支持增量向量缓存、有效记录过滤、并发快照复核、MCP 常驻编码器复用和超时恢复，以及显式启用的成对重排兜底（`--semantic-reranker`）与子句级事实约束绑定（`--bind-claims` / `--reference-date` / `config.json` 中的 `claim_binding`；默认均关闭）。不改变标准库核心依赖；需要 Python 3.12+ 及单独的 `semantic` 依赖，模型必须显式下载/指定。
 
 代理输出可显式精简：CLI `recall --output compact` / MCP 启动 `--compact`，完整记忆正文与来源保留，去掉重复正文和诊断数据。见[接入与成本边界](docs/ai-integration.md#减少代理工具输出开销)；工具体积减少不等于已测得净额度节省。 项目配置还可显式启用 `max_recalls_per_turn`，按真实会话/回合限制成功召回份数；默认关闭，需要宿主提供一致身份，详见接入说明。
 
@@ -60,6 +60,8 @@ hfa status --json
 hfa add-topic --title "编码修复" --hit-words "GBK乱码, 编码修复" --conclusion "使用 UTF-8 写入和解码。"
 hfa recall --query "之前 GBK 乱码 怎么修的"
 hfa reindex --verify
+hfa export --out backup-bundle.json --json
+hfa import --bundle backup-bundle.json --json
 ```
 
 ### 方式 2：`uvx` 零配置启动 MCP Server
@@ -205,6 +207,7 @@ python scripts/hfa_manager.py add-topic ./my_memory \
 1. **默认词法与可选语义的边界**：HFA 的默认混合检索基于精确命中词、`sqlite3` FTS5 倒排索引、中文双字切分与可配置同义词表。它具有确定性和可解释的匹配词（`selected[].match`），但默认路径不是 Embedding 向量模型，对于完全无词汇重叠且未配置同义词的跨领域隐喻不会强行召回。可选本地语义模式另见 [后端说明](docs/local-semantic.md)，其相似度不保证事实正确，也不涵盖任意隐喻。查询时在清单通过后以只读方式查询磁盘 `index/fts.sqlite`。内容哈希一致时不重建表；只有哈希不一致时才在内存中对照期望映像，且不把结果写回磁盘。默认热路径不是每次全量 SHA-256：同样大小且 mtime 被恢复的修改，要 `--full-verify` 或 `reindex --verify` 才查得出。不能据此宣称零冷启动延迟或大规模性能已验证。
 2. **评估集性质透明**：`tests/evaluate_memory.py` 包含 32 个公开可见的人工构造检索案例（混合模式正向召回 `23/23`，负向拒识 `9/9`，零误报）与 1,000 次工具读写/重试/替代操作回放。它是确定性工程回归基准，不代表独立盲测或千轮真实大模型对话的认知表现证明。
 3. **进程级崩溃恢复而非断电级存储引擎**：`.hfa-transaction.json` 保障进程异常退出或普通 I/O 错误时的多文件回滚一致性；直接绕过 CLI 手动乱改文件不参与事务保护。
+4. **子句级绑定与外部基准的真实范围**：`--bind-claims` / `claim_binding` 使用确定性正则与日期/数值校验（支持 `--reference-date YYYY-MM-DD`），在截断前将错配候选退回 `deferred`，但不等同于通用 NLI 蕴含证明；`benchmarks/general-memory-v1/run_hfa3.py` 用于独立隔离验证 `records` 与 `operational` 用例，不伪造未实现能力（如离线包导入导出或原生对话生成），不支持的能力明确报告为 `unsupported`。
 
 ---
 
@@ -229,5 +232,19 @@ python experiments/quota/cost_gate.py
 ```
 
 普通检查不会更新参考值；`--output` 可保存完整证据。它同时检查完整依据、范围与成本，采用7个开发者合成场景、4种HFA配置，保留单条查询反而增加补查的反例；不代表独立竞品排名或实际账户节省。细节见[接入与成本边界](docs/ai-integration.md#减少代理工具输出开销)。
+
+完整 `unittest` 回归与 `general-memory-v1` 独立基准（按需启用可选 `tiktoken`、本地语义模型与重排模型以覆盖全部用例）：
+
+```powershell
+# 运行全量单元测试（配置 HFA_TEST_SEMANTIC_MODEL / HFA_TEST_RERANKER_MODEL 与 tiktoken 后可覆盖此前跳过的用例）
+python -B -m unittest discover -s tests -v
+
+# 运行 general-memory-v1 基准（混合模式；不支持的原生生成与导出/硬删用例会诚实标为 unsupported）
+python -B benchmarks/general-memory-v1/run_hfa3.py --modes records,operational --retrieval-mode hybrid
+
+# 启用本地语义模型与重排模型运行基准（超大规模填充集按上限退回混合检索以控制耗时）
+$sh = Join-Path $env:LOCALAPPDATA 'HFA-Local-Semantic'
+python -B benchmarks/general-memory-v1/run_hfa3.py --modes records,operational --retrieval-mode semantic --semantic-model "$sh\model" --semantic-reranker "$sh\reranker-model" --max-scale-semantic-records 500
+```
 
 MIT License · 实事求是构建可审计、受预算约束的本地 AI 工程记忆。

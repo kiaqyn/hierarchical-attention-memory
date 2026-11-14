@@ -129,7 +129,7 @@ class MCPIntegrationTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual([m["id"] for m in result.structured_content["matches"]], [new_id])
                 self.assertIn("UTF-8-SIG", result.structured_content["memory_text"])
                 health = await restarted.call_tool("memory_health", {})
-                self.assertEqual(health.structured_content["total_topics"], 3)
+                self.assertEqual(health.structured_content["total_topics"], 2)
                 self.assertTrue((memory / f"chunks/{old_id}.json").is_file())
 
 

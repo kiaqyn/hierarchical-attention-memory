@@ -118,4 +118,12 @@ CLI 单独运行仍有冷启动；显式开启语义模式的 MCP 现在复用�
 - 正常服务关闭会回收工作进程。关闭时等待正在处理的有界调用结束；停止客户端等待不保证已完成的计数写入被撤销。进程被强杀时，既有事务恢复规则仍适用。
 - 写入与健康检查继续使用原有 CLI 子进程，默认词法服务不启动常驻语义模型。
 
+### 子句级事实约束绑定（`--bind-claims` / `claim_binding`）
+
+为降低“实体匹配但版本、年份、金额、时长或新旧状态混淆”的错配风险，纯标准库模块 `scripts/hfa_binding.py` 已接入主线 CLI、worker 与 MCP（默认关闭，不改变既有默认召回行为）：
+
+- **显式开启**：在记忆目录 `config.json` 中设置 `"claim_binding": true`（仅接受布尔值），或在 `recall` / `route` 时传入 `--bind-claims` / `--no-bind-claims` 与可选 `--reference-date YYYY-MM-DD`；MCP 启动支持 `--bind-claims` / `--no-bind-claims` 设服务默认值，工具 `recall_memory` 支持单次传入 `bind_claims` 与 `reference_date`。
+- **拦截位置与审计结果**：在按 `topic_limit` 与 `recall_token_budget` 截断之前，对当前主线允许或已 `--unlock` 解锁的候选正文（`title` 与 `summary`）执行子句级约束校验。错配候选会退回 `deferred` 并附 `reason: "claim_binding:<status>"`；结果新增 `claim_binding` 摘要（`--compact` 保留精简统计）。与 `--semantic-reranker` 同时使用时，`reference_date` 会透传至成对重排候选筛选。
+- **诚实边界**：基于确定性的术语、数值/单位（时长含 `ms`、百分比、金额、64 位哈希、年份、`changed to` / `now` 与相对日期）校验，不调用生成式大模型，也不是通用 NLI 蕴含证明。
+
 性能复验脚本：`experiments/local_semantic/benchmark_mcp_reuse.py`。用两个源码目录、同一本地模型和临时合成记忆比较真实 MCP 调用；磁盘向量预建，服务启动、首次查询与后续查询分开计时，同时核对结果正文、来源、排序和预算。它测调用开销，不是检索准确率或竞品排名。

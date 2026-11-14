@@ -63,4 +63,5 @@ def compact_recall(result):
         "status_check_due": result["status_check_due"],
         **({"turn_budget": result["turn_budget"]} if "turn_budget" in result else {}),
         **({"query_plan": _compact_query_plan(result["query_plan"])} if "query_plan" in result else {}),
+        **({"claim_binding": {k: result["claim_binding"][k] for k in ("enabled", "reference_date", "evaluated", "accepted_ids", "rejected_ids")}} if "claim_binding" in result else {}),
     }

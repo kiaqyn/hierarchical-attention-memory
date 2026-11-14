@@ -14,9 +14,10 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from pydantic import StrictInt, StrictStr
+    from pydantic import StrictBool, StrictInt, StrictStr
 except ImportError:
-    StrictInt = int  # --print-config still works without the optional SDK stack.
+    StrictBool = bool  # --print-config still works without the optional SDK stack.
+    StrictInt = int
     StrictStr = str
 
 CLI = Path(__file__).with_name("hfa_manager.py")
@@ -69,13 +70,17 @@ def _default_memory_dir(explicit: Path | None = None) -> Path:
 
 def create_server(memory_dir: Path | None = None, auto_init: bool = True,
                   semantic_model: Path | None = None, compact: bool = False,
-                  recall_text_only: bool = False, semantic_reranker: Path | None = None):
+                  recall_text_only: bool = False, semantic_reranker: Path | None = None,
+                  bind_claims: bool | None = None):
     from mcp.server import MCPServer
     from anyio import to_thread
     from mcp.server.mcpserver.exceptions import ToolError
 
     if semantic_reranker is not None and semantic_model is None:
         raise ValueError("--semantic-reranker requires --semantic-model")
+    if bind_claims is not None and type(bind_claims) is not bool:
+        raise ValueError("bind_claims must be a boolean or None")
+    default_bind_claims = bind_claims
     target = _default_memory_dir(memory_dir)
     if auto_init and not (target / "directory.md").is_file():
         if not target.exists() or (target.is_dir() and not any(target.iterdir())):
@@ -120,7 +125,7 @@ def create_server(memory_dir: Path | None = None, auto_init: bool = True,
         flags = []
         values = iter(args)
         for flag in values:
-            flags.append(flag if flag == "--json" else flag + "=" + next(values))
+            flags.append(flag if flag in ("--json", "--bind-claims", "--no-bind-claims") else flag + "=" + next(values))
         try:
             process = subprocess.run(
                 [sys.executable, "-B", str(CLI), command, str(root), *flags],
@@ -142,7 +147,9 @@ def create_server(memory_dir: Path | None = None, auto_init: bool = True,
     async def recall_memory(query: str, unlock_reason: str | None = None,
                       conversation_id: str | None = None, turn_id: str | None = None,
                             max_topics: StrictInt | None = None,
-                            refinement_queries: list[StrictStr] | None = None) -> dict[str, Any]:
+                            refinement_queries: list[StrictStr] | None = None,
+                            bind_claims: StrictBool | None = None,
+                            reference_date: StrictStr | None = None) -> dict[str, Any]:
         """Find relevant past decisions before answering. No hits means unknown, not permission to invent.
 
         Non-mainline/archived material requires an explicit purpose in unlock_reason.
@@ -209,6 +216,13 @@ def create_server(memory_dir: Path | None = None, auto_init: bool = True,
             args.extend(["--conversation-id", conversation_id])
         if turn_id is not None:
             args.extend(["--turn-id", turn_id])
+        effective_bind_claims = bind_claims if bind_claims is not None else default_bind_claims
+        if effective_bind_claims is True:
+            args.append("--bind-claims")
+        elif effective_bind_claims is False:
+            args.append("--no-bind-claims")
+        if reference_date is not None:
+            args.extend(["--reference-date", reference_date])
         if worker is not None:
             try:
                 # Shield cancellation while the bounded worker request completes;
@@ -216,7 +230,8 @@ def create_server(memory_dir: Path | None = None, auto_init: bool = True,
                 result = await to_thread.run_sync(lambda: worker.recall(
                     query=query, unlock=unlock_reason or None,
                     conversation_id=conversation_id, turn_id=turn_id, max_topics=max_topics,
-                    refinement_queries=refinement_queries))
+                    refinement_queries=refinement_queries, bind_claims=effective_bind_claims,
+                    reference_date=reference_date))
             except (WorkerError, OSError) as exc:
                 raise ToolError(str(exc)) from exc
         else:
@@ -243,6 +258,7 @@ def create_server(memory_dir: Path | None = None, auto_init: bool = True,
             "delivery": result["delivery"],
             "retrieval": result.get("retrieval", {"backend": "lexical"}),
             **({"query_plan": result["query_plan"]} if "query_plan" in result else {}),
+            **({"claim_binding": result["claim_binding"]} if "claim_binding" in result else {}),
             "summary_tokens": result["summary_tokens"],
             "summary_budget": result["summary_token_budget"],
             "profile_drift": result["profile_drift"],
@@ -304,6 +320,8 @@ def main():
                         help="Opt in to smaller recall metadata; preserve complete memory_text")
     parser.add_argument("--recall-text-only", action="store_true",
                         help="Opt in to one JSON text block for recall_memory; no structuredContent for this tool")
+    parser.add_argument("--bind-claims", action=argparse.BooleanOptionalAction, default=None,
+                        help="Default opt-in/out for clause-level claim binding on recall_memory")
     args = parser.parse_args()
     if args.semantic_reranker is not None and args.semantic_model is None:
         parser.error("--semantic-reranker requires --semantic-model")
@@ -322,6 +340,10 @@ def main():
             launch_args.append("--compact")
         if args.recall_text_only:
             launch_args.append("--recall-text-only")
+        if args.bind_claims is True:
+            launch_args.append("--bind-claims")
+        elif args.bind_claims is False:
+            launch_args.append("--no-bind-claims")
         print(json.dumps({"mcpServers": {"hfa-project-memory": {
             "command": str(Path(sys.executable).resolve()),
             "args": launch_args,
@@ -331,7 +353,7 @@ def main():
     try:
         server = create_server(args.memory_dir, auto_init=not args.no_auto_init,
                                semantic_model=args.semantic_model, semantic_reranker=args.semantic_reranker, compact=args.compact,
-                               recall_text_only=args.recall_text_only)
+                               recall_text_only=args.recall_text_only, bind_claims=args.bind_claims)
     except ImportError:
         print("Install requirements-mcp.txt in your project virtual environment first.", file=sys.stderr)
         return 1

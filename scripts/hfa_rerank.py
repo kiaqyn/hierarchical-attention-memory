@@ -4,10 +4,10 @@ Only prefiltered active-mainline candidates reach this module. No model download
 network, memory writes, answer generation, or unbounded candidate expansion.
 """
 import hashlib
+import importlib.util
 import json
 import math
 from pathlib import Path
-import re
 import sys
 
 MODEL = 'cross-encoder/mmarco-mMiniLMv2-L12-H384-v1'
@@ -19,6 +19,13 @@ MAX_PAIRS = 24
 MIN_DENSE_SCORE = .75
 MIN_SCORE = .6
 MIN_MARGIN = .2
+
+
+def _binding_module():
+    spec = importlib.util.spec_from_file_location('hfa_local_binding', Path(__file__).with_name('hfa_binding.py'))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def model_identity(directory):
@@ -34,32 +41,12 @@ def model_identity(directory):
 
 
 def fields_present(query, body):
-    """Conservative finite missing-field veto, not an entailment classifier."""
-    number = r'(?:\d+(?:[.,]\d+)?|[零〇一二两三四五六七八九十百千万亿]+)'
-    fields = (
-        (r'谁|哪位|\bwho\b', r'(?:由|批准人[:：]?|负责人[:：]?|approved by\s+|authorized by\s+)[^。；;\n]{1,35}(?:批准|确认|[。.;]|$)'),
-        (r'多少(?:钱|元|美元)|费用(?:是|为|多少)|预算(?:是|为|多少|额度)|how much|purchase price|cost in|spending budget|monthly budget|allocated|what amount',
-         rf'(?:[$¥￥]|\b(?:USD|CNY|RMB)\s*){number}|{number}\s*(?:元|美元|人民币|USD|CNY|RMB|dollars?)'),
-        (r'多久|几天|多长时间|how long|how many days|\blifetime\b|retention period',
-         rf'{number}\s*(?:天|日|小时|分钟|毫秒|秒|days?|hours?|minutes?|milliseconds?|seconds?)'),
-        (r'占比|比例|百分比|\b(?:percentage|fraction|share|percent)\b', rf'{number}\s*[%％]|百分之\s*{number}'),
-        (r'(?:实际|具体).{0,20}(?:哈希|校验值)|(?:哈希值|校验值).{0,8}(?:多少|什么)|(?:actual|exact).{0,25}(?:hash|digest|checksum)|hash value',
-         r'(?<![a-f0-9])[a-f0-9]{64}(?![a-f0-9])'),
-    )
-    for requested, value in fields:
-        if re.search(requested, query, re.I) and not re.search(value, body, re.I):
-            return False
-    if any(year not in body for year in re.findall(r'(?<!\d)(20\d{2})(?!\d)', query)):
-        return False
-    if (re.search(r'实际|实测|measured|observed|actually', query, re.I)
-            and re.search(r'计划|预计|目标|planned|expected|target', body, re.I)
-            and not re.search(r'实际|实测|验证|measured|observed|verified', body, re.I)):
-        return False
-    return True
+    """Conservative finite missing-field veto, shared with hfa_binding."""
+    return _binding_module().fields_present(query, body)
 
 
-def select_candidate(query, candidates):
-    """At most one candidate; never promote a weaker hit after a field veto."""
+def select_candidate(query, candidates, reference_date=None):
+    """At most one candidate; never promote a weaker hit after a binding veto."""
     if not candidates:
         return None
     if any(type(c['pair_score']) not in (int, float) or not math.isfinite(c['pair_score'])
@@ -74,7 +61,9 @@ def select_candidate(query, candidates):
         return None
     if len(ordered) > 1 and best['pair_score'] - ordered[1]['pair_score'] < MIN_MARGIN:
         return None
-    return best if fields_present(query, best['text']) else None
+    binding = _binding_module()
+    parsed_date = binding.parse_reference_date(reference_date)
+    return best if binding.binding_support(query, best['text'], reference_date=parsed_date)['allowed'] else None
 
 
 class PairSession:

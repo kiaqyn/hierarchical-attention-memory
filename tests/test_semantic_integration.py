@@ -33,7 +33,7 @@ class ActualSemanticTests(unittest.TestCase):
             first=self.cli(*arguments)
             self.assertIn(saved['id'],[x['id'] for x in first['selected']])
             self.assertEqual(first['retrieval']['backend'],'local_semantic')
-            self.assertEqual(first['retrieval']['encoded_documents'],2)
+            self.assertEqual(first['retrieval']['encoded_documents'],1)
             semantic_only=self.cli('recall',root,'--mode','semantic','--semantic-model',MODEL,
                  '--semantic-min-score','.80','--query',
                  'How did we get the missing Chinese characters to render instead of square placeholders?')

@@ -118,10 +118,12 @@ python scripts/hfa_manager.py tombstone ./memory --id S1 --reason "工作完成�
 ```powershell
 python scripts/hfa_manager.py reindex ./memory
 python scripts/hfa_manager.py reindex ./memory --verify
+python scripts/hfa_manager.py export ./memory --out bundle.json --json
+python scripts/hfa_manager.py import ./memory --bundle bundle.json --json
 python scripts/hfa_manager.py summarize ./memory --check
 ```
 
-旧版目录升级到 3.0 后先重建新增的正文检索索引，再使用。升级后若 `status` 提示缺少 `index/catalog.json` 或 `index/source-manifest.json`，运行 `reindex`。CLI 支持的命令有 `init`、`doctor`、`status`、`add-topic`、`tombstone`、`route`、`recall`、`reindex`、`summarize`、`semantic-index`。`doctor` 和默认的 `status --json` 都不返回 `summary.md` 正文；`status --json --include-text` 才包含它。`doctor` 不证明宿主已接入。`semantic-index` 只维护可删除的本地向量缓存，需要显式模型目录，默认召回不会调用它。不要虚构 `evidence`、`lock promote`、`lint`、`gc` 或裁决 API 已经存在。
+旧版目录升级到 3.0 后先重建新增的正文检索索引，再使用。升级后若 `status` 提示缺少 `index/catalog.json` 或 `index/source-manifest.json`，运行 `reindex`。CLI 支持的命令有 `init`、`doctor`、`status`、`add-topic`、`tombstone`、`route`、`recall`、`reindex`、`summarize`、`semantic-index`、`export`、`import`。`doctor` 和默认的 `status --json` 都不返回 `summary.md` 正文；`status --json --include-text` 才包含它。`doctor` 不证明宿主已接入。`semantic-index` 只维护可删除的本地向量缓存，需要显式模型目录，默认召回不会调用它。不要虚构 `evidence`、`lock promote`、`lint`、`gc` 或裁决 API 已经存在。
 
 `config.json` 的 `write_policy` 默认或缺省都是 `host`：普通回复仍要宿主本轮的 `memoryWriteAllowed: true`。`explicit` 只收结构化决定。`auto` 才允许在既有过滤之后保存普通回复，且“不要保存”和 `false` 仍然优先。改配置后运行 `reindex`。`session_retention` 与 `access_retention` 缺省表示不裁剪；新的最小模板才带上限。默认召回只看大小和 mtime。同样大小、并把 mtime 设回原值的修改，普通召回发现不了；字节校验用 `recall --full-verify` 或 `reindex --verify`。
 

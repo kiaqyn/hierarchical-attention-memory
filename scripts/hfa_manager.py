@@ -303,23 +303,35 @@ _NEGATION = re.compile(
     rf"\b(?:do\s+not|don'?t|no\s+need\s+to)\s+(?:\w+\s+)?{_RETRIEVAL_VERBS_EN}\b"
     rf"|^\s*(?:please\s+)?never\s+(?:\w+\s+)?{_RETRIEVAL_VERBS_EN}\b"
     r"|\b(?:exclude|excluding|skip|skipping|ignore|ignoring)\s+(?:the\s+)?(?:history|memory|memories|records?|notes?)\b"
-    r"|不要|不需要|无需|不用|不必|切勿|请勿|不查|不看"
+    r"|不查|不看"
+    rf"|(?:不要|不需要|无需|不用|不必|切勿|请勿)(?:再|去)?(?:查|看|找|搜|检索|提|翻|读|调取|调用|回忆|召回|参考|管|碰|涉及)"
+    rf"|(?:不要|不需要|无需|不用|不必|切勿|请勿).{{0,6}}(?:记忆|历史|旧记录|过去)"
     rf"|(?<![级区类特分识性派差告离辨鉴个格判])别{_RETRIEVAL_VERBS_ZH}"
     rf"|勿{_RETRIEVAL_VERBS_ZH}|禁止(?:查|看|找|搜|检索|调取|召回|读取)",
     re.I)
+_NEGATION_BARE_ZH = re.compile(r"不要|不需要|无需|不用|不必|切勿|请勿")
 
 def _positive_query(query):
-    clauses = re.split(r"[，。；;,\n!?！？]|但是|不过|而是|但|\b(?:but|however|instead)\b", query, flags=re.I)
-    return "，".join(clause for clause in clauses if clause and not _NEGATION.search(clause))
+    clauses = [clause for clause in re.split(r"[，。；;,\n!?！？]|但是|不过|而是|但|\b(?:but|however|instead)\b", query, flags=re.I) if clause.strip()]
+    kept = [clause for clause in clauses if not _NEGATION.search(clause)]
+    bare_kept = [clause for clause in kept if not _NEGATION_BARE_ZH.search(clause)]
+    if bare_kept:
+        return "，".join(bare_kept)
+    return "，".join(kept)
 
 
 # Small, auditable vocabulary; this is lexical expansion, not an embedding model.
 DEFAULT_ALIASES = [
     ["乱码", "中文变问号", "文字变成问号", "看不懂的符号", "mojibake", "garbled text"],
+    ["缺字", "豆腐块", "小方格", "方格", "missing-glyph", "missing glyph", "empty boxes"],
+    ["重复扣款", "收两次钱", "两次扣款", "duplicate charge", "charging twice", "charged twice", "idempotency"],
+    ["死锁", "进程假死", "互相等着不动", "全局锁", "卡死", "process hang", "deadlock", "waited on each other", "froze", "global lock"],
     ["部署", "上线", "deployment", "deploy"],
     ["备份", "backup"], ["并发", "同时写入", "concurrency"],
-    ["超时", "等太久", "timeout", "timed out"],
+    ["超时", "等太久", "timeout", "timed out", "timed-out"],
     ["回滚", "撤销更改", "撤回", "rollback"],
+    ["导入", "import", "imports"],
+    ["解析器", "parser", "parsers"],
 ]
 STOP_TERMS = set("the a an to of is are in on for with how what was were please find recall previous this that it and or my we do not should about 的是 之前 怎么 如何 这个 那个 我们 记得 请问 一下 什么 现在 继续 方案 问题 处理 需要 已经 可以 当时 后来 是否 结果".split())
 # Common English words: indexed and matchable, but never sufficient evidence alone.
@@ -329,7 +341,7 @@ whose our you your me us they them their its be been being am no not yes any som
 as if then than so such only also just very too here there out up down over under again once same own both each few
 nor off now let lets like via per vs etc ok help thanks thank know try trying work works working way ways thing things
 something anything one two give go going doing made said say says before after earlier previously last
-decide decided decision remember""".split())
+decide decided decision remember time continue mentioning retaining""".split())
 _ENGLISH_TERM = re.compile(r"[a-z][a-z0-9_.-]+")
 
 @functools.lru_cache(maxsize=4096)
@@ -343,7 +355,11 @@ def _search_terms_cached(text, custom_aliases, query=False):
                       lambda match: "".join(match.group().split()), text)
     else:
         text = _normalize_for_match(text)
-    terms = set(re.findall(r"[a-z0-9][a-z0-9_.-]*", text))
+    raw_tokens = re.findall(r"[a-z0-9][a-z0-9_.-]*", text)
+    if query:
+        terms = {tok.rstrip(".-") for tok in raw_tokens if tok.rstrip(".-")}
+    else:
+        terms = set(raw_tokens)
     for run in re.findall(r"[\u4e00-\u9fff]+", text):
         terms.update(run[i:i+2] for i in range(len(run)-1))
     terms = {t for t in terms if t not in STOP_TERMS and len(t) >= 2}
@@ -608,7 +624,7 @@ def _rank_content_exact(query, documents, config, fts_bytes=None):
         # explicitly separated matched words (启动 加载) into one clue. Repeated
         # words count once; overlapping bigrams inside 数据库 still form one clue.
         separate_cjk = set(re.findall(r"[\u4e00-\u9fff]+", unicodedata.normalize("NFKC", query))) & cjk
-        cjk_concepts = max(math.ceil(len(cjk) / 2), _separate_cjk_clues(separate_cjk))
+        cjk_concepts = max(math.ceil(len(cjk) / 2), _separate_cjk_clues(cjk))
         concepts = len(aliases) + len(english) + cjk_concepts
         strong = bool(aliases or english)  # includes 2–3 letter terms: API, CLI, Git, SQL
         if concepts == 0 or (len(shared) < 2 and not strong):
@@ -646,12 +662,34 @@ def _plural_forms(word):
     return tuple(sorted(f for f in forms if len(f) >= 4))
 
 
+def _word_variants(word):
+    forms = []
+    if word.endswith("ied") and len(word) > 4:
+        forms.append(word[:-3] + "y")
+    if word.endswith("ed") and len(word) > 4:
+        forms.extend((word[:-2], word[:-1]))
+        if len(word) > 5 and word[-3] == word[-4]:
+            forms.append(word[:-3])
+    if word.endswith("ing") and len(word) > 5:
+        forms.extend((word[:-3], word[:-3] + "e"))
+        if len(word) > 6 and word[-4] == word[-5]:
+            forms.append(word[:-4])
+    if word.endswith("ate") and len(word) >= 5:
+        forms.append(word[:-1] + "ion")
+    if word.endswith("ated") and len(word) >= 6:
+        forms.append(word[:-1] + "ion")
+    if word.endswith("ating") and len(word) >= 7:
+        forms.append(word[:-3] + "ion")
+    if word.endswith("ation") and len(word) >= 7:
+        forms.extend((word[:-3] + "e", word[:-3] + "ed", word[:-3] + "ing", word[:-5]))
+    return forms
+
 def _query_spelling_variant(query, vocabulary):
     def replace(match):
         word = match.group().lower()
         if word in vocabulary:
             return match.group()
-        choices = set(_plural_forms(word)) & vocabulary
+        choices = (set(_plural_forms(word)) | set(_word_variants(word))) & vocabulary
         if not choices:
             return match.group()
         return min(choices, key=lambda value: (abs(len(value) - len(word)), value))
@@ -683,25 +721,100 @@ def _short_literal_matches(query, documents, literal_documents):
     return matches
 
 
+def _split_doc_subtokens(raw_terms):
+    extra = set()
+    for raw in raw_terms:
+        clean = raw.rstrip(".-")
+        if any(sep in clean for sep in (".", "_", "-")):
+            for part in re.split(r"[._-]+", clean):
+                if len(part) >= 4 and not part.isdigit() and part not in STOP_TERMS:
+                    extra.add(part)
+    return extra
+
+
+_HYPHEN_COMPOUND_RE = re.compile(
+    r"(?<![_/\\])([A-Za-z]{2,})-([A-Za-z]{2,}(?:-[A-Za-z]{2,})*)(?![_/\\])"
+)
+
+
+def _hyphen_split_query(query):
+    return _HYPHEN_COMPOUND_RE.sub(lambda m: m.group(0).replace("-", " "), query)
+
+
+def _filter_hyphen_hits(orig_query, hits, expanded_documents):
+    compounds = [m.group(0).lower() for m in _HYPHEN_COMPOUND_RE.finditer(orig_query)]
+    if not compounds:
+        return hits
+    required_groups = [
+        [p for p in comp.split("-") if len(p) >= 2 and p not in STOP_TERMS and p not in GENERIC_TERMS]
+        for comp in compounds
+    ]
+    kept = []
+    for cid, score, terms in hits:
+        doc_terms = set(expanded_documents[cid]["terms"])
+        ok = True
+        for comp, parts in zip(compounds, required_groups):
+            if comp in doc_terms:
+                continue
+            if parts and not all(p in doc_terms for p in parts):
+                ok = False
+                break
+        if ok:
+            kept.append((cid, score, terms))
+    return kept
+
+
 def _rank_content(query, documents, config, fts_bytes=None, *, literal_documents=None):
     """Bounded query normalization and conjunctive subqueries; same source/budgets."""
+    documents = {
+        cid: {**doc, "terms": sorted({t for raw in doc["terms"] for t in (raw, raw.rstrip(".-")) if t})}
+        for cid, doc in documents.items()
+    }
+    raw_vocab = set().union(*(set(doc["terms"]) for doc in documents.values())) if documents else set()
+    expanded_documents = {
+        cid: {**doc, "terms": sorted(set(doc["terms"]) | _split_doc_subtokens(doc["terms"]))}
+        for cid, doc in documents.items()
+    }
+    vocabulary = set().union(*(set(doc["terms"]) for doc in expanded_documents.values())) if expanded_documents else set()
+    subtoken_vocab = vocabulary - raw_vocab
     baseline = _rank_content_exact(query, documents, config, fts_bytes)
-    vocabulary = set().union(*(set(doc["terms"]) for doc in documents.values())) if documents else set()
-    alternative = _query_spelling_variant(query, vocabulary)
     merged = {cid: (score, set(terms)) for cid, score, terms in baseline}
     ceiling = min((score for _, score, _ in baseline), default=1.0) * .8
-    def supplement(rows, factor):
+    def supplement(rows, factor, *, use_ceiling=True):
         for cid, score, terms in rows:
             if cid in merged:
                 continue  # Preserve established full-query ordering and evidence.
-            merged[cid] = (min(score * factor, ceiling), set(terms))
+            capped = min(score * factor, ceiling) if use_ceiling else score * factor
+            merged[cid] = (capped, set(terms))
+    def exact_with_subtokens(subquery, *, use_ceiling=True, factor=1.0, filter_from=None):
+        hits = list(_rank_content_exact(subquery, documents, config, fts_bytes))
+        if filter_from is not None:
+            hits = _filter_hyphen_hits(filter_from, hits, expanded_documents)
+        if hits:
+            supplement(hits, factor, use_ceiling=use_ceiling)
+        if subtoken_vocab and (_search_terms(subquery, config, query=True) & subtoken_vocab):
+            sub_hits = _rank_content_exact(subquery, expanded_documents, config, None)
+            if filter_from is not None:
+                sub_hits = _filter_hyphen_hits(filter_from, sub_hits, expanded_documents)
+            if sub_hits:
+                supplement(sub_hits, factor, use_ceiling=use_ceiling)
+        return hits
+    if subtoken_vocab and (_search_terms(query, config, query=True) & subtoken_vocab):
+        supplement(_rank_content_exact(query, expanded_documents, config, None), 1.0, use_ceiling=False)
+    hyphen_variant = _hyphen_split_query(query)
+    if hyphen_variant != query:
+        exact_with_subtokens(hyphen_variant, use_ceiling=False, factor=.85, filter_from=query)
+    alternative = _query_spelling_variant(query, vocabulary)
     if alternative != query:
-        supplement(_rank_content_exact(alternative, documents, config, fts_bytes), .8)
+        exact_with_subtokens(alternative, use_ceiling=True, factor=.8)
+    alt_hyphen = _hyphen_split_query(alternative)
+    if alt_hyphen != alternative and alt_hyphen != hyphen_variant:
+        exact_with_subtokens(alt_hyphen, use_ceiling=True, factor=.8, filter_from=alternative)
     if not merged and literal_documents is not None:
-        supplement(_short_literal_matches(query, documents, literal_documents), 1)
+        supplement(_short_literal_matches(query, expanded_documents, literal_documents), 1)
     pieces = list(dict.fromkeys(part.strip() for part in
-        re.split(r"\band\b|以及|[和与；;]", query, maxsplit=3, flags=re.I) if part.strip()))
-    if 2 <= len(pieces) <= 4:
+        re.split(r",\s+and\b|\band\b|以及|并且|[和与且、；;]", query, maxsplit=4, flags=re.I) if part.strip()))
+    if 2 <= len(pieces) <= 5:
         groups = []
         for piece in pieces:
             # A request for "cipher choice" is about cipher, not any saved choice.
@@ -710,9 +823,17 @@ def _rank_content(query, documents, config, fts_bytes=None, *, literal_documents
             if not piece.strip():
                 continue
             piece = _query_spelling_variant(piece, vocabulary)
-            hits = _rank_content_exact(piece, documents, config, fts_bytes)
+            hits = list(_rank_content_exact(piece, documents, config, fts_bytes))
+            if subtoken_vocab and (_search_terms(piece, config, query=True) & subtoken_vocab):
+                hits.extend(_rank_content_exact(piece, expanded_documents, config, None))
+            piece_hyphen = _hyphen_split_query(piece)
+            if piece_hyphen != piece:
+                ph_hits = list(_rank_content_exact(piece_hyphen, documents, config, fts_bytes))
+                if subtoken_vocab and (_search_terms(piece_hyphen, config, query=True) & subtoken_vocab):
+                    ph_hits.extend(_rank_content_exact(piece_hyphen, expanded_documents, config, None))
+                hits.extend(_filter_hyphen_hits(piece, ph_hits, expanded_documents))
             if not hits and literal_documents is not None:
-                hits = _short_literal_matches(piece, documents, literal_documents)
+                hits = _short_literal_matches(piece, expanded_documents, literal_documents)
             if hits:
                 groups.append(hits)
         # One vaguely related clause or repeated clues must not widen a miss.
@@ -777,6 +898,9 @@ def _config(root):
     _session_policy(config)
     _access_policy(config)
     _write_policy_name(config.get("write_policy", "host"), strict=True)
+    claim_binding = config.get("claim_binding", False)
+    if type(claim_binding) is not bool:
+        raise MemoryError("claim_binding must be a boolean")
     return config
 
 def _write_policy_name(value, *, strict):
@@ -1431,6 +1555,380 @@ def cmd_tombstone(root, branch_id, hit_words=None, reason=None):
     print(f"[OK] Tombstoned {branch_id}; audit event committed")
     return 0
 
+EXPORT_SCHEMA = "hfa.export.v1"
+EXPORT_SCHEMA_VERSION = 1
+EXPORT_FORMAT = "hfa-portable-bundle"
+
+def _canonical_bundle_digest(payload_without_digest):
+    canonical = json.dumps(payload_without_digest, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+def _validate_import_bundle(bundle):
+    if not isinstance(bundle, dict):
+        raise MemoryError("Invalid export bundle: expected JSON object")
+    schema = bundle.get("schema")
+    if schema != EXPORT_SCHEMA:
+        raise MemoryError(f"Unsupported export bundle schema: {schema!r}; expected {EXPORT_SCHEMA!r}")
+    version = bundle.get("schema_version")
+    if type(version) is not int or version < 1:
+        raise MemoryError(f"Invalid export bundle schema_version: {version!r}")
+    if version > EXPORT_SCHEMA_VERSION:
+        raise MemoryError(
+            f"Unsupported future export bundle schema_version {version}; "
+            f"this reader supports <= {EXPORT_SCHEMA_VERSION}"
+        )
+    min_ver = bundle.get("min_reader_version")
+    if min_ver is not None and (type(min_ver) is not int or min_ver > EXPORT_SCHEMA_VERSION):
+        raise MemoryError(f"Unsupported min_reader_version {min_ver!r}; reader supports <= {EXPORT_SCHEMA_VERSION}")
+    if bundle.get("format") != EXPORT_FORMAT:
+        raise MemoryError(f"Unsupported export bundle format: {bundle.get('format')!r}")
+    digest = bundle.get("digest")
+    if not isinstance(digest, str) or not digest.startswith("sha256:"):
+        raise MemoryError("Missing or malformed export bundle digest")
+    payload_copy = {k: v for k, v in bundle.items() if k != "digest"}
+    expected = _canonical_bundle_digest(payload_copy)
+    if digest != expected:
+        raise MemoryError("Export bundle digest verification failed")
+    records = bundle.get("records")
+    projects = bundle.get("projects", [])
+    tombstones = bundle.get("tombstones", [])
+    if not isinstance(records, list) or not isinstance(projects, list) or not isinstance(tombstones, list):
+        raise MemoryError("Malformed export bundle collections")
+    if not all(isinstance(x, str) and x.strip() for x in tombstones):
+        raise MemoryError("Malformed tombstones in export bundle")
+    for proj in projects:
+        if not isinstance(proj, dict) or not isinstance(proj.get("id"), str) or not proj["id"].strip():
+            raise MemoryError("Malformed project entry in export bundle")
+    seen_ids = set()
+    for rec in records:
+        if not isinstance(rec, dict):
+            raise MemoryError("Malformed record entry in export bundle")
+        rid = rec.get("id")
+        if not isinstance(rid, str) or not rid.strip() or rid in seen_ids:
+            raise MemoryError(f"Invalid or duplicate export record id: {rid!r}")
+        seen_ids.add(rid)
+        if not isinstance(rec.get("project"), str) or not rec["project"].strip():
+            raise MemoryError(f"Invalid record project in {rid}")
+        if not isinstance(rec.get("title"), str):
+            raise MemoryError(f"Invalid record title in {rid}")
+        summary = rec.get("summary")
+        hitwords = rec.get("hitwords", [])
+        if not isinstance(summary, list) or not summary or not all(isinstance(x, str) for x in summary):
+            raise MemoryError(f"Invalid record summary in {rid}")
+        if not isinstance(hitwords, list) or not all(isinstance(x, str) for x in hitwords):
+            raise MemoryError(f"Invalid record hitwords in {rid}")
+        if not isinstance(rec.get("source", ""), str) or not isinstance(rec.get("supersedes", []), list):
+            raise MemoryError(f"Invalid record provenance in {rid}")
+        status = rec.get("status", "ACTIVE")
+        if not isinstance(status, str) or not status.strip() or len(status) > 64:
+            raise MemoryError(f"Invalid record status in {rid}")
+
+def _order_import_records(records):
+    by_id = {rec["id"]: rec for rec in records}
+    ordered, visiting, visited = [], set(), set()
+    def visit(rid):
+        if rid in visited:
+            return
+        if rid in visiting:
+            raise MemoryError(f"Cycle detected in export bundle supersedes graph at {rid}")
+        visiting.add(rid)
+        for old_id in by_id[rid].get("supersedes", []):
+            if old_id in by_id:
+                visit(old_id)
+        visiting.remove(rid)
+        visited.add(rid)
+        ordered.append(by_id[rid])
+    for rec in sorted(records, key=lambda r: (r.get("epoch", 1), r.get("number", 0), r["id"])):
+        visit(rec["id"])
+    return ordered
+
+def cmd_export(root, out_path=None, *, include_tombstoned=True, json_output=False, return_result=False):
+    root = Path(root).resolve()
+    with _hfa_lock(root):
+        state = parse_directory_nodes(root / "directory.md")
+        config = _config(root)
+        main = _guard_mainline(state, config["active_mainline"])
+        chunks = _load_verified_chunks(root, state, full_verify=True)
+        tombstones = sorted(n["id"] for n in state["nodes"]["TOMBSTONED"])
+        tomb_set = set(tombstones)
+        exported_projects = []
+        for tier in ("MAX", "MEDIUM", "TOMBSTONED"):
+            for n in sorted(state["nodes"][tier], key=lambda item: item["id"]):
+                if not include_tombstoned and (tier == "TOMBSTONED" or n["id"] in tomb_set):
+                    continue
+                rel = n["path"]
+                content = _read_utf8(root / rel) if n.get("exists") and (root / rel).is_file() else ""
+                exported_projects.append({
+                    "id": n["id"],
+                    "tier": tier,
+                    "path": rel,
+                    "status": n["status"],
+                    "content": content,
+                })
+        exported_records = []
+        filtered = [
+            c for c in sorted(chunks, key=lambda item: (item["epoch"], item["number"], item["id"]))
+            if include_tombstoned or (c["project"] not in tomb_set and c["status"] != "TOMBSTONED")
+        ]
+        kept_ids = {c["id"] for c in filtered}
+        for c in filtered:
+            rec = {
+                "id": c["id"],
+                "epoch": c["epoch"],
+                "number": c["number"],
+                "project": c["project"],
+                "title": c["title"],
+                "summary": list(c["summary"]),
+                "hitwords": list(c["hitwords"]),
+                "status": c["status"],
+                "source": c.get("source", ""),
+                "supersedes": [old_id for old_id in c.get("supersedes", []) if old_id in kept_ids],
+            }
+            if c.get("created_at") is not None:
+                rec["created_at"] = c["created_at"]
+            if c.get("request_id") is not None:
+                rec["request_id"] = c["request_id"]
+                rec["request_digest"] = c.get("request_digest")
+            exported_records.append(rec)
+        payload = {
+            "schema": EXPORT_SCHEMA,
+            "schema_version": EXPORT_SCHEMA_VERSION,
+            "format": EXPORT_FORMAT,
+            "active_mainline": main["id"],
+            "config": {
+                "active_mainline": config["active_mainline"],
+                "router_token_budget": config["router_token_budget"],
+                "recall_token_budget": config["recall_token_budget"],
+                "summary_token_budget": config["summary_token_budget"],
+                "max_recall_topics": config["max_recall_topics"],
+            },
+            "projects": exported_projects,
+            "tombstones": tombstones if include_tombstoned else [],
+            "records": exported_records,
+        }
+        payload["digest"] = _canonical_bundle_digest(payload)
+    if out_path is not None:
+        _atomic_write(Path(out_path), (_json(payload) + "\n").encode("utf-8"))
+    if return_result:
+        return payload
+    if out_path is None:
+        print(_json(payload))
+    elif json_output:
+        print(_json({
+            "status": "ok",
+            "schema": EXPORT_SCHEMA,
+            "schema_version": EXPORT_SCHEMA_VERSION,
+            "out": str(out_path),
+            "records": len(exported_records),
+            "projects": len(exported_projects),
+            "tombstones": payload["tombstones"],
+            "digest": payload["digest"],
+        }))
+    else:
+        print(f"[OK] Exported {len(exported_records)} record(s) to {out_path}")
+    return 0
+
+def cmd_import(root, bundle_path, *, json_output=False, return_result=False):
+    root = Path(root).resolve()
+    try:
+        raw_bundle = _read_utf8(Path(bundle_path))
+        bundle = json.loads(raw_bundle)
+    except (OSError, ValueError, UnicodeError) as exc:
+        raise MemoryError(f"Failed to read export bundle {bundle_path}: {exc}") from exc
+    _validate_import_bundle(bundle)
+    ordered_records = _order_import_records(bundle["records"])
+    tomb_set = set(bundle.get("tombstones", []))
+
+    with _hfa_lock(root):
+        state = parse_directory_nodes(root / "directory.md")
+        config = _config(root)
+        main = _guard_mainline(state, config["active_mainline"])
+        if state["missing_targets"]:
+            raise MemoryError(f"Memory directory has missing targets before import: {state['missing_targets']}")
+        existing_chunks = _load_verified_chunks(root, state)
+
+        known_nodes = {
+            n["id"]: (tier, n)
+            for tier, group in state["nodes"].items()
+            if tier in ("MAX", "MEDIUM", "TOMBSTONED")
+            for n in group
+        }
+        bundle_mainline = bundle.get("active_mainline")
+        updates = {}
+        dir_text = _read_utf8(root / "directory.md")
+        dir_lines = dir_text.splitlines()
+
+        proj_meta = {p["id"]: p for p in bundle.get("projects", [])}
+        needed_projects = []
+        for p in bundle.get("projects", []):
+            if p["id"] != bundle_mainline and p["id"] not in known_nodes:
+                needed_projects.append(p)
+        for rec in ordered_records:
+            rp = rec["project"]
+            if rp == bundle_mainline and rp not in known_nodes:
+                continue
+            if rp not in known_nodes and rp not in {p["id"] for p in needed_projects}:
+                needed_projects.append(proj_meta.get(rp, {"id": rp, "tier": "TOMBSTONED" if rp in tomb_set else "MEDIUM"}))
+
+        for proj in needed_projects:
+            pid = _inline(proj["id"])
+            if not pid or pid != proj["id"] or not re.fullmatch(r"[A-Za-z0-9._-]+", pid):
+                raise MemoryError(f"Unsafe project id in export bundle: {proj['id']!r}")
+            raw_rel = proj.get("path") or f"branches/{pid}.md"
+            if not isinstance(raw_rel, str) or not raw_rel.startswith("branches/") or not raw_rel.endswith(".md"):
+                raw_rel = f"branches/{pid}.md"
+            _safe_path(root, raw_rel)
+            is_tomb = pid in tomb_set or proj.get("status") == "TOMBSTONED" or proj.get("tier") == "TOMBSTONED"
+            tier_label = "TOMBSTONED" if is_tomb else "MEDIUM"
+            desc = "归档导入分支" if is_tomb else "导入分支"
+            if not (root / raw_rel).exists():
+                updates[raw_rel] = proj.get("content") or f"# {pid}\n"
+            dir_lines.append(f"* **[{pid}]** [`{pid}`]({raw_rel}) ➔ `{tier_label}` | {desc} `[命中词: {pid}]`")
+            known_nodes[pid] = (tier_label, {"id": pid, "path": raw_rel, "status": tier_label, "exists": True})
+
+        if len(dir_lines) != len(dir_text.splitlines()):
+            new_dir_text = "\n".join(dir_lines) + "\n"
+            updates["directory.md"] = new_dir_text
+            final_dir_override = new_dir_text
+        else:
+            final_dir_override = dir_text
+
+        m_epoch = re.fullmatch(r"epoch_(\d+)", state["active_epoch"])
+        active_epoch = int(m_epoch.group(1)) if m_epoch else 1
+        max_chunk_seq = max(
+            (int(m.group(1)) for c in existing_chunks if (m := re.fullmatch(r"chunk_(\d+)", c["id"]))),
+            default=0,
+        )
+        next_num_by_epoch = {}
+        for c in existing_chunks:
+            next_num_by_epoch[c["epoch"]] = max(next_num_by_epoch.get(c["epoch"], 0), c["number"])
+
+        by_req_id = {c["request_id"]: c for c in existing_chunks if c.get("request_id")}
+        by_fingerprint = {
+            (c["project"], c["title"], tuple(c["summary"]), tuple(c["hitwords"]), c.get("source", "")): c
+            for c in existing_chunks
+        }
+        all_chunks = list(existing_chunks)
+        by_id = {c["id"]: c for c in all_chunks}
+        replaced_ids = {old_id for c in all_chunks for old_id in c.get("supersedes", [])}
+        id_map = {}
+        added_ids = []
+        skipped_existing = []
+        touched_epochs = set()
+
+        for rec in ordered_records:
+            raw_proj = rec["project"]
+            target_proj = main["id"] if (raw_proj == bundle_mainline and raw_proj not in known_nodes) else raw_proj
+            if target_proj not in known_nodes:
+                raise MemoryError(f"Unknown project {target_proj!r} in export record {rec['id']}")
+            canon_rec = {
+                "project": target_proj,
+                "title": rec["title"],
+                "summary": list(rec["summary"]),
+                "hitwords": list(rec["hitwords"]),
+                "source": rec.get("source", ""),
+                "status": rec.get("status", "ACTIVE"),
+            }
+            rec_sha = hashlib.sha256(
+                json.dumps(canon_rec, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+            ).hexdigest()
+            req_id = rec.get("request_id") or f"import:{rec_sha[:24]}"
+            if len(req_id) > 120:
+                req_id = f"import:{rec_sha[:24]}"
+            req_digest = rec.get("request_digest") or rec_sha
+            fp = (target_proj, rec["title"], tuple(rec["summary"]), tuple(rec["hitwords"]), rec.get("source", ""))
+
+            existing_match = by_req_id.get(req_id)
+            if existing_match is None and rec.get("request_id") is None:
+                existing_match = by_fingerprint.get(fp)
+            if existing_match is not None:
+                id_map[rec["id"]] = existing_match["id"]
+                skipped_existing.append({"source_id": rec["id"], "target_id": existing_match["id"]})
+                continue
+
+            mapped_supersedes = []
+            min_epoch = 1
+            for old_id in rec.get("supersedes", []):
+                target_old = id_map.get(old_id, old_id)
+                old_chunk = by_id.get(target_old)
+                if old_chunk is None or old_chunk["project"] != target_proj or target_old in replaced_ids:
+                    raise MemoryError(f"Invalid supersession target {old_id!r} for imported record {rec['id']}")
+                mapped_supersedes.append(target_old)
+                replaced_ids.add(target_old)
+                min_epoch = max(min_epoch, old_chunk["epoch"])
+
+            rec_epoch = rec.get("epoch", active_epoch)
+            if type(rec_epoch) is not int or rec_epoch < 1:
+                rec_epoch = active_epoch
+            target_epoch = max(rec_epoch, min_epoch)
+            next_num = next_num_by_epoch.get(target_epoch, 0) + 1
+            next_num_by_epoch[target_epoch] = next_num
+
+            max_chunk_seq += 1
+            new_id = f"chunk_{max_chunk_seq:04d}"
+            chunk_payload = {
+                "id": new_id,
+                "epoch": target_epoch,
+                "number": next_num,
+                "project": target_proj,
+                "title": rec["title"],
+                "summary": list(rec["summary"]),
+                "hitwords": list(rec["hitwords"]),
+                "status": rec.get("status", "ACTIVE"),
+                "source": rec.get("source", ""),
+                "supersedes": mapped_supersedes,
+                "request_id": req_id,
+                "request_digest": req_digest,
+            }
+            if rec.get("created_at") is not None:
+                chunk_payload["created_at"] = rec["created_at"]
+
+            rel_chunk = f"chunks/{new_id}.json"
+            updates[rel_chunk] = _json(chunk_payload) + "\n"
+            normalized_chunk = {
+                **chunk_payload,
+                "topic_id": f"Topic#{next_num:02d}",
+                "file": rel_chunk,
+            }
+            all_chunks.append(normalized_chunk)
+            by_id[new_id] = normalized_chunk
+            by_req_id[req_id] = normalized_chunk
+            by_fingerprint.setdefault(fp, normalized_chunk)
+            id_map[rec["id"]] = new_id
+            added_ids.append(new_id)
+            touched_epochs.add(target_epoch)
+
+        if updates:
+            final_state = parse_directory_nodes(root / "directory.md", text_override=final_dir_override)
+            if not final_state["within_budget"]:
+                raise MemoryError("Imported branches exceed router_token_budget")
+            summary_upds = {}
+            for ep in sorted(touched_epochs):
+                summary_upds.update(_summary_updates(root, all_chunks, ep))
+            all_pre_derived = {**updates, **summary_upds}
+            derived_upds = _derived(root, final_state, all_chunks, overrides=all_pre_derived, include_fts=True)
+            all_commit = {**all_pre_derived, **derived_upds}
+            for rel_target in all_commit:
+                _safe_path(root, rel_target).parent.mkdir(parents=True, exist_ok=True)
+            _commit(root, all_commit)
+            _refresh_manifest_locked(root)
+
+    summary = {
+        "status": "ok",
+        "added": len(added_ids),
+        "skipped_existing": len(skipped_existing),
+        "added_ids": added_ids,
+        "id_map": id_map,
+        "total_records": len(all_chunks),
+    }
+    if return_result:
+        return summary
+    if json_output:
+        print(_json(summary))
+    else:
+        print(f"[OK] Imported {len(added_ids)} record(s) (skipped {len(skipped_existing)} existing)")
+    return 0
+
 def _next_turn(root, conversation_id, turn_id, interval, session_policy=None):
     """IDs are host-supplied; missing IDs never masquerade as real chat turns."""
     for value in (conversation_id, turn_id):
@@ -1571,12 +2069,106 @@ def _semantic_module():
 
 
 @functools.lru_cache(maxsize=1)
+def _binding_module():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("hfa_local_binding", Path(__file__).with_name("hfa_binding.py"))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@functools.lru_cache(maxsize=1)
 def _rerank_module():
     import importlib.util
     spec = importlib.util.spec_from_file_location("hfa_local_rerank", Path(__file__).with_name("hfa_rerank.py"))
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+_DATE_MONTH_MAP = {
+    "jan": 1, "january": 1, "feb": 2, "february": 2, "mar": 3, "march": 3,
+    "apr": 4, "april": 4, "may": 5, "jun": 6, "june": 6, "jul": 7, "july": 7,
+    "aug": 8, "august": 8, "sep": 9, "sept": 9, "september": 9,
+    "oct": 10, "october": 10, "nov": 11, "november": 11, "dec": 12, "december": 12,
+}
+_HISTORICAL_POINT_CUE = re.compile(
+    r"回顾|当时|那[天日时]|截止|历史|旧[版方]|曾[经用]?|as\s+of|at\s+that\s+time|back\s+on|looking\s+back|historical\s+access|point[- ]in[- ]time|was\s+current|were\s+current|recommended\s+then",
+    re.I,
+)
+
+
+def _extract_calendar_dates(text, default_year=2000):
+    found = []
+    for m in re.finditer(r"(?<!\d)(\d{4})-(\d{1,2})-(\d{1,2})(?!\d)", text):
+        try:
+            found.append((True, dt.date(int(m.group(1)), int(m.group(2)), int(m.group(3)))))
+        except ValueError:
+            pass
+    for m in re.finditer(r"(?:(\d{4})\s*年\s*)?(1[0-2]|0?[1-9])\s*月\s*(3[01]|[12]\d|0?[1-9])\s*[日号]?", text):
+        y = int(m.group(1)) if m.group(1) else default_year
+        try:
+            found.append((bool(m.group(1)), dt.date(y, int(m.group(2)), int(m.group(3)))))
+        except ValueError:
+            pass
+    for m in re.finditer(
+        r"\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(3[01]|[12]\d|0?[1-9])(?:st|nd|rd|th)?(?:,?\s*(\d{4}))?\b",
+        text, re.I,
+    ):
+        month = _DATE_MONTH_MAP[m.group(1).lower()]
+        y = int(m.group(3)) if m.group(3) else default_year
+        try:
+            found.append((bool(m.group(3)), dt.date(y, month, int(m.group(2)))))
+        except ValueError:
+            pass
+    return found
+
+
+def _date_gt(rec_item, target_item, explicit_ref_year=False):
+    rec_has_year, rec_date = rec_item
+    tgt_has_year, tgt_date = target_item
+    if (rec_has_year and tgt_has_year) or (not rec_has_year and not tgt_has_year) or explicit_ref_year:
+        return rec_date > tgt_date
+    return (rec_date.month, rec_date.day) > (tgt_date.month, tgt_date.day)
+
+
+def _point_in_time_target_date(query, unlock, reference_date=None):
+    if not (unlock and unlock.strip()):
+        return None
+    if not _HISTORICAL_POINT_CUE.search(query):
+        return None
+    default_year = reference_date.year if reference_date is not None else 2000
+    dates = _extract_calendar_dates(query, default_year=default_year)
+    if not dates:
+        return None
+    return (dates[0], reference_date is not None)
+
+
+def _chunk_effective_dates(chunk, default_year=2000):
+    title_dates = _extract_calendar_dates(chunk.get("title", ""), default_year=default_year)
+    if title_dates:
+        return title_dates
+    for line in chunk.get("summary", []):
+        for seg in re.split(r"[。；;!?\n]+", line):
+            seg_dates = _extract_calendar_dates(seg, default_year=default_year)
+            if seg_dates:
+                return seg_dates
+    return []
+
+
+def _postdating_chunk_ids(chunks, mainline, historical_target, reference_date=None):
+    if historical_target is None:
+        return set()
+    target_item, explicit_ref_year = historical_target
+    default_year = reference_date.year if reference_date is not None else 2000
+    postdating = set()
+    for c in chunks:
+        if c["project"] != mainline or c["status"] != "ACTIVE":
+            continue
+        dates = _chunk_effective_dates(c, default_year=default_year)
+        if dates and all(_date_gt(d, target_item, explicit_ref_year) for d in dates):
+            postdating.add(c["id"])
+    return postdating
 
 
 def _semantic_snapshot_locked(root, active_mainline=None):
@@ -1591,7 +2183,8 @@ def _semantic_snapshot_locked(root, active_mainline=None):
 
 def _prepare_semantic(root, model_dir, active_mainline=None, query=None,
                       min_score=.875, min_margin=0, verify=False, runtime=None,
-                      *, refinement_queries=None, reranker_model=None, reranker_runtime=None):
+                      *, refinement_queries=None, reranker_model=None, reranker_runtime=None,
+                      reference_date=None, historical_target_date=None):
     if model_dir is None:
         raise MemoryError("Explicit local --semantic-model/--model-dir is required")
     if (type(min_score) not in (int, float) or not math.isfinite(min_score) or not -1 <= min_score <= 1
@@ -1609,6 +2202,21 @@ def _prepare_semantic(root, model_dir, active_mainline=None, query=None,
             raise MemoryError("Reranker runtime is bound to a different model directory")
     with _hfa_lock(root):
         state, config = _semantic_snapshot_locked(root, active_mainline)
+        postdating_ids, hist_docs = set(), []
+        if historical_target_date is not None:
+            all_chunks = _load_verified_chunks(root, state)
+            postdating_ids = _postdating_chunk_ids(all_chunks, state["mainline"], historical_target_date, reference_date)
+            active_replaced = {old for c in all_chunks for old in c["supersedes"] if c["id"] not in postdating_ids}
+            cached_ids = {d["id"] for d in state["documents"]}
+            hist_docs = [
+                {"id": c["id"], "text": _chunk_text(c)}
+                for c in all_chunks
+                if c["project"] == state["mainline"]
+                and c["status"] == "ACTIVE"
+                and c["id"] not in postdating_ids
+                and c["id"] not in active_replaced
+                and c["id"] not in cached_ids
+            ]
         relative = f"index/semantic-{state['mainline']}.json"
         path = _safe_path(root, relative)
         try:
@@ -1623,7 +2231,21 @@ def _prepare_semantic(root, model_dir, active_mainline=None, query=None,
     reused = runtime.loaded
     encode = runtime.encode
     cache, info = module.prepare_cache(state, previous, identity, encode)
+    search_cache = cache
+    extra_texts = {}
     queries = [query] + (refinement_queries or []) if query else []
+    if historical_target_date is not None and queries:
+        search_rows = {k: v for k, v in cache["rows"].items() if k not in postdating_ids}
+        if hist_docs:
+            hist_vectors = encode([d["text"] for d in hist_docs], "passage")
+            if len(hist_vectors) != len(hist_docs):
+                raise MemoryError("Semantic encoder returned the wrong number of passage vectors")
+            for doc, vec in zip(hist_docs, hist_vectors):
+                search_rows[doc["id"]] = {"source_sha256": module.digest(doc["text"]), "vector": vec}
+                extra_texts[doc["id"]] = doc["text"]
+        payload = {k: v for k, v in cache.items() if k != "checksum"}
+        payload["rows"] = dict(sorted(search_rows.items()))
+        search_cache = {**payload, "checksum": module.digest(payload)}
     ranked, query_matches, rerank_matches, rerank_info = [], {}, {}, {}
     if queries:
         # At most four validated directions share one encoder call and cache.
@@ -1631,18 +2253,19 @@ def _prepare_semantic(root, model_dir, active_mainline=None, query=None,
         vectors = encode(queries, "query")
         if len(vectors) != len(queries):
             raise MemoryError("Semantic encoder returned the wrong number of query vectors")
-        rankings = [module.rank(cache, vector, min_score, min_margin,
+        rankings = [module.rank(search_cache, vector, min_score, min_margin,
                                max(8, config["max_recall_topics"])) for vector in vectors]
         if pair_module is not None:
             # Preserve dense-gated hits. Only an empty direction can receive a
             # separately gated pair-relevance candidate. Explicit refinements
             # take precedence over rechecking a possibly vague original query.
-            texts = {doc["id"]: doc["text"] for doc in state["documents"]}
+            texts = {doc["id"]: doc["text"] for doc in state["documents"] if doc["id"] not in postdating_ids}
+            texts.update(extra_texts)
             pairs, locations = [], []
             for index in (range(1, len(queries)) if len(queries) > 1 else range(1)):
                 if rankings[index]:
                     continue
-                pool = module.rank(cache, vectors[index], pair_module.MIN_DENSE_SCORE, 0, pair_module.CANDIDATES_PER_QUERY)
+                pool = module.rank(search_cache, vectors[index], pair_module.MIN_DENSE_SCORE, 0, pair_module.CANDIDATES_PER_QUERY)
                 for key, similarity in pool:
                     pairs.append((queries[index], texts[key]))
                     locations.append((index, key, similarity))
@@ -1656,7 +2279,7 @@ def _prepare_semantic(root, model_dir, active_mainline=None, query=None,
                                                        "pair_score": score, "similarity": similarity})
             accepted = []
             for index, candidates in grouped.items():
-                best = pair_module.select_candidate(queries[index], candidates)
+                best = pair_module.select_candidate(queries[index], candidates, reference_date=reference_date)
                 if best is not None:
                     rankings[index] = [(best["id"], best["similarity"])]
                     rerank_matches.setdefault(best["id"], []).append({"query_index": index,
@@ -1772,7 +2395,8 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
               conversation_id=None, turn_id=None, allow_refinement=True,
               semantic_model=None, semantic_min_score=.875, semantic_min_margin=0,
               *, semantic_runtime=None, return_result=False, output="full", max_topics=None,
-              refinement_queries=None, full_verify=False, semantic_reranker=None, reranker_runtime=None):
+              refinement_queries=None, full_verify=False, semantic_reranker=None, reranker_runtime=None,
+              bind_claims=None, reference_date=None):
     if not isinstance(query, str) or not query.strip() or len(query) > 8000:
         raise MemoryError("Query must contain 1–8000 characters")
     if max_topics is not None and (type(max_topics) is not int or max_topics < 1):
@@ -1785,6 +2409,14 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
         raise MemoryError("allow_refinement must be a boolean")
     if type(full_verify) is not bool:
         raise MemoryError("full_verify must be a boolean")
+    if bind_claims is not None and type(bind_claims) is not bool:
+        raise MemoryError("bind_claims must be a boolean")
+    parsed_reference_date = None
+    if reference_date is not None:
+        try:
+            parsed_reference_date = _binding_module().parse_reference_date(reference_date)
+        except ValueError as exc:
+            raise MemoryError(str(exc)) from exc
     refinements = validate_refinement_queries(query, refinement_queries)
     if refinements and not allow_refinement:
         raise MemoryError("Refinement queries are disabled by --no-refinement")
@@ -1802,11 +2434,15 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
             preflight = _config(root)
             _recall_topic_limit(preflight, max_topics)
             _checked_recall_turn(root, preflight, conversation_id, turn_id)
-    semantic_prepared = (_prepare_semantic(root, semantic_model, active_mainline, _positive_query(query),
+    positive_q = _positive_query(query)
+    historical_target_date = _point_in_time_target_date(positive_q, unlock, parsed_reference_date) if positive_q.strip() else None
+    semantic_prepared = (_prepare_semantic(root, semantic_model, active_mainline, positive_q,
                                          semantic_min_score, semantic_min_margin, runtime=semantic_runtime,
                                          refinement_queries=[_positive_query(q) for q in refinements],
-                                         reranker_model=semantic_reranker, reranker_runtime=reranker_runtime)
-                         if mode == "semantic" and _positive_query(query).strip() else None)
+                                         reranker_model=semantic_reranker, reranker_runtime=reranker_runtime,
+                                         reference_date=parsed_reference_date,
+                                         historical_target_date=historical_target_date)
+                         if mode == "semantic" and positive_q.strip() else None)
     with _hfa_lock(root):
         state, config = parse_directory_nodes(root / "directory.md"), _config(root)
         topic_limit = _recall_topic_limit(config, max_topics)
@@ -1824,7 +2460,7 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
         fts_path = root / "index/fts.sqlite"
         checked_turn = _checked_recall_turn(root, config, conversation_id, turn_id)
         index = json.loads(_read_utf8(root / "index/hitwords.json"))["entries"]
-        positive, refs, matched = _positive_query(query), [], []
+        positive, refs, matched = positive_q, [], []
         scores, kw_terms, content_terms = {}, {}, {}
         query_matches = {}
         search_queries = [positive] + [_positive_query(q) for q in refinements]
@@ -1861,7 +2497,8 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
                     query_matches.setdefault(key, []).append(query_number)
         nodes = {n["id"]: (tier, n) for tier, group in state["nodes"].items() for n in group}
         by_id = {c["id"]: c for c in chunks}
-        replaced = {old for c in chunks for old in c["supersedes"]}
+        postdating_ids = _postdating_chunk_ids(chunks, active_mainline, historical_target_date, parsed_reference_date)
+        replaced = {old for c in chunks for old in c["supersedes"] if c["id"] not in postdating_ids}
         dense_scores = {}
         if semantic_prepared is not None:
             _publish_semantic_locked(root, semantic_prepared, chunks, active_mainline)
@@ -1896,6 +2533,9 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
                         match_info["method"] = "semantic_rerank"
             if ref["kind"] == "chunk":
                 c = by_id[ref["id"]]
+                if c["id"] in postdating_ids:
+                    deferred.append({"id": c["id"], "reason": "postdates historical target date"})
+                    continue
                 if c["id"] in replaced:
                     deferred.append({"id": c["id"], "reason": "superseded; historical evidence only"})
                     continue
@@ -1918,6 +2558,9 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
             candidates.append(candidate)
         # Higher relevance first; newer records win ties, never file/index order.
         candidates.sort(key=lambda c: (c.get("score", 0), c.get("epoch", 0), c.get("number", 0)), reverse=True)
+        binding_active = bool(config.get("claim_binding", False)) if bind_claims is None else bind_claims
+        binding_decisions = []
+        binding_mod = _binding_module() if binding_active else None
         payload = ""
         for candidate in _coverage_candidate_order(candidates, selected, topic_limit, len(refinements),
                                                     bool(unlock and unlock.strip())):
@@ -1930,6 +2573,34 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
                 if candidate["path"].startswith("history/"):
                     continue
                 candidate["text"] = _read_utf8(_safe_path(root, candidate["path"]))
+            if binding_active and candidate["kind"] == "chunk":
+                c_record = by_id[candidate["id"]]
+                clean_body = c_record["title"] + "\n" + "\n".join(c_record["summary"])
+                q_indices = candidate["match"].get("query_indices") or [0]
+                check_indices = (
+                    [i for i in q_indices if 0 < i < len(search_queries)]
+                    + [i for i in q_indices if i == 0 and search_queries]
+                ) or ([0] if search_queries else [])
+                decision = None
+                for qi in check_indices:
+                    probe = binding_mod.binding_support(
+                        search_queries[qi], clean_body, reference_date=parsed_reference_date
+                    )
+                    probe = {**probe, "query_index": qi}
+                    if decision is None or (not decision["allowed"] and probe["allowed"]):
+                        decision = probe
+                    if probe["allowed"]:
+                        break
+                if decision is not None:
+                    binding_decisions.append({"id": candidate["id"], **decision})
+                    if not decision["allowed"]:
+                        deferred.append({
+                            "id": candidate["id"],
+                            "reason": f"claim_binding:{decision['status']}",
+                            "binding": decision["binding"],
+                        })
+                        continue
+                    candidate["binding"] = decision["binding"]
             addition = payload + ("\n\n" if payload else "") + candidate["text"]
             if len(selected) >= topic_limit or measure_tokens(addition)["count"] > config["recall_token_budget"]:
                 deferred.append({"id": candidate["id"], "reason": "recall budget or item limit"})
@@ -1991,6 +2662,15 @@ def cmd_route(root, query, active_mainline=None, unlock=None, mode="hybrid",
                                     "shared_scope_and_budget": True,
                                     "semantic_query": "all_directions" if mode == "semantic" else None,
                                     "semantic_queries": semantic_prepared["info"]["semantic_queries"] if semantic_prepared else 0}
+        if binding_active:
+            result["claim_binding"] = {
+                "enabled": True,
+                "reference_date": parsed_reference_date.isoformat() if parsed_reference_date else None,
+                "evaluated": len(binding_decisions),
+                "accepted_ids": [d["id"] for d in binding_decisions if d["allowed"]],
+                "rejected_ids": [d["id"] for d in binding_decisions if not d["allowed"]],
+                "decisions": binding_decisions,
+            }
         if checked_turn is not None:
             limit = config["max_recalls_per_turn"]
             result["turn_budget"] = {"limit": limit, "used": turn["turn_search_count"],
@@ -2111,6 +2791,10 @@ def main():
         route.add_argument("--auto-init", action="store_true", help="Initialize memory directory if not yet initialized")
         route.add_argument("--full-verify", action="store_true",
                            help="Re-read every L0/L1 byte instead of trusting the size/mtime manifest")
+        route.add_argument("--bind-claims", action=argparse.BooleanOptionalAction, default=None,
+                           help="Filter candidates via clause-level object, metric, time, and numeric binding")
+        route.add_argument("--reference-date",
+                           help="Explicit YYYY-MM-DD anchor date for relative time binding checks")
     for name in ("reindex", "summarize"):
         rebuild = subs.add_parser(name, help="Rebuild indexes and Markdown views from L0/L1")
         rebuild.add_argument("memory_dir", nargs="?", type=Path, default=None, help="Target memory directory (defaults to HFA_MEMORY_DIR or ./memory)")
@@ -2119,6 +2803,15 @@ def main():
     semantic_index.add_argument("memory_dir", nargs="?", type=Path, default=None)
     semantic_index.add_argument("--model-dir", required=True, type=Path)
     semantic_index.add_argument("--verify", action="store_true")
+    exp = subs.add_parser("export", help="Export verified L0 branches and L1 records as a checksummed portable JSON bundle")
+    exp.add_argument("memory_dir", nargs="?", type=Path, default=None, help="Target memory directory (defaults to HFA_MEMORY_DIR or ./memory)")
+    exp.add_argument("--out", type=Path, default=None, help="Write JSON bundle atomically to file instead of stdout")
+    exp.add_argument("--exclude-tombstoned", action="store_true", help="Omit tombstoned branches and records")
+    exp.add_argument("--json", action="store_true")
+    imp = subs.add_parser("import", help="Idempotently import a verified portable HFA export bundle")
+    imp.add_argument("memory_dir", nargs="?", type=Path, default=None, help="Target memory directory (defaults to HFA_MEMORY_DIR or ./memory)")
+    imp.add_argument("--bundle", "--in", dest="bundle", required=True, type=Path, help="Path to portable HFA export JSON bundle")
+    imp.add_argument("--json", action="store_true")
     args = parser.parse_args()
     try:
         if args.command == "init":
@@ -2140,9 +2833,14 @@ def main():
                              args.conversation_id, args.turn_id, not args.no_refinement,
                              args.semantic_model, args.semantic_min_score, args.semantic_min_margin,
                              output=args.output, max_topics=args.max_topics, refinement_queries=args.refine_query,
-                             full_verify=args.full_verify, semantic_reranker=args.semantic_reranker)
+                             full_verify=args.full_verify, semantic_reranker=args.semantic_reranker,
+                             bind_claims=args.bind_claims, reference_date=args.reference_date)
         if args.command == "semantic-index":
             return cmd_semantic_index(target_dir, args.model_dir, args.verify)
+        if args.command == "export":
+            return cmd_export(target_dir, args.out, include_tombstoned=not args.exclude_tombstoned, json_output=args.json)
+        if args.command == "import":
+            return cmd_import(target_dir, args.bundle, json_output=args.json)
         return cmd_reindex(target_dir, args.verify)
     except (MemoryError, OSError, ValueError, KeyError) as exc:
         error = {"error": str(exc), "command": args.command}

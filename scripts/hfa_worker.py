@@ -8,10 +8,12 @@ turn accounting before its response was lost. Retrying must keep real turn IDs.
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import os
 from pathlib import Path
 import queue
+import re
 import subprocess
 import sys
 import threading
@@ -19,14 +21,14 @@ import time
 
 MAX_REQUEST = 128 * 1024
 MAX_RESPONSE = 16 * 1024 * 1024
-ALLOWED = {"query", "unlock", "conversation_id", "turn_id", "max_topics", "refinement_queries"}
+ALLOWED = {"query", "unlock", "conversation_id", "turn_id", "max_topics", "refinement_queries", "bind_claims", "reference_date"}
 
 
 def validate_request(arguments):
     if not isinstance(arguments, dict) or set(arguments) - ALLOWED:
         raise ValueError("Unsupported recall worker arguments")
     if any(value is not None and not isinstance(value, str)
-           for key, value in arguments.items() if key not in ("max_topics", "refinement_queries")):
+           for key, value in arguments.items() if key not in ("max_topics", "refinement_queries", "bind_claims")):
         raise ValueError("Recall worker arguments must be strings or null")
     limit = arguments.get("max_topics")
     if limit is not None and (type(limit) is not int or limit < 1):
@@ -38,6 +40,17 @@ def validate_request(arguments):
     if refinements is not None and (not isinstance(refinements, list) or len(refinements) > 3
             or any(not isinstance(q, str) or not q.strip() or len(q) > 256 for q in refinements)):
         raise ValueError("Invalid bounded refinement_queries")
+    bind_claims = arguments.get("bind_claims")
+    if bind_claims is not None and type(bind_claims) is not bool:
+        raise ValueError("bind_claims must be a boolean or null")
+    ref_date = arguments.get("reference_date")
+    if ref_date is not None:
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", ref_date):
+            raise ValueError("reference_date must be YYYY-MM-DD")
+        try:
+            datetime.date.fromisoformat(ref_date)
+        except ValueError as exc:
+            raise ValueError("reference_date must be YYYY-MM-DD") from exc
 
 
 class WorkerError(RuntimeError):
