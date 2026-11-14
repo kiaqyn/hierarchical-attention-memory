@@ -1,0 +1,555 @@
+{
+  "retrieval": {
+    "kind": "synthetic, developer-authored cases; no model calls",
+    "corpus_size": 12,
+    "modes": {
+      "keyword": {
+        "hits": 9,
+        "positive_cases": 23,
+        "false_hits": 0,
+        "negative_cases": 9,
+        "extra_results": 0,
+        "budget_ok": true,
+        "cases": [
+          {
+            "query": "export-case",
+            "expected": "chunk_0002",
+            "actual": [
+              "chunk_0002"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "中文变问号",
+            "expected": "chunk_0002",
+            "actual": [],
+            "pass": false,
+            "budget_ok": true
+          },
+          {
+            "query": "garbled text",
+            "expected": "chunk_0002",
+            "actual": [],
+            "pass": false,
+            "budget_ok": true
+          },
+          {
+            "query": "CSV 导出编码",
+            "expected": "chunk_0002",
+            "actual": [
+              "chunk_0002"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "上线步骤",
+            "expected": "chunk_0003",
+            "actual": [],
+            "pass": false,
+            "budget_ok": true
+          },
+          {
+            "query": "deployment",
+            "expected": "chunk_0003",
+            "actual": [],
+            "pass": false,
+            "budget_ok": true
+          },
+          {
+            "query": "redis cache expiry",
+            "expected": "chunk_0004",
+            "actual": [
+              "chunk_0004"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "cache invalidate",
+            "expected": "chunk_0004",
+            "actual": [
+              "chunk_0004"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "timeout",
+            "expected": "chunk_0005",
+            "actual": [],
+            "pass": false,
+            "budget_ok": true
+          },
+          {
+            "query": "请求等太久",
+            "expected": "chunk_0005",
+            "actual": [],
+            "pass": false,
+            "budget_ok": true
+          },
+          {
+            "query": "backup",
+            "expected": "chunk_0006",
+            "actual": [],
+            "pass": false,
+            "budget_ok": true
+          },
+          {
+            "query": "数据库副本",
+            "expected": "chunk_0006",
+            "actual": [
+              "chunk_0006"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "同时写入",
+            "expected": "chunk_0007",
+            "actual": [],
+            "pass": false,
+            "budget_ok": true
+          },
+          {
+            "query": "concurrency",
+            "expected": "chunk_0007",
+            "actual": [],
+            "pass": false,
+            "budget_ok": true
+          },
+          {
+            "query": "撤销更改",
+            "expected": "chunk_0008",
+            "actual": [],
+            "pass": false,
+            "budget_ok": true
+          },
+          {
+            "query": "rollback",
+            "expected": "chunk_0008",
+            "actual": [],
+            "pass": false,
+            "budget_ok": true
+          },
+          {
+            "query": "PNG 透明背景",
+            "expected": "chunk_0009",
+            "actual": [
+              "chunk_0009"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "Windows Node 构建",
+            "expected": "chunk_0010",
+            "actual": [
+              "chunk_0010"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "小屏幕折叠菜单",
+            "expected": "chunk_0011",
+            "actual": [
+              "chunk_0011"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "重复扣款幂等键",
+            "expected": "chunk_0012",
+            "actual": [],
+            "pass": false,
+            "budget_ok": true
+          },
+          {
+            "query": "请求编号错误日志",
+            "expected": "chunk_0013",
+            "actual": [
+              "chunk_0013"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "今天晚饭吃什么",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "继续处理之前那个问题",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "不要查乱码和部署",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "do not retrieve backup",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "provider authentication",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "火星大气成分",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "what did we decide before",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "weather in London",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "backup singer audition",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "输出文件全是看不懂的符号",
+            "expected": "chunk_0002",
+            "actual": [],
+            "pass": false,
+            "budget_ok": true
+          },
+          {
+            "query": "撤回这次更新恢复到昨天那版",
+            "expected": "chunk_0008",
+            "actual": [],
+            "pass": false,
+            "budget_ok": true
+          }
+        ]
+      },
+      "hybrid": {
+        "hits": 23,
+        "positive_cases": 23,
+        "false_hits": 0,
+        "negative_cases": 9,
+        "extra_results": 0,
+        "budget_ok": true,
+        "cases": [
+          {
+            "query": "export-case",
+            "expected": "chunk_0002",
+            "actual": [
+              "chunk_0002"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "中文变问号",
+            "expected": "chunk_0002",
+            "actual": [
+              "chunk_0002"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "garbled text",
+            "expected": "chunk_0002",
+            "actual": [
+              "chunk_0002"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "CSV 导出编码",
+            "expected": "chunk_0002",
+            "actual": [
+              "chunk_0002"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "上线步骤",
+            "expected": "chunk_0003",
+            "actual": [
+              "chunk_0003"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "deployment",
+            "expected": "chunk_0003",
+            "actual": [
+              "chunk_0003"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "redis cache expiry",
+            "expected": "chunk_0004",
+            "actual": [
+              "chunk_0004"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "cache invalidate",
+            "expected": "chunk_0004",
+            "actual": [
+              "chunk_0004"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "timeout",
+            "expected": "chunk_0005",
+            "actual": [
+              "chunk_0005"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "请求等太久",
+            "expected": "chunk_0005",
+            "actual": [
+              "chunk_0005"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "backup",
+            "expected": "chunk_0006",
+            "actual": [
+              "chunk_0006"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "数据库副本",
+            "expected": "chunk_0006",
+            "actual": [
+              "chunk_0006"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "同时写入",
+            "expected": "chunk_0007",
+            "actual": [
+              "chunk_0007"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "concurrency",
+            "expected": "chunk_0007",
+            "actual": [
+              "chunk_0007"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "撤销更改",
+            "expected": "chunk_0008",
+            "actual": [
+              "chunk_0008"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "rollback",
+            "expected": "chunk_0008",
+            "actual": [
+              "chunk_0008"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "PNG 透明背景",
+            "expected": "chunk_0009",
+            "actual": [
+              "chunk_0009"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "Windows Node 构建",
+            "expected": "chunk_0010",
+            "actual": [
+              "chunk_0010"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "小屏幕折叠菜单",
+            "expected": "chunk_0011",
+            "actual": [
+              "chunk_0011"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "重复扣款幂等键",
+            "expected": "chunk_0012",
+            "actual": [
+              "chunk_0012"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "请求编号错误日志",
+            "expected": "chunk_0013",
+            "actual": [
+              "chunk_0013"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "今天晚饭吃什么",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "继续处理之前那个问题",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "不要查乱码和部署",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "do not retrieve backup",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "provider authentication",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "火星大气成分",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "what did we decide before",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "weather in London",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "backup singer audition",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "输出文件全是看不懂的符号",
+            "expected": "chunk_0002",
+            "actual": [
+              "chunk_0002"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "撤回这次更新恢复到昨天那版",
+            "expected": "chunk_0008",
+            "actual": [
+              "chunk_0008"
+            ],
+            "pass": true,
+            "budget_ok": true
+          }
+        ]
+      }
+    }
+  },
+  "replay": {
+    "operations": 1000,
+    "writes": 100,
+    "retries": 100,
+    "reads": 800,
+    "explicit_updates": 99,
+    "all_original_bytes_preserved": true,
+    "current_decision_correct_on_all_reads": true,
+    "active_epoch": "epoch_03",
+    "total_topics": 101,
+    "elapsed_seconds": 83.958,
+    "latency_ms_median": 71.662,
+    "latency_ms_p95": 232.96,
+    "scope": "1000 simulated tool operations, not 1000 real conversation turns"
+  }
+}

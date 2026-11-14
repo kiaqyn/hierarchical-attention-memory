@@ -1,0 +1,1553 @@
+Command exited with code 0.
+
+Command output:
+=== 1. BENCHMARK SEMANTIC+RERANK ===
+{
+  "benchmark": "general-memory-v1",
+  "retrieval_mode": "semantic",
+  "bind_claims": true,
+  "semantic_model": "C:\\Users\\jiao\\AppData\\Local\\HFA-Local-Semantic\\model",
+  "semantic_reranker": "C:\\Users\\jiao\\AppData\\Local\\HFA-Local-Semantic\\reranker-model",
+  "total_executed_entries": 111,
+  "by_mode": {
+    "records": {
+      "applicable": 111,
+      "passed": 110,
+      "failed": 1,
+      "unsupported": 0,
+      "pending_evidence": 0,
+      "failed_cases": [
+        {
+          "case": "M15-02-zh",
+          "errors": [
+            "required_evidence_missing"
+          ]
+        }
+      ],
+      "unsupported_cases": []
+    }
+  },
+  "latency_ms": {
+    "p50": 1312.98,
+    "p95": 2399.83,
+    "max": 13891.99
+  },
+  "records_context_tokens": {
+    "median": 203,
+    "max": 496
+  }
+}
+RC_BENCH_SEM=0
+=== 2. BENCHMARK HYBRID ALL MODES ===
+{
+  "consistent": true,
+  "differences": []
+}
+{
+  "consistent": true,
+  "differences": []
+}
+{
+  "consistent": true,
+  "differences": []
+}
+{
+  "benchmark": "general-memory-v1",
+  "retrieval_mode": "hybrid",
+  "bind_claims": true,
+  "semantic_model": null,
+  "semantic_reranker": null,
+  "total_executed_entries": 311,
+  "by_mode": {
+    "records": {
+      "applicable": 111,
+      "passed": 79,
+      "failed": 32,
+      "unsupported": 0,
+      "pending_evidence": 0,
+      "failed_cases": [
+        {
+          "case": "M03-01-en",
+          "errors": [
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "M03-02-en",
+          "errors": [
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "M05-01-zh",
+          "errors": [
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "M05-01-en",
+          "errors": [
+            "required_evidence_missing",
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "M05-02-zh",
+          "errors": [
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "M05-02-en",
+          "errors": [
+            "required_evidence_missing",
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "M05-03-zh",
+          "errors": [
+            "required_evidence_missing",
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "M05-03-en",
+          "errors": [
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "M07-01-zh",
+          "errors": [
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "M07-02-zh",
+          "errors": [
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "M08-01-zh",
+          "errors": [
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "M08-01-en",
+          "errors": [
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "M08-02-zh",
+          "errors": [
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "M10-01-zh",
+          "errors": [
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "M10-02-zh",
+          "errors": [
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "M10-03-zh",
+          "errors": [
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "M10-03-en",
+          "errors": [
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "M11-01-en",
+          "errors": [
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "M11-02-zh",
+          "errors": [
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "M11-02-en",
+          "errors": [
+            "required_evidence_missing",
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "M15-02-zh",
+          "errors": [
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "M18-02-zh",
+          "errors": [
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "M18-02-en",
+          "errors": [
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "M18-03-zh",
+          "errors": [
+            "required_evidence_missing",
+            "required_evidence_missing",
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "M18-03-en",
+          "errors": [
+            "required_evidence_missing",
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "M20-01-zh",
+          "errors": [
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "M20-02-zh",
+          "errors": [
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "M20-02-en",
+          "errors": [
+            "required_evidence_missing",
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "M20-03-zh",
+          "errors": [
+            "required_evidence_missing",
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "M20-03-en",
+          "errors": [
+            "required_evidence_missing",
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "A04-01-zh",
+          "errors": [
+            "required_evidence_missing"
+          ]
+        },
+        {
+          "case": "A06-03-zh",
+          "errors": [
+            "required_evidence_missing"
+          ]
+        }
+      ],
+      "unsupported_cases": []
+    },
+    "operational": {
+      "applicable": 44,
+      "passed": 38,
+      "failed": 0,
+      "unsupported": 6,
+      "pending_evidence": 0,
+      "failed_cases": [],
+      "unsupported_cases": [
+        {
+          "case": "R04-01-zh",
+          "reason": "Local semantic model directory not provided"
+        },
+        {
+          "case": "R04-02-en",
+          "reason": "Local semantic model directory not provided"
+        },
+        {
+          "case": "R04-03-zh",
+          "reason": "Local semantic model directory not provided"
+        },
+        {
+          "case": "R04-04-en",
+          "reason": "Local semantic model directory not provided"
+        },
+        {
+          "case": "R06-03-zh",
+          "reason": "Local semantic model not provided"
+        },
+        {
+          "case": "R08-02-en",
+          "reason": "HFA 3.0 enforces logical tombstone archival rather than irreversible hard-erasure of L1 history"
+        }
+      ]
+    },
+    "native": {
+      "applicable": 156,
+      "passed": 0,
+      "failed": 0,
+      "unsupported": 156,
+      "pending_evidence": 0,
+      "failed_cases": [],
+      "unsupported_cases": [
+        {
+          "case": "M01-01-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M01-01-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M01-02-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M01-02-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M01-03-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M01-03-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M02-01-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M02-01-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M02-02-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M02-02-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M02-03-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M02-03-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M03-01-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M03-01-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M03-02-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M03-02-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M03-03-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M03-03-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M04-01-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M04-01-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M04-02-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M04-02-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M04-03-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M04-03-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M05-01-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M05-01-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M05-02-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M05-02-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M05-03-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M05-03-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M06-01-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M06-01-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M06-02-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M06-02-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M06-03-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M06-03-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M07-01-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M07-01-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M07-02-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M07-02-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M07-03-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M07-03-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M08-01-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M08-01-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M08-02-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M08-02-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M08-03-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M08-03-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M09-01-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M09-01-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M09-02-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M09-02-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M09-03-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M09-03-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M10-01-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M10-01-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M10-02-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M10-02-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M10-03-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M10-03-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M11-01-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M11-01-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M11-02-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M11-02-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M11-03-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M11-03-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M12-01-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M12-01-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M12-02-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M12-02-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M12-03-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M12-03-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M13-01-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M13-01-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M13-02-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M13-02-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M13-03-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M13-03-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M14-01-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M14-01-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M14-02-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M14-02-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M14-03-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M14-03-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M15-01-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M15-01-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M15-02-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M15-02-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M15-03-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M15-03-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M16-01-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M16-01-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M16-02-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M16-02-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M16-03-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M16-03-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M17-01-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M17-01-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M17-02-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M17-02-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M17-03-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M17-03-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M18-01-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M18-01-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M18-02-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M18-02-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M18-03-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M18-03-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M19-01-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M19-01-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M19-02-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M19-02-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M19-03-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M19-03-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M20-01-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M20-01-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M20-02-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M20-02-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M20-03-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "M20-03-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "A01-01-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "A01-02-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "A01-03-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "A01-04-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "A02-01-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "A02-02-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "A02-03-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "A02-04-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "A03-01-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "A03-02-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "A03-03-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "A03-04-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "A04-01-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "A04-02-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "A04-03-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "A04-04-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "A05-01-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "A05-02-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "A05-03-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "A05-04-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "A06-01-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "A06-02-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "A06-03-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "A06-04-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "A07-01-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "A07-02-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "A07-03-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "A07-04-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "C01-01-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "C01-02-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "C01-03-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "C01-04-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "C03-01-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "C03-02-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "C03-03-zh",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        },
+        {
+          "case": "C03-04-en",
+          "reason": "HFA 3.0 is a local memory engine without a generative LLM host"
+        }
+      ]
+    }
+  },
+  "latency_ms": {
+    "p50": 81.61,
+    "p95": 2347.45,
+    "max": 11088.27
+  },
+  "records_context_tokens": {
+    "median": 290,
+    "max": 392
+  }
+}
+RC_BENCH_HYB=0
+=== 3. EVALUATE_MEMORY ===
+{
+  "retrieval": {
+    "kind": "synthetic, developer-authored cases; no model calls",
+    "corpus_size": 12,
+    "modes": {
+      "keyword": {
+        "hits": 9,
+        "positive_cases": 23,
+        "false_hits": 0,
+        "negative_cases": 9,
+        "extra_results": 0,
+        "budget_ok": true,
+        "cases": [
+          {
+            "query": "export-case",
+            "expected": "chunk_0002",
+            "actual": [
+              "chunk_0002"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "中文变问号",
+            "expected": "chunk_0002",
+            "actual": [],
+            "pass": false,
+            "budget_ok": true
+          },
+          {
+            "query": "garbled text",
+            "expected": "chunk_0002",
+            "actual": [],
+            "pass": false,
+            "budget_ok": true
+          },
+          {
+            "query": "CSV 导出编码",
+            "expected": "chunk_0002",
+            "actual": [
+              "chunk_0002"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "上线步骤",
+            "expected": "chunk_0003",
+            "actual": [],
+            "pass": false,
+            "budget_ok": true
+          },
+          {
+            "query": "deployment",
+            "expected": "chunk_0003",
+            "actual": [],
+            "pass": false,
+            "budget_ok": true
+          },
+          {
+            "query": "redis cache expiry",
+            "expected": "chunk_0004",
+            "actual": [
+              "chunk_0004"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "cache invalidate",
+            "expected": "chunk_0004",
+            "actual": [
+              "chunk_0004"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "timeout",
+            "expected": "chunk_0005",
+            "actual": [],
+            "pass": false,
+            "budget_ok": true
+          },
+          {
+            "query": "请求等太久",
+            "expected": "chunk_0005",
+            "actual": [],
+            "pass": false,
+            "budget_ok": true
+          },
+          {
+            "query": "backup",
+            "expected": "chunk_0006",
+            "actual": [],
+            "pass": false,
+            "budget_ok": true
+          },
+          {
+            "query": "数据库副本",
+            "expected": "chunk_0006",
+            "actual": [
+              "chunk_0006"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "同时写入",
+            "expected": "chunk_0007",
+            "actual": [],
+            "pass": false,
+            "budget_ok": true
+          },
+          {
+            "query": "concurrency",
+            "expected": "chunk_0007",
+            "actual": [],
+            "pass": false,
+            "budget_ok": true
+          },
+          {
+            "query": "撤销更改",
+            "expected": "chunk_0008",
+            "actual": [],
+            "pass": false,
+            "budget_ok": true
+          },
+          {
+            "query": "rollback",
+            "expected": "chunk_0008",
+            "actual": [],
+            "pass": false,
+            "budget_ok": true
+          },
+          {
+            "query": "PNG 透明背景",
+            "expected": "chunk_0009",
+            "actual": [
+              "chunk_0009"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "Windows Node 构建",
+            "expected": "chunk_0010",
+            "actual": [
+              "chunk_0010"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "小屏幕折叠菜单",
+            "expected": "chunk_0011",
+            "actual": [
+              "chunk_0011"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "重复扣款幂等键",
+            "expected": "chunk_0012",
+            "actual": [],
+            "pass": false,
+            "budget_ok": true
+          },
+          {
+            "query": "请求编号错误日志",
+            "expected": "chunk_0013",
+            "actual": [
+              "chunk_0013"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "今天晚饭吃什么",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "继续处理之前那个问题",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "不要查乱码和部署",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "do not retrieve backup",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "provider authentication",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "火星大气成分",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "what did we decide before",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "weather in London",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "backup singer audition",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "输出文件全是看不懂的符号",
+            "expected": "chunk_0002",
+            "actual": [],
+            "pass": false,
+            "budget_ok": true
+          },
+          {
+            "query": "撤回这次更新恢复到昨天那版",
+            "expected": "chunk_0008",
+            "actual": [],
+            "pass": false,
+            "budget_ok": true
+          }
+        ]
+      },
+      "hybrid": {
+        "hits": 23,
+        "positive_cases": 23,
+        "false_hits": 0,
+        "negative_cases": 9,
+        "extra_results": 0,
+        "budget_ok": true,
+        "cases": [
+          {
+            "query": "export-case",
+            "expected": "chunk_0002",
+            "actual": [
+              "chunk_0002"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "中文变问号",
+            "expected": "chunk_0002",
+            "actual": [
+              "chunk_0002"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "garbled text",
+            "expected": "chunk_0002",
+            "actual": [
+              "chunk_0002"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "CSV 导出编码",
+            "expected": "chunk_0002",
+            "actual": [
+              "chunk_0002"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "上线步骤",
+            "expected": "chunk_0003",
+            "actual": [
+              "chunk_0003"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "deployment",
+            "expected": "chunk_0003",
+            "actual": [
+              "chunk_0003"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "redis cache expiry",
+            "expected": "chunk_0004",
+            "actual": [
+              "chunk_0004"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "cache invalidate",
+            "expected": "chunk_0004",
+            "actual": [
+              "chunk_0004"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "timeout",
+            "expected": "chunk_0005",
+            "actual": [
+              "chunk_0005"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "请求等太久",
+            "expected": "chunk_0005",
+            "actual": [
+              "chunk_0005"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "backup",
+            "expected": "chunk_0006",
+            "actual": [
+              "chunk_0006"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "数据库副本",
+            "expected": "chunk_0006",
+            "actual": [
+              "chunk_0006"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "同时写入",
+            "expected": "chunk_0007",
+            "actual": [
+              "chunk_0007"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "concurrency",
+            "expected": "chunk_0007",
+            "actual": [
+              "chunk_0007"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "撤销更改",
+            "expected": "chunk_0008",
+            "actual": [
+              "chunk_0008"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "rollback",
+            "expected": "chunk_0008",
+            "actual": [
+              "chunk_0008"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "PNG 透明背景",
+            "expected": "chunk_0009",
+            "actual": [
+              "chunk_0009"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "Windows Node 构建",
+            "expected": "chunk_0010",
+            "actual": [
+              "chunk_0010"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "小屏幕折叠菜单",
+            "expected": "chunk_0011",
+            "actual": [
+              "chunk_0011"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "重复扣款幂等键",
+            "expected": "chunk_0012",
+            "actual": [
+              "chunk_0012"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "请求编号错误日志",
+            "expected": "chunk_0013",
+            "actual": [
+              "chunk_0013"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "今天晚饭吃什么",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "继续处理之前那个问题",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "不要查乱码和部署",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "do not retrieve backup",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "provider authentication",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "火星大气成分",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "what did we decide before",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "weather in London",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "backup singer audition",
+            "expected": null,
+            "actual": [],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "输出文件全是看不懂的符号",
+            "expected": "chunk_0002",
+            "actual": [
+              "chunk_0002"
+            ],
+            "pass": true,
+            "budget_ok": true
+          },
+          {
+            "query": "撤回这次更新恢复到昨天那版",
+            "expected": "chunk_0008",
+            "actual": [
+              "chunk_0008"
+            ],
+            "pass": true,
+            "budget_ok": true
+          }
+        ]
+      }
+    }
+  },
+  "replay": {
+    "operations": 1000,
+    "writes": 100,
+    "retries": 100,
+    "reads": 800,
+    "explicit_updates": 99,
+    "all_original_bytes_preserved": true,
+    "current_decision_correct_on_all_reads": true,
+    "active_epoch": "epoch_03",
+    "total_topics": 101,
+    "elapsed_seconds": 83.958,
+    "latency_ms_median": 71.662,
+    "latency_ms_p95": 232.96,
+    "scope": "1000 simulated tool operations, not 1000 real conversation turns"
+  }
+}
+RC_EVAL=0
+=== 4. VALIDATE_HFA ===
+test_64_real_CLI_writers_across_epoch_boundary (__main__.HfaTests.test_64_real_CLI_writers_across_epoch_boundary) ... ok
+test_L0_rejects_escaping_paths_and_orphan_chunks (__main__.HfaTests.test_L0_rejects_escaping_paths_and_orphan_chunks) ... ok
+test_actual_filesystem_error_does_not_partially_commit (__main__.HfaTests.test_actual_filesystem_error_does_not_partially_commit) ... ok
+test_add_and_recall_returns_single_L1_snippet (__main__.HfaTests.test_add_and_recall_returns_single_L1_snippet) ... ok
+test_configured_token_budget_is_enforced (__main__.HfaTests.test_configured_token_budget_is_enforced) ... ok
+test_contrast_after_negative_clause_is_retained (__main__.HfaTests.test_contrast_after_negative_clause_is_retained) ... ok
+test_core_summary_sections_and_800_token_upper_bound (__main__.HfaTests.test_core_summary_sections_and_800_token_upper_bound) ... ok
+test_crash_after_commit_keeps_completed_transaction (__main__.HfaTests.test_crash_after_commit_keeps_completed_transaction) ... ok
+test_custom_branch_tier_tombstone_without_tag_and_planned_mainline (__main__.HfaTests.test_custom_branch_tier_tombstone_without_tag_and_planned_mainline) ... ok
+test_empty_lock_contention_and_unlock_exception_do_not_crash_or_leak_fd (__main__.HfaTests.test_empty_lock_contention_and_unlock_exception_do_not_crash_or_leak_fd) ... ok
+test_epoch_rollover_keeps_historical_summary_links (__main__.HfaTests.test_epoch_rollover_keeps_historical_summary_links) ... ok
+test_epoch_rollover_preserves_every_chunk_and_keyword (__main__.HfaTests.test_epoch_rollover_preserves_every_chunk_and_keyword) ... ok
+test_failed_recovery_blocks_reads_until_rollback_can_finish (__main__.HfaTests.test_failed_recovery_blocks_reads_until_rollback_can_finish) ... ok
+test_failed_tombstone_keeps_both_state_and_log (__main__.HfaTests.test_failed_tombstone_keeps_both_state_and_log) ... ok
+test_failure_after_replacement_rolls_back_every_file (__main__.HfaTests.test_failure_after_replacement_rolls_back_every_file) ... ok
+test_full_token_count_includes_parentheses_urls_and_special_text (__main__.HfaTests.test_full_token_count_includes_parentheses_urls_and_special_text) ... ok
+test_historical_JSON_field_spellings_remain_readable (__main__.HfaTests.test_historical_JSON_field_spellings_remain_readable) ... ok
+test_init_force_preserves_existing_data (__main__.HfaTests.test_init_force_preserves_existing_data) ... ok
+test_init_status_and_utf8_false_console (__main__.HfaTests.test_init_status_and_utf8_false_console) ... ok
+test_invalid_lock_error_fails_fast_and_contention_times_out (__main__.HfaTests.test_invalid_lock_error_fails_fast_and_contention_times_out) ... ok
+test_legacy_Markdown_is_backed_up_before_rebuilding (__main__.HfaTests.test_legacy_Markdown_is_backed_up_before_rebuilding) ... ok
+test_malformed_JSON_objects_fail_without_tracebacks (__main__.HfaTests.test_malformed_JSON_objects_fail_without_tracebacks) ... ok
+test_markdown_header_cannot_forge_topic (__main__.HfaTests.test_markdown_header_cannot_forge_topic) ... ok
+test_missing_mainline_and_M404_are_rejected (__main__.HfaTests.test_missing_mainline_and_M404_are_rejected) ... ok
+test_pep517_stdlib_build_backend_wheel_and_editable (__main__.HfaTests.test_pep517_stdlib_build_backend_wheel_and_editable) ... ok
+test_process_crash_rolls_back_on_next_CLI_access (__main__.HfaTests.test_process_crash_rolls_back_on_next_CLI_access) ... ok
+test_profile_drift_requires_preference_context (__main__.HfaTests.test_profile_drift_requires_preference_context) ... ok
+test_project_branch_writes_legacy_version_and_rollover_framework_notes (__main__.HfaTests.test_project_branch_writes_legacy_version_and_rollover_framework_notes) ... ok
+test_provider_and_negative_requests_do_not_match_IDE (__main__.HfaTests.test_provider_and_negative_requests_do_not_match_IDE) ... ok
+test_sqlite_fts5_index_created_verified_and_rebuilt (__main__.HfaTests.test_sqlite_fts5_index_created_verified_and_rebuilt) ... ok
+test_stale_index_is_rejected_then_rebuilt_deterministically (__main__.HfaTests.test_stale_index_is_rejected_then_rebuilt_deterministically) ... ok
+test_summary_tampering_does_not_change_authoritative_recall (__main__.HfaTests.test_summary_tampering_does_not_change_authoritative_recall) ... ok
+test_title_body_keywords_and_complete_recall_budget (__main__.HfaTests.test_title_body_keywords_and_complete_recall_budget) ... ok
+test_tombstone_requires_unlock_and_logs_access (__main__.HfaTests.test_tombstone_requires_unlock_and_logs_access) ... ok
+test_zero_config_default_memory_dir_and_auto_init (__main__.HfaTests.test_zero_config_default_memory_dir_and_auto_init) ... ok
+test_zero_hits_feedback_20_turn_status_check_and_history_never_dilutes (__main__.HfaTests.test_zero_hits_feedback_20_turn_status_check_and_history_never_dilutes) ... ok
+
+----------------------------------------------------------------------
+Ran 36 tests in 67.753s
+
+OK
+RC_VALIDATE=0

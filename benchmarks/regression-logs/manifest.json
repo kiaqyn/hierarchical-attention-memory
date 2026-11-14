@@ -1,0 +1,34 @@
+{
+  "current_source_commit": "505199dab4f5ced22f0771b5e526ffff2cb44755",
+  "current_commit_regression_log_found": false,
+  "note": "Historical logs only; suites overlap and counts must not be added. No tests were rerun during extraction. Current memory recall returned stale-index; no repair attempted.",
+  "logs": [
+    {
+      "file": "209-tests-regression.log",
+      "original": "C:\\Users\\jiao\\Documents\\Codex\\2026-10-30\\c-users-jiao-gemini-antigravity-scratch\\outputs\\hfa-grok-fix-20261107\\extended-regression.log",
+      "sha256": "2aca2aa697ce1028180f50d3de78d0bbf41b429f2a62637f25f1478035518c1f",
+      "tests": 209,
+      "seconds": "285.020",
+      "result": "OK",
+      "historical": true
+    },
+    {
+      "file": "36-tests-core.log",
+      "original": "C:\\Users\\jiao\\Documents\\Codex\\2026-10-30\\c-users-jiao-gemini-antigravity-scratch\\outputs\\hfa-grok-fix-20261107\\core-validation.log",
+      "sha256": "d358c019b637c8dcf9051f833217a9fb0989f42e4559d30a2a485ea90c37cd56",
+      "tests": 36,
+      "seconds": "69.397",
+      "result": "OK",
+      "historical": true
+    },
+    {
+      "file": "74-tests-rerank.txt",
+      "original": "C:\\Users\\jiao\\Documents\\Codex\\2026-10-30\\c-users-jiao-gemini-antigravity-scratch\\outputs\\hfa-paraphrase-rerank-20261110\\candidate-tests.txt",
+      "sha256": "e0f1c3d59c1f61b0d948990dc2ab9c5457ce5c356f3fbc22137732eca022d1cd",
+      "tests": 74,
+      "seconds": "56.417",
+      "result": "OK",
+      "historical": true
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+test_64_real_CLI_writers_across_epoch_boundary (__main__.HfaTests.test_64_real_CLI_writers_across_epoch_boundary) ... ok
+test_L0_rejects_escaping_paths_and_orphan_chunks (__main__.HfaTests.test_L0_rejects_escaping_paths_and_orphan_chunks) ... ok
+test_actual_filesystem_error_does_not_partially_commit (__main__.HfaTests.test_actual_filesystem_error_does_not_partially_commit) ... ok
+test_add_and_recall_returns_single_L1_snippet (__main__.HfaTests.test_add_and_recall_returns_single_L1_snippet) ... ok
+test_configured_token_budget_is_enforced (__main__.HfaTests.test_configured_token_budget_is_enforced) ... ok
+test_contrast_after_negative_clause_is_retained (__main__.HfaTests.test_contrast_after_negative_clause_is_retained) ... ok
+test_core_summary_sections_and_800_token_upper_bound (__main__.HfaTests.test_core_summary_sections_and_800_token_upper_bound) ... ok
+test_crash_after_commit_keeps_completed_transaction (__main__.HfaTests.test_crash_after_commit_keeps_completed_transaction) ... ok
+test_custom_branch_tier_tombstone_without_tag_and_planned_mainline (__main__.HfaTests.test_custom_branch_tier_tombstone_without_tag_and_planned_mainline) ... ok
+test_empty_lock_contention_and_unlock_exception_do_not_crash_or_leak_fd (__main__.HfaTests.test_empty_lock_contention_and_unlock_exception_do_not_crash_or_leak_fd) ... ok
+test_epoch_rollover_keeps_historical_summary_links (__main__.HfaTests.test_epoch_rollover_keeps_historical_summary_links) ... ok
+test_epoch_rollover_preserves_every_chunk_and_keyword (__main__.HfaTests.test_epoch_rollover_preserves_every_chunk_and_keyword) ... ok
+test_failed_recovery_blocks_reads_until_rollback_can_finish (__main__.HfaTests.test_failed_recovery_blocks_reads_until_rollback_can_finish) ... ok
+test_failed_tombstone_keeps_both_state_and_log (__main__.HfaTests.test_failed_tombstone_keeps_both_state_and_log) ... ok
+test_failure_after_replacement_rolls_back_every_file (__main__.HfaTests.test_failure_after_replacement_rolls_back_every_file) ... ok
+test_full_token_count_includes_parentheses_urls_and_special_text (__main__.HfaTests.test_full_token_count_includes_parentheses_urls_and_special_text) ... ok
+test_historical_JSON_field_spellings_remain_readable (__main__.HfaTests.test_historical_JSON_field_spellings_remain_readable) ... ok
+test_init_force_preserves_existing_data (__main__.HfaTests.test_init_force_preserves_existing_data) ... ok
+test_init_status_and_utf8_false_console (__main__.HfaTests.test_init_status_and_utf8_false_console) ... ok
+test_invalid_lock_error_fails_fast_and_contention_times_out (__main__.HfaTests.test_invalid_lock_error_fails_fast_and_contention_times_out) ... ok
+test_legacy_Markdown_is_backed_up_before_rebuilding (__main__.HfaTests.test_legacy_Markdown_is_backed_up_before_rebuilding) ... ok
+test_malformed_JSON_objects_fail_without_tracebacks (__main__.HfaTests.test_malformed_JSON_objects_fail_without_tracebacks) ... ok
+test_markdown_header_cannot_forge_topic (__main__.HfaTests.test_markdown_header_cannot_forge_topic) ... ok
+test_missing_mainline_and_M404_are_rejected (__main__.HfaTests.test_missing_mainline_and_M404_are_rejected) ... ok
+test_pep517_stdlib_build_backend_wheel_and_editable (__main__.HfaTests.test_pep517_stdlib_build_backend_wheel_and_editable) ... ok
+test_process_crash_rolls_back_on_next_CLI_access (__main__.HfaTests.test_process_crash_rolls_back_on_next_CLI_access) ... ok
+test_profile_drift_requires_preference_context (__main__.HfaTests.test_profile_drift_requires_preference_context) ... ok
+test_project_branch_writes_legacy_version_and_rollover_framework_notes (__main__.HfaTests.test_project_branch_writes_legacy_version_and_rollover_framework_notes) ... ok
+test_provider_and_negative_requests_do_not_match_IDE (__main__.HfaTests.test_provider_and_negative_requests_do_not_match_IDE) ... ok
+test_sqlite_fts5_index_created_verified_and_rebuilt (__main__.HfaTests.test_sqlite_fts5_index_created_verified_and_rebuilt) ... ok
+test_stale_index_is_rejected_then_rebuilt_deterministically (__main__.HfaTests.test_stale_index_is_rejected_then_rebuilt_deterministically) ... ok
+test_summary_tampering_does_not_change_authoritative_recall (__main__.HfaTests.test_summary_tampering_does_not_change_authoritative_recall) ... ok
+test_title_body_keywords_and_complete_recall_budget (__main__.HfaTests.test_title_body_keywords_and_complete_recall_budget) ... ok
+test_tombstone_requires_unlock_and_logs_access (__main__.HfaTests.test_tombstone_requires_unlock_and_logs_access) ... ok
+test_zero_config_default_memory_dir_and_auto_init (__main__.HfaTests.test_zero_config_default_memory_dir_and_auto_init) ... ok
+test_zero_hits_feedback_20_turn_status_check_and_history_never_dilutes (__main__.HfaTests.test_zero_hits_feedback_20_turn_status_check_and_history_never_dilutes) ... ok
+
+----------------------------------------------------------------------
+Ran 36 tests in 69.397s
+
+OK

@@ -1,0 +1,177 @@
+python.exe : test_pinned_reranker_singleton_invariance_and_checksum_guard (test_semantic_rerank.ActualLocalRerankerChec
+ks.test_pinned_reranker_singleton_invariance_and_checksum_guard) ... ok
+At line:7 char:1
++ & $py -B -m unittest -v test_semantic_rerank test_semantic_batch_inva ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (test_pinned_rer...m_guard) ... ok:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+test_stdio_mcp_worker_with_real_reranker_and_turn_guard (test_semantic_rerank.ActualLocalRerankerChecks.test_stdio_mcp_
+worker_with_real_reranker_and_turn_guard) ... Executing <Task pending name='Task-6' coro=<ActualLocalRerankerChecks.tes
+t_stdio_mcp_worker_with_real_reranker_and_turn_guard() running at C:\Users\jiao\Documents\Codex\2026-10-30\c-users-jiao
+-gemini-antigravity-scratch\work\hfa-paraphrase-rerank-20261110\candidate\tests\test_semantic_rerank.py:253> cb=[_run_u
+ntil_complete_cb() at C:\Users\jiao\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py:181] created at 
+C:\Users\jiao\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py:101> took 0.307 seconds
+ok
+test_dense_floor_and_margin_guard_block_weak_or_ambiguous_candidates (test_semantic_rerank.SemanticRerankChecks.test_de
+nse_floor_and_margin_guard_block_weak_or_ambiguous_candidates) ... ok
+test_dense_hit_is_preserved_without_invoking_reranker_for_that_direction (test_semantic_rerank.SemanticRerankChecks.tes
+t_dense_hit_is_preserved_without_invoking_reranker_for_that_direction) ... ok
+test_inactive_branch_and_superseded_records_never_reach_reranker (test_semantic_rerank.SemanticRerankChecks.test_inacti
+ve_branch_and_superseded_records_never_reach_reranker) ... ok
+test_missing_field_veto_blocks_top_hit_without_promoting_runner_up (test_semantic_rerank.SemanticRerankChecks.test_miss
+ing_field_veto_blocks_top_hit_without_promoting_runner_up) ... ok
+test_multi_direction_only_reranks_uncovered_refinements_and_keeps_dense_method (test_semantic_rerank.SemanticRerankChec
+ks.test_multi_direction_only_reranks_uncovered_refinements_and_keeps_dense_method) ... ok
+test_reranker_requires_explicit_semantic_mode_and_model (test_semantic_rerank.SemanticRerankChecks.test_reranker_requir
+es_explicit_semantic_mode_and_model) ... ok
+test_single_query_fallback_recovers_paraphrase_and_marks_method (test_semantic_rerank.SemanticRerankChecks.test_single_
+query_fallback_recovers_paraphrase_and_marks_method) ... ok
+test_cold_and_incremental_cache_have_identical_vectors_and_rankings (test_semantic_batch_invariance.BatchInvarianceTest
+s.test_cold_and_incremental_cache_have_identical_vectors_and_rankings) ... ok
+test_empty_and_invalid_prefix (test_semantic_batch_invariance.BatchInvarianceTests.test_empty_and_invalid_prefix) ... o
+k
+test_legacy_batch_pipeline_cache_is_invalidated (test_semantic_batch_invariance.BatchInvarianceTests.test_legacy_batch_
+pipeline_cache_is_invalidated) ... ok
+test_order_duplicates_and_former_batch_boundary (test_semantic_batch_invariance.BatchInvarianceTests.test_order_duplica
+tes_and_former_batch_boundary) ... ok
+test_passage_independent_of_neighbors_and_position (test_semantic_batch_invariance.BatchInvarianceTests.test_passage_in
+dependent_of_neighbors_and_position) ... ok
+test_query_independent_of_neighbors_and_position (test_semantic_batch_invariance.BatchInvarianceTests.test_query_indepe
+ndent_of_neighbors_and_position) ... ok
+test_corrupt_checksum_and_nonfinite_or_wrong_shape_rebuild (test_semantic_service.CacheChecks.test_corrupt_checksum_and
+_nonfinite_or_wrong_shape_rebuild) ... ok
+test_filter_scope_archive_and_supersession_before_encoding (test_semantic_service.CacheChecks.test_filter_scope_archive
+_and_supersession_before_encoding) ... ok
+test_incremental_add_edit_remove_and_reuse (test_semantic_service.CacheChecks.test_incremental_add_edit_remove_and_reus
+e) ... ok
+test_model_and_root_identity_changes_cannot_reuse_vectors (test_semantic_service.CacheChecks.test_model_and_root_identi
+ty_changes_cannot_reuse_vectors) ... ok
+test_model_manifest_cannot_redefine_trusted_checksums (test_semantic_service.CacheChecks.test_model_manifest_cannot_red
+efine_trusted_checksums) ... ok
+test_score_threshold_margin_and_invalid_numbers (test_semantic_service.CacheChecks.test_score_threshold_margin_and_inva
+lid_numbers) ... ok
+test_archive_and_delete_prune_before_returning_cached_candidates (test_semantic_service.ServiceChecks.test_archive_and_
+delete_prune_before_returning_cached_candidates) ... ok
+test_cache_write_failure_rolls_back_without_damaging_truth (test_semantic_service.ServiceChecks.test_cache_write_failur
+e_rolls_back_without_damaging_truth) ... ok
+test_changed_truth_during_inference_fails_without_stale_payload_or_turn (test_semantic_service.ServiceChecks.test_chang
+ed_truth_during_inference_fails_without_stale_payload_or_turn) ... ok
+test_core_mode_does_not_load_model_or_create_vector_cache (test_semantic_service.ServiceChecks.test_core_mode_does_not_
+load_model_or_create_vector_cache) ... ok
+test_corrupted_or_missing_cache_during_inference_is_repaired_even_if_prepared_reused (test_semantic_service.ServiceChec
+ks.test_corrupted_or_missing_cache_during_inference_is_repaired_even_if_prepared_reused) ... ok
+test_corruption_is_reported_as_rebuilt_not_a_silent_miss (test_semantic_service.ServiceChecks.test_corruption_is_report
+ed_as_rebuilt_not_a_silent_miss) ... ok
+test_invalid_threshold_is_rejected_even_for_a_negative_only_query (test_semantic_service.ServiceChecks.test_invalid_thr
+eshold_is_rejected_even_for_a_negative_only_query) ... ok
+test_no_memory_lock_is_held_during_inference (test_semantic_service.ServiceChecks.test_no_memory_lock_is_held_during_in
+ference) ... ok
+test_recall_refreshes_after_add_supersede_and_edit_without_cache_command (test_semantic_service.ServiceChecks.test_reca
+ll_refreshes_after_add_supersede_and_edit_without_cache_command) ... ok
+test_runtime_inference_error_is_an_explicit_failure_not_zero_hits (test_semantic_service.ServiceChecks.test_runtime_inf
+erence_error_is_an_explicit_failure_not_zero_hits) ... ok
+test_side_branches_are_not_embedded_even_when_lateral_unlock_is_present (test_semantic_service.ServiceChecks.test_side_
+branches_are_not_embedded_even_when_lateral_unlock_is_present) ... ok
+test_unchanged_cache_skips_disk_writes_and_keeps_turn_accounting (test_semantic_service.ServiceChecks.test_unchanged_ca
+che_skips_disk_writes_and_keeps_turn_accounting) ... ok
+test_verify_does_not_mutate_missing_or_stale_cache (test_semantic_service.ServiceChecks.test_verify_does_not_mutate_mis
+sing_or_stale_cache) ... ok
+test_real_model_warm_cache_restart_and_external_updates (test_semantic_worker.ActualWorkerChecks.test_real_model_warm_c
+ache_restart_and_external_updates) ... ok
+test_warm_recall_succeeds_while_unchanged_cache_has_a_shared_reader (test_semantic_worker.ActualWorkerChecks.test_warm_
+recall_succeeds_while_unchanged_cache_has_a_shared_reader) ... ok
+test_single_encoder_reused_and_failure_evicts_it (test_semantic_worker.SessionChecks.test_single_encoder_reused_and_fai
+lure_evicts_it) ... ok
+test_warm_recall_revalidates_model_bytes_and_produces_no_stdout (test_semantic_worker.SessionChecks.test_warm_recall_re
+validates_model_bytes_and_produces_no_stdout) ... ok
+test_bound_paths_options_and_oversized_requests_cannot_be_overridden (test_semantic_worker.WorkerChecks.test_bound_path
+s_options_and_oversized_requests_cannot_be_overridden) ... ok
+test_concurrent_requests_are_serial_and_do_not_cross_responses (test_semantic_worker.WorkerChecks.test_concurrent_reque
+sts_are_serial_and_do_not_cross_responses) ... ok
+test_crash_invalid_json_and_mismatched_id_fail_without_auto_replay (test_semantic_worker.WorkerChecks.test_crash_invali
+d_json_and_mismatched_id_fail_without_auto_replay) ... ok
+test_expected_error_is_not_zero_hit_or_worker_restart (test_semantic_worker.WorkerChecks.test_expected_error_is_not_zer
+o_hit_or_worker_restart) ... ok
+test_expired_queue_does_not_kill_or_send_to_active_worker (test_semantic_worker.WorkerChecks.test_expired_queue_does_no
+t_kill_or_send_to_active_worker) ... ok
+test_timeout_kills_child_then_next_request_starts_cleanly (test_semantic_worker.WorkerChecks.test_timeout_kills_child_t
+hen_next_request_starts_cleanly) ... ok
+test_stdio_worker_forwards_all_directions_and_final_coverage (test_semantic_query_plan.ActualSemanticQueryPlanMCPChecks
+.test_stdio_worker_forwards_all_directions_and_final_coverage) ... Executing <Task pending name='Task-13' coro=<ActualS
+emanticQueryPlanMCPChecks.test_stdio_worker_forwards_all_directions_and_final_coverage() running at C:\Users\jiao\Docum
+ents\Codex\2026-10-30\c-users-jiao-gemini-antigravity-scratch\work\hfa-paraphrase-rerank-20261110\candidate\tests\test_
+semantic_query_plan.py:248> cb=[_run_until_complete_cb() at C:\Users\jiao\AppData\Local\Programs\Python\Python313\Lib\a
+syncio\base_events.py:181] created at C:\Users\jiao\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py:101>
+ took 0.277 seconds
+Tool 'recall_memory' failed: 'Error executing tool recall_memory: Recall limit reached for this real turn (2/2). Reuse 
+existing evidence; do not retry automatically or invent new turn IDs.'
+ok
+test_cached_vectors_and_encoder_are_reused_for_all_directions (test_semantic_query_plan.SemanticQueryPlanChecks.test_ca
+ched_vectors_and_encoder_are_reused_for_all_directions) ... ok
+test_coverage_uses_final_full_context_after_trimming (test_semantic_query_plan.SemanticQueryPlanChecks.test_coverage_us
+es_final_full_context_after_trimming) ... ok
+test_deferred_diagnostics_have_a_fixed_size_with_an_exact_total (test_semantic_query_plan.SemanticQueryPlanChecks.test_
+deferred_diagnostics_have_a_fixed_size_with_an_exact_total) ... ok
+test_directions_matching_same_record_use_one_slot (test_semantic_query_plan.SemanticQueryPlanChecks.test_directions_mat
+ching_same_record_use_one_slot) ... ok
+test_invalid_plan_fails_before_inference_or_writes (test_semantic_query_plan.SemanticQueryPlanChecks.test_invalid_plan_
+fails_before_inference_or_writes) ... ok
+test_lexical_and_semantic_provenance_merge_without_duplicate_evidence (test_semantic_query_plan.SemanticQueryPlanChecks
+.test_lexical_and_semantic_provenance_merge_without_duplicate_evidence) ... ok
+test_one_slot_reports_dropped_direction_and_never_duplicates_records (test_semantic_query_plan.SemanticQueryPlanChecks.
+test_one_slot_reports_dropped_direction_and_never_duplicates_records) ... ok
+test_original_single_query_preserves_results_and_empty_plan (test_semantic_query_plan.SemanticQueryPlanChecks.test_orig
+inal_single_query_preserves_results_and_empty_plan) ... ok
+test_paraphrases_are_encoded_in_one_query_batch_with_provenance (test_semantic_query_plan.SemanticQueryPlanChecks.test_
+paraphrases_are_encoded_in_one_query_batch_with_provenance) ... ok
+test_per_direction_margin_is_not_bypassed_by_fusion (test_semantic_query_plan.SemanticQueryPlanChecks.test_per_directio
+n_margin_is_not_bypassed_by_fusion) ... ok
+test_recall_budget_cannot_be_multiplied_by_number_of_queries (test_semantic_query_plan.SemanticQueryPlanChecks.test_rec
+all_budget_cannot_be_multiplied_by_number_of_queries) ... ok
+test_same_turn_cap_terms_not_saved_and_no_extra_encoder_call_after_cap (test_semantic_query_plan.SemanticQueryPlanCheck
+s.test_same_turn_cap_terms_not_saved_and_no_extra_encoder_call_after_cap) ... ok
+test_scope_and_replacement_filter_before_encoding (test_semantic_query_plan.SemanticQueryPlanChecks.test_scope_and_repl
+acement_filter_before_encoding) ... ok
+test_unknown_direction_is_visible_without_claiming_evidence_complete (test_semantic_query_plan.SemanticQueryPlanChecks.
+test_unknown_direction_is_visible_without_claiming_evidence_complete) ... ok
+test_unrelated_queries_abstain (test_semantic_query_plan.SemanticQueryPlanChecks.test_unrelated_queries_abstain) ... ok
+test_wrong_query_batch_size_cannot_commit_partial_cache_or_turn (test_semantic_query_plan.SemanticQueryPlanChecks.test_
+wrong_query_batch_size_cannot_commit_partial_cache_or_turn) ... ok
+test_stdio_discovery_recall_supersession_same_turn_and_restart (test_semantic_integration.ActualSemanticMCPTests.test_s
+tdio_discovery_recall_supersession_same_turn_and_restart) ... ok
+test_actual_model_cli_incremental_refresh_and_corruption_recovery (test_semantic_integration.ActualSemanticTests.test_a
+ctual_model_cli_incremental_refresh_and_corruption_recovery) ... ok
+test_installed_download_verifier_uses_no_network_or_writes (test_semantic_integration.ActualSemanticTests.test_installe
+d_download_verifier_uses_no_network_or_writes) ... ok
+test_wheel_contains_backend_and_runs_core_without_optional_site_packages (test_semantic_integration.ActualSemanticTests
+.test_wheel_contains_backend_and_runs_core_without_optional_site_packages) ... ok
+test_stdio_preserves_a_distinct_facet_under_a_two_record_limit (test_planned_coverage.ActualPlannedCoverageMCPChecks.te
+st_stdio_preserves_a_distinct_facet_under_a_two_record_limit) ... Executing <Task pending name='Task-29' coro=<ActualPl
+annedCoverageMCPChecks.test_stdio_preserves_a_distinct_facet_under_a_two_record_limit() running at C:\Users\jiao\Docume
+nts\Codex\2026-10-30\c-users-jiao-gemini-antigravity-scratch\work\hfa-paraphrase-rerank-20261110\candidate\tests\test_p
+lanned_coverage.py:142> cb=[_run_until_complete_cb() at C:\Users\jiao\AppData\Local\Programs\Python\Python313\Lib\async
+io\base_events.py:181] created at C:\Users\jiao\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py:101> too
+k 0.248 seconds
+ok
+test_distinct_direction_not_displaced_by_repeated_first_direction (test_planned_coverage.PlannedCoverageChecks.test_dis
+tinct_direction_not_displaced_by_repeated_first_direction) ... ok
+test_missing_direction_does_not_suppress_other_existing_records (test_planned_coverage.PlannedCoverageChecks.test_missi
+ng_direction_does_not_suppress_other_existing_records) ... ok
+test_one_record_covering_both_directions_does_not_force_an_extra_slot (test_planned_coverage.PlannedCoverageChecks.test
+_one_record_covering_both_directions_does_not_force_an_extra_slot) ... ok
+test_original_or_one_refinement_selection_stays_in_relevance_order (test_planned_coverage.PlannedCoverageChecks.test_or
+iginal_or_one_refinement_selection_stays_in_relevance_order) ... ok
+test_oversized_facet_does_not_hide_a_smaller_record_for_that_facet (test_planned_coverage.PlannedCoverageChecks.test_ov
+ersized_facet_does_not_hide_a_smaller_record_for_that_facet) ... ok
+test_shared_budget_and_real_turn_count_are_not_expanded (test_planned_coverage.PlannedCoverageChecks.test_shared_budget
+_and_real_turn_count_are_not_expanded) ... ok
+test_single_slot_keeps_the_best_first_hit (test_planned_coverage.PlannedCoverageChecks.test_single_slot_keeps_the_best_
+first_hit) ... ok
+test_superseded_and_private_records_do_not_claim_coverage (test_planned_coverage.PlannedCoverageChecks.test_superseded_
+and_private_records_do_not_claim_coverage) ... ok
+
+----------------------------------------------------------------------
+Ran 74 tests in 56.417s
+
+OK

@@ -1,0 +1,695 @@
+{
+  "summary": {
+    "benchmark": "general-memory-v1",
+    "retrieval_mode": "hybrid",
+    "bind_claims": true,
+    "semantic_model": "C:\\Users\\jiao\\AppData\\Local\\HFA-Local-Semantic\\model",
+    "semantic_reranker": "C:\\Users\\jiao\\AppData\\Local\\HFA-Local-Semantic\\reranker-model",
+    "total_executed_entries": 44,
+    "by_mode": {
+      "operational": {
+        "applicable": 44,
+        "passed": 43,
+        "failed": 0,
+        "unsupported": 1,
+        "pending_evidence": 0,
+        "failed_cases": [],
+        "unsupported_cases": [
+          {
+            "case": "R08-02-en",
+            "reason": "HFA 3.0 enforces logical tombstone archival rather than irreversible hard-erasure of L1 history"
+          }
+        ]
+      }
+    },
+    "latency_ms": {
+      "p50": 431.38,
+      "p95": 3838.96,
+      "max": 10282.97
+    },
+    "records_context_tokens": {
+      "median": 0,
+      "max": 0
+    }
+  },
+  "results": [
+    {
+      "case": "A08-01-zh",
+      "family": "A08",
+      "tier": "auxiliary",
+      "language": "zh",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 3838.96
+      }
+    },
+    {
+      "case": "A08-02-en",
+      "family": "A08",
+      "tier": "auxiliary",
+      "language": "en",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 2452.76
+      }
+    },
+    {
+      "case": "A08-03-zh",
+      "family": "A08",
+      "tier": "auxiliary",
+      "language": "zh",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 2337.54
+      }
+    },
+    {
+      "case": "A08-04-en",
+      "family": "A08",
+      "tier": "auxiliary",
+      "language": "en",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 462.07
+      }
+    },
+    {
+      "case": "R01-01-zh",
+      "family": "R01",
+      "tier": "resilience",
+      "language": "zh",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 272.79
+      }
+    },
+    {
+      "case": "R01-02-en",
+      "family": "R01",
+      "tier": "resilience",
+      "language": "en",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 413.2
+      }
+    },
+    {
+      "case": "R01-03-zh",
+      "family": "R01",
+      "tier": "resilience",
+      "language": "zh",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 362.34
+      }
+    },
+    {
+      "case": "R01-04-en",
+      "family": "R01",
+      "tier": "resilience",
+      "language": "en",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 340.95
+      }
+    },
+    {
+      "case": "R02-01-zh",
+      "family": "R02",
+      "tier": "resilience",
+      "language": "zh",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 1889.47
+      }
+    },
+    {
+      "case": "R02-02-en",
+      "family": "R02",
+      "tier": "resilience",
+      "language": "en",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 2907.12
+      }
+    },
+    {
+      "case": "R02-03-zh",
+      "family": "R02",
+      "tier": "resilience",
+      "language": "zh",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 1180.96
+      }
+    },
+    {
+      "case": "R02-04-en",
+      "family": "R02",
+      "tier": "resilience",
+      "language": "en",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 950.9
+      }
+    },
+    {
+      "case": "R03-01-zh",
+      "family": "R03",
+      "tier": "resilience",
+      "language": "zh",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 307.7
+      }
+    },
+    {
+      "case": "R03-02-en",
+      "family": "R03",
+      "tier": "resilience",
+      "language": "en",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 185.36
+      }
+    },
+    {
+      "case": "R03-03-zh",
+      "family": "R03",
+      "tier": "resilience",
+      "language": "zh",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 189.89
+      }
+    },
+    {
+      "case": "R03-04-en",
+      "family": "R03",
+      "tier": "resilience",
+      "language": "en",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 168.36
+      }
+    },
+    {
+      "case": "R04-01-zh",
+      "family": "R04",
+      "tier": "resilience",
+      "language": "zh",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 2678.78
+      }
+    },
+    {
+      "case": "R04-02-en",
+      "family": "R04",
+      "tier": "resilience",
+      "language": "en",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 1247.45
+      }
+    },
+    {
+      "case": "R04-03-zh",
+      "family": "R04",
+      "tier": "resilience",
+      "language": "zh",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 1122.23
+      }
+    },
+    {
+      "case": "R04-04-en",
+      "family": "R04",
+      "tier": "resilience",
+      "language": "en",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 1828.7
+      }
+    },
+    {
+      "case": "R05-01-zh",
+      "family": "R05",
+      "tier": "resilience",
+      "language": "zh",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 219.18
+      }
+    },
+    {
+      "case": "R05-02-en",
+      "family": "R05",
+      "tier": "resilience",
+      "language": "en",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 246.6
+      }
+    },
+    {
+      "case": "R05-03-zh",
+      "family": "R05",
+      "tier": "resilience",
+      "language": "zh",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 385.28
+      }
+    },
+    {
+      "case": "R05-04-en",
+      "family": "R05",
+      "tier": "resilience",
+      "language": "en",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 199.51
+      }
+    },
+    {
+      "case": "R06-01-zh",
+      "family": "R06",
+      "tier": "resilience",
+      "language": "zh",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 0.65
+      }
+    },
+    {
+      "case": "R06-02-en",
+      "family": "R06",
+      "tier": "resilience",
+      "language": "en",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 1085.55
+      }
+    },
+    {
+      "case": "R06-03-zh",
+      "family": "R06",
+      "tier": "resilience",
+      "language": "zh",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 2911.04
+      }
+    },
+    {
+      "case": "R06-04-en",
+      "family": "R06",
+      "tier": "resilience",
+      "language": "en",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 336.02
+      }
+    },
+    {
+      "case": "R07-01-zh",
+      "family": "R07",
+      "tier": "resilience",
+      "language": "zh",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 665.39
+      }
+    },
+    {
+      "case": "R07-02-en",
+      "family": "R07",
+      "tier": "resilience",
+      "language": "en",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 573.84
+      }
+    },
+    {
+      "case": "R07-03-zh",
+      "family": "R07",
+      "tier": "resilience",
+      "language": "zh",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 258.9
+      }
+    },
+    {
+      "case": "R07-04-en",
+      "family": "R07",
+      "tier": "resilience",
+      "language": "en",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 246.47
+      }
+    },
+    {
+      "case": "R08-01-zh",
+      "family": "R08",
+      "tier": "resilience",
+      "language": "zh",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 535.99
+      }
+    },
+    {
+      "case": "R08-02-en",
+      "family": "R08",
+      "tier": "resilience",
+      "language": "en",
+      "mode": "operational",
+      "status": "unsupported",
+      "passed": false,
+      "reason": "HFA 3.0 enforces logical tombstone archival rather than irreversible hard-erasure of L1 history",
+      "telemetry": {
+        "latency_ms": 180.17
+      }
+    },
+    {
+      "case": "R08-03-zh",
+      "family": "R08",
+      "tier": "resilience",
+      "language": "zh",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 184.57
+      }
+    },
+    {
+      "case": "R08-04-en",
+      "family": "R08",
+      "tier": "resilience",
+      "language": "en",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 223.03
+      }
+    },
+    {
+      "case": "C02-01-zh",
+      "family": "C02",
+      "tier": "cost_scale",
+      "language": "zh",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 437.47
+      }
+    },
+    {
+      "case": "C02-02-en",
+      "family": "C02",
+      "tier": "cost_scale",
+      "language": "en",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 337.58
+      }
+    },
+    {
+      "case": "C02-03-zh",
+      "family": "C02",
+      "tier": "cost_scale",
+      "language": "zh",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 467.96
+      }
+    },
+    {
+      "case": "C02-04-en",
+      "family": "C02",
+      "tier": "cost_scale",
+      "language": "en",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 425.29
+      }
+    },
+    {
+      "case": "C04-01-zh",
+      "family": "C04",
+      "tier": "cost_scale",
+      "language": "zh",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 1126.37
+      }
+    },
+    {
+      "case": "C04-02-en",
+      "family": "C04",
+      "tier": "cost_scale",
+      "language": "en",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 382.38
+      }
+    },
+    {
+      "case": "C04-03-zh",
+      "family": "C04",
+      "tier": "cost_scale",
+      "language": "zh",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 5846.97
+      }
+    },
+    {
+      "case": "C04-04-en",
+      "family": "C04",
+      "tier": "cost_scale",
+      "language": "en",
+      "mode": "operational",
+      "passed": true,
+      "status": "pass",
+      "errors": [],
+      "pending": [],
+      "task_completion": true,
+      "telemetry": {
+        "latency_ms": 10282.97
+      }
+    }
+  ]
+}
